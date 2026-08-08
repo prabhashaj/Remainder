@@ -324,8 +324,31 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid } as never;
 
+import "katex/dist/katex.min.css";
+
+function preprocessLatexText(children?: React.ReactNode): string {
+  if (typeof children !== "string") return "";
+  let text = children;
+
+  // Convert \( ... \) inline math to $ ... $
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, " $1 ");
+
+  // Convert \[ ... \] display math to \n$$\n$1\n$$\n
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, "\n$$\n$1\n$$\n");
+
+  // Convert inline $$ ... $$ inside sentences into $ ... $
+  text = text.replace(/([^\n])\$\$([^\n\$\#]+?)\$\$/g, "$1$$2$");
+  text = text.replace(/\$\$([^\n\$\#]+?)\$\$([^\n])/g, "$$1$$2");
+
+  // Ensure block display math equations $$ ... $$ have newlines around them
+  text = text.replace(/([^\n])\$\$([\s\S]+?)\$\$/g, "$1\n\n$$\n$2\n$$\n");
+  text = text.replace(/\$\$([\s\S]+?)\$\$([^\n])/g, "\n$$\n$1\n$$\n$2");
+
+  return text;
+}
+
 export const MessageResponse = memo(
-  ({ className, components, ...props }: MessageResponseProps) => (
+  ({ className, components, children, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn(
         "size-full text-base sm:text-[17px] leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
@@ -338,8 +361,8 @@ export const MessageResponse = memo(
             <ExpandableImage
               src={typeof src === "string" ? src : ""}
               alt={typeof alt === "string" ? alt : "Markdown image"}
-              containerClassName="my-4 max-w-xl shadow-sm"
-              imageClassName="max-h-80 w-full object-cover"
+              containerClassName="my-4 max-w-2xl shadow-sm"
+              imageClassName="max-h-[500px] w-full object-contain"
               showCaption={true}
               caption={typeof alt === "string" && alt !== "image" ? alt : undefined}
             />
@@ -347,7 +370,9 @@ export const MessageResponse = memo(
         ...components,
       }}
       {...props}
-    />
+    >
+      {preprocessLatexText(children)}
+    </Streamdown>
   ),
   (prevProps, nextProps) =>
     prevProps.children === nextProps.children &&

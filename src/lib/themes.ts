@@ -8,13 +8,17 @@ export type ThemeId =
   | "mint"
   | "lilac"
   | "butter"
-  | "cloud";
+  | "cloud"
+  | "midnight"
+  | "emerald"
+  | "velvet";
 
 export type ThemeDef = {
   id: ThemeId;
   name: string;
   blurb: string;
   swatches: string[];
+  isDark?: boolean;
 };
 
 export const THEMES: ThemeDef[] = [
@@ -77,6 +81,27 @@ export const THEMES: ThemeDef[] = [
     name: "Cloud",
     blurb: "Neutral grey-white",
     swatches: ["oklch(0.985 0.002 260)", "oklch(0.925 0.008 260)", "oklch(0.45 0.02 260)"],
+  },
+  {
+    id: "midnight",
+    name: "Midnight",
+    blurb: "Deep navy + luminous cyan",
+    swatches: ["oklch(0.16 0.03 260)", "oklch(0.28 0.04 260)", "oklch(0.7 0.15 240)"],
+    isDark: true,
+  },
+  {
+    id: "emerald",
+    name: "Emerald Night",
+    blurb: "Deep forest + glowing mint",
+    swatches: ["oklch(0.16 0.03 160)", "oklch(0.27 0.04 160)", "oklch(0.72 0.15 160)"],
+    isDark: true,
+  },
+  {
+    id: "velvet",
+    name: "Velvet Dark",
+    blurb: "Plum charcoal + glowing rose",
+    swatches: ["oklch(0.16 0.03 320)", "oklch(0.27 0.04 320)", "oklch(0.72 0.15 330)"],
+    isDark: true,
   },
 ];
 

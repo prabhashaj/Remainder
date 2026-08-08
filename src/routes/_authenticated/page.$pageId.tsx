@@ -1,11 +1,40 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heading1, ListTodo, Plus, Quote, Star, Text, Trash2 } from "lucide-react";
+import { Heading1, LayoutTemplate, ListTodo, Plus, Quote, Star, Text, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
+import { cjk } from "@streamdown/cjk";
+import { code } from "@streamdown/code";
+import { math } from "@streamdown/math";
+import { mermaid } from "@streamdown/mermaid";
+import "katex/dist/katex.min.css";
 
+import { ExpandableImage } from "@/components/ui/expandable-image";
 import { Button } from "@/components/ui/button";
+
+const streamdownPlugins = { cjk, code, math, mermaid } as never;
+
+function preprocessLatexText(text: string): string {
+  if (typeof text !== "string") return "";
+  let result = text;
+
+  // Convert \( ... \) inline math to $ ... $
+  result = result.replace(/\\\(([\s\S]*?)\\\)/g, " $1 ");
+
+  // Convert \[ ... \] display math to \n$$\n$1\n$$\n
+  result = result.replace(/\\\[([\s\S]*?)\\\]/g, "\n$$\n$1\n$$\n");
+
+  // Convert inline $$ ... $$ inside sentences into $ ... $
+  result = result.replace(/([^\n])\$\$([^\n\$\#]+?)\$\$/g, "$1$$2$");
+  result = result.replace(/\$\$([^\n\$\#]+?)\$\$([^\n])/g, "$$1$$2");
+
+  // Ensure block display math equations $$ ... $$ have newlines around them
+  result = result.replace(/([^\n])\$\$([\s\S]+?)\$\$/g, "$1\n\n$$\n$2\n$$\n");
+  result = result.replace(/\$\$([\s\S]+?)\$\$([^\n])/g, "\n$$\n$1\n$$\n$2");
+
+  return result;
+}
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -45,6 +74,75 @@ const BLOCK_TYPES = [
   { type: "divider", label: "Divider", icon: Plus },
 ] as const;
 
+type TemplateDef = {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  blocks: { type: string; content: string }[];
+};
+
+const PAGE_TEMPLATES: TemplateDef[] = [
+  {
+    id: "cornell",
+    name: "Cornell Study Notes",
+    icon: "📖",
+    description: "Structured cue column, detailed notes, and core summary",
+    blocks: [
+      { type: "heading", content: "Cue Column & Questions" },
+      { type: "todo", content: "What is the primary mechanism?" },
+      { type: "todo", content: "What are key edge cases to remember?" },
+      { type: "heading", content: "Detailed Class & Reading Notes" },
+      { type: "text", content: "Write comprehensive notes, derivations, and explanations here..." },
+      { type: "quote", content: "Core Takeaway: Summarize the single most essential concept." },
+      { type: "divider", content: "" },
+      { type: "heading", content: "Summary (3 Sentences)" },
+      { type: "text", content: "1. Key concept 1\n2. Key concept 2\n3. Practical application" },
+    ],
+  },
+  {
+    id: "focus",
+    name: "Daily Focus & Reflection",
+    icon: "⚡",
+    description: "Daily intention, top 3 priorities, and reflection",
+    blocks: [
+      { type: "quote", content: "Intention: What does done look like today?" },
+      { type: "heading", content: "Top 3 Priorities" },
+      { type: "todo", content: "High priority task 1" },
+      { type: "todo", content: "High priority task 2" },
+      { type: "todo", content: "High priority task 3" },
+      { type: "heading", content: "Wins & Reflections" },
+      { type: "text", content: "What went well today? What can be improved tomorrow?" },
+    ],
+  },
+  {
+    id: "exam",
+    name: "Exam & Project Prep",
+    icon: "🎯",
+    description: "Topic checklist, practice problems, and formula references",
+    blocks: [
+      { type: "heading", content: "Core Topics to Master" },
+      { type: "todo", content: "Review foundational concepts" },
+      { type: "todo", content: "Complete practice problem set" },
+      { type: "todo", content: "Self-test with flashcards" },
+      { type: "quote", content: "Target Score / Mastery Goal: 90%+" },
+    ],
+  },
+  {
+    id: "code",
+    name: "Engineering & Code Log",
+    icon: "🧪",
+    description: "Architecture design, edge cases, and safety checks",
+    blocks: [
+      { type: "heading", content: "System Goal & Architecture" },
+      { type: "text", content: "Describe the component responsibility, API endpoints, or data structures..." },
+      { type: "heading", content: "Edge Cases & Safety Checks" },
+      { type: "todo", content: "Verify null / empty input payloads" },
+      { type: "todo", content: "Check error boundaries and fallback handlers" },
+    ],
+  },
+];
+
 function PageView() {
   const { pageId } = Route.useParams();
   const qc = useQueryClient();
@@ -73,6 +171,27 @@ function PageView() {
   const addBlock = useMutation({
     mutationFn: (type: string) => createBlock({ page_id: pageId, type, position: blocks.length }),
     onSuccess: refreshBlocks,
+  });
+
+  const applyTemplate = useMutation({
+    mutationFn: async (tpl: TemplateDef) => {
+      // Update page icon and title if default
+      if (!page?.title || page.title === "Untitled") {
+        await updatePage(pageId, { title: tpl.name, icon: tpl.icon });
+        setTitle(tpl.name);
+      }
+      // Insert template blocks sequentially
+      let startPos = blocks.length;
+      for (const b of tpl.blocks) {
+        await createBlock({
+          page_id: pageId,
+          type: b.type,
+          content: b.content,
+          position: startPos++,
+        });
+      }
+    },
+    onSuccess: refreshPages,
   });
 
   const addSubpage = useMutation({
@@ -272,8 +391,24 @@ function BlockRow({ block, onChanged }: { block: Block; onChanged: () => void })
           }`}
         >
           {value ? (
-            <Streamdown className="prose-base sm:prose-lg max-w-none text-inherit [&>p]:m-0 [&>p]:inline">
-              {value}
+            <Streamdown
+              plugins={streamdownPlugins}
+              components={{
+                img: ({ src, alt }) =>
+                  src ? (
+                    <ExpandableImage
+                      src={typeof src === "string" ? src : ""}
+                      alt={typeof alt === "string" ? alt : "Notebook diagram"}
+                      containerClassName="my-3 max-w-2xl shadow-sm"
+                      imageClassName="max-h-[500px] w-full object-contain"
+                      showCaption={true}
+                      caption={typeof alt === "string" && alt !== "image" ? alt : undefined}
+                    />
+                  ) : null,
+              }}
+              className="prose-base sm:prose-lg max-w-none text-inherit [&>p]:m-0 [&>p]:inline"
+            >
+              {preprocessLatexText(value)}
             </Streamdown>
           ) : (
             <span className="text-muted-foreground/40 italic font-normal">

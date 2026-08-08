@@ -4,6 +4,7 @@ import { MessagesSquare, Send, Sparkle } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { MessageResponse } from "@/components/ai-elements/message";
+import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,12 +60,18 @@ export function MaterialTutor({ resourceId }: { resourceId: string }) {
               </p>
             ) : (
               <div className="mt-3 text-base leading-relaxed">
-                <MessageResponse>
-                  {message.parts
+                {(() => {
+                  const text = message.parts
                     .filter((p) => p.type === "text")
                     .map((p) => p.text)
-                    .join("")}
-                </MessageResponse>
+                    .join("");
+                  return (
+                    <>
+                      <MessageResponse>{text}</MessageResponse>
+                      <SpeechAndCopyToolbar text={text} className="mt-2" />
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>

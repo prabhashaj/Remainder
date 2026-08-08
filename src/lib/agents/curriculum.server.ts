@@ -28,7 +28,7 @@ Write in clear, warm, plain language for a motivated self-learner. Use markdown:
 Formatting rules (strict):
 - **Bold** each key term the first time it appears; never bold whole sentences or headings
 - Write every formula in LaTeX: inline as $a^2 + b^2 = c^2$, and important/derived formulas on their own line as $$\\frac{dy}{dx} = 2x$$
-- Never write maths as plain text ("x^2", "a/b") and never leave unbalanced $ or brackets
+- Use explicit operators (\\times, \\cdot), no plain-text math ("x^2", "a/b"), and never bracket delimiters
 - Use fenced code blocks with a language tag; use \`inline code\` for identifiers and commands
 - Keep paragraphs to 2-4 sentences and use tables only for genuine comparisons
 
@@ -145,7 +145,7 @@ Write the lesson now.`,
     };
   }
 
-  const images: LessonImage[] = imageSearch.images.slice(0, 4).map((img) => ({
+  const images: LessonImage[] = imageSearch.images.slice(0, 2).map((img) => ({
     url: img.url,
     caption: img.description,
   }));
@@ -158,7 +158,7 @@ Write the lesson now.`,
     if (seen.has(key)) continue;
     seen.add(key);
     videos.push({ title: r.title, url: r.url, youtube_id: id });
-    if (videos.length >= 4) break;
+    if (videos.length >= 2) break;
   }
 
   const { error: updateErr } = await supabase

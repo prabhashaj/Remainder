@@ -1,24 +1,42 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, CalendarHeart, Plus } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  ArrowRight,
+  Brain,
+  CalendarHeart,
+  Compass,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 
 import { RemiPanel } from "@/components/remi-dock";
 import { Button } from "@/components/ui/button";
-
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   createTask,
   fetchGoals,
+  fetchHabitLogs,
+  fetchHabits,
   fetchProfile,
+  fetchRoadmapItems,
   fetchTasks,
   today,
   updateTask,
 } from "@/lib/db";
+import { fetchDueFlashcardCount } from "@/lib/srs.functions";
 import { generateWeeklyReflection } from "@/lib/weekly.functions";
 import { MessageResponse } from "@/components/ai-elements/message";
+import { FlashcardReview } from "@/components/flashcard-review";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -42,10 +60,24 @@ function greeting() {
 function Dashboard() {
   const qc = useQueryClient();
   const day = today();
+  const runFetchCardCount = useServerFn(fetchDueFlashcardCount);
 
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: fetchProfile });
   const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: fetchTasks });
   const { data: goals = [] } = useQuery({ queryKey: ["goals"], queryFn: fetchGoals });
+  const { data: habits = [] } = useQuery({ queryKey: ["habits"], queryFn: fetchHabits });
+  const { data: habitLogs = [] } = useQuery({
+    queryKey: ["habit-logs", day],
+    queryFn: () => fetchHabitLogs(day),
+  });
+  const { data: roadmapItems = [] } = useQuery({
+    queryKey: ["roadmap-items"],
+    queryFn: () => fetchRoadmapItems(),
+  });
+  const { data: dueCardData } = useQuery({
+    queryKey: ["due-flashcard-count"],
+    queryFn: () => runFetchCardCount(),
+  });
   const { data: reflection, isLoading: reflectionLoading } = useQuery({
     queryKey: ["weekly-reflection"],
     queryFn: () => generateWeeklyReflection(),
@@ -53,6 +85,7 @@ function Dashboard() {
   });
 
   const [newTask, setNewTask] = useState("");
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const invalidate = (keys: string[]) =>
     keys.forEach((k) => void qc.invalidateQueries({ queryKey: [k] }));
@@ -74,6 +107,65 @@ function Dashboard() {
   const todaysTasks = tasks.filter((t) => !t.due_date || t.due_date <= day);
   const openTasks = todaysTasks.filter((t) => !t.done);
   const doneToday = todaysTasks.length - openTasks.length;
+
+  const dueCardCount = dueCardData?.count ?? 0;
+
+  // Next Best Action Determination (Deterministic ranking algorithm)
+  const nextBestAction = (() => {
+    // 1. Overdue task
+    const overdueTask = tasks.find((t) => !t.done && t.due_date && t.due_date < day);
+    if (overdueTask) {
+      return {
+        category: "Overdue task",
+        title: overdueTask.title,
+        actionText: "Complete task",
+        link: "/tasks",
+      };
+    }
+
+    // 2. Uncompleted Habit today
+    const doneHabitIds = new Set(habitLogs.filter((l) => l.day === day).map((l) => l.habit_id));
+    const unloggedHabit = habits.find((h) => !doneHabitIds.has(h.id));
+    if (unloggedHabit) {
+      return {
+        category: "Daily Habit",
+        title: unloggedHabit.title,
+        actionText: "Log habit",
+        link: "/habits",
+      };
+    }
+
+    // 3. Due Flashcards
+    if (dueCardCount > 0) {
+      return {
+        category: "Spaced Repetition",
+        title: `${dueCardCount} card${dueCardCount === 1 ? "" : "s"} ready for review`,
+        actionText: "Review now",
+        onClick: () => setReviewOpen(true),
+      };
+    }
+
+    // 4. Undone Roadmap Lesson
+    const unreadItem = roadmapItems.find(
+      (item) => !item.done && item.content_status === "ready",
+    );
+    if (unreadItem) {
+      return {
+        category: "Roadmap Lesson",
+        title: unreadItem.title,
+        actionText: "Read lesson",
+        link: `/lesson/${unreadItem.id}`,
+      };
+    }
+
+    // 5. Fallback
+    return {
+      category: "All Clear",
+      title: "Everything pressing is done. Take a breath or explore a goal.",
+      actionText: "View Goals",
+      link: "/goals",
+    };
+  })();
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
@@ -97,6 +189,43 @@ function Dashboard() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-3">
+        {/* Pinned Next Best Action Card */}
+        <section className="card-soft lg:col-span-3 border-primary/20 bg-primary/5 p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl bg-primary/10 p-2.5 text-primary shrink-0">
+                <Compass className="size-5" />
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+                  Next Best Action · {nextBestAction.category}
+                </span>
+                <h3 className="font-display text-base font-semibold text-foreground mt-0.5">
+                  {nextBestAction.title}
+                </h3>
+              </div>
+            </div>
+
+            {nextBestAction.onClick ? (
+              <Button
+                onClick={nextBestAction.onClick}
+                className="press rounded-2xl shrink-0 self-start sm:self-auto"
+              >
+                {nextBestAction.actionText} <ArrowRight className="ml-1.5 size-4" />
+              </Button>
+            ) : (
+              <Button
+                asChild
+                className="press rounded-2xl shrink-0 self-start sm:self-auto"
+              >
+                <Link to={nextBestAction.link ?? "#"}>
+                  {nextBestAction.actionText} <ArrowRight className="ml-1.5 size-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </section>
+
         <RemiPanel className="lg:col-span-3" />
 
         <section className="card-soft p-6 lg:col-span-2">
@@ -200,6 +329,17 @@ function Dashboard() {
           )}
         </section>
       </div>
+
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="rounded-3xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">
+              Spaced Repetition Review
+            </DialogTitle>
+          </DialogHeader>
+          <FlashcardReview onComplete={() => setReviewOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

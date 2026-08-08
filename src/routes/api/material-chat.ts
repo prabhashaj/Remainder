@@ -20,7 +20,7 @@ Absolute rules:
 Style:
 - Warm, direct, concrete. Short paragraphs.
 - **Bold** each key term the first time it appears.
-- Formulas in LaTeX: inline $x^2$, display $$\\\\frac{dy}{dx} = 2x$$. Never plain-text maths.
+- Formulas in LaTeX: inline as $x^2$, display on dedicated lines as $$\\frac{dy}{dx} = 2x$$. Use explicit operators (\\times, \\cdot), never plain-text math or bracket delimiters.
 - Fenced code blocks with a language tag; \`inline code\` for identifiers.
 - End with one short "Try this" line the learner can act on.`;
 

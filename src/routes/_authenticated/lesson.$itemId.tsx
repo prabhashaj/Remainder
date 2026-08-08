@@ -1,17 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Clock, Play, RefreshCw, Sparkle } from "lucide-react";
-import { useEffect } from "react";
+import { ArrowLeft, BookOpenCheck, Clock, Layers, Play, RefreshCw, Sparkle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { MessageResponse } from "@/components/ai-elements/message";
+import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ExpandableImage } from "@/components/ui/expandable-image";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { fetchRoadmapItem, updateRoadmapItem } from "@/lib/db";
 import { generateLesson } from "@/lib/lesson.functions";
+import { generateFlashcardsForItem, fetchFlashcardCountForItem } from "@/lib/srs.functions";
 import { useRegisterTopic } from "@/lib/topic-context";
 import { useFocusTimer } from "@/components/focus-timer";
+import { QuizModal } from "@/components/quiz-modal";
+import { CheckpointGate } from "@/components/checkpoint-gate";
+import { FlashcardReview } from "@/components/flashcard-review";
 import type { LessonImage, LessonVideo } from "@/lib/agents/curriculum.server";
 
 export const Route = createFileRoute("/_authenticated/lesson/$itemId")({
@@ -37,12 +48,22 @@ function LessonPage() {
   const { itemId } = Route.useParams();
   const qc = useQueryClient();
   const runLesson = useServerFn(generateLesson);
+  const runGenerateFlashcards = useServerFn(generateFlashcardsForItem);
+  const runFetchCardCount = useServerFn(fetchFlashcardCountForItem);
   const { start: startTimer } = useFocusTimer();
 
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [flashcardsOpen, setFlashcardsOpen] = useState(false);
 
   const { data: item, isLoading } = useQuery({
     queryKey: ["roadmap-item", itemId],
     queryFn: () => fetchRoadmapItem(itemId),
+  });
+
+  const { data: flashcardData } = useQuery({
+    queryKey: ["flashcard-count-item", itemId],
+    queryFn: () => runFetchCardCount({ data: { itemId } }),
+    enabled: Boolean(item?.content),
   });
 
   const generate = useMutation({
@@ -50,6 +71,22 @@ function LessonPage() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["roadmap-item", itemId] });
       void qc.invalidateQueries({ queryKey: ["roadmap-items"] });
+    },
+  });
+
+  const makeFlashcards = useMutation({
+    mutationFn: () => runGenerateFlashcards({ data: { itemId } }),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(`Generated ${res.count ?? 0} flashcards for review!`);
+        void qc.invalidateQueries({ queryKey: ["flashcard-count-item", itemId] });
+        void qc.invalidateQueries({ queryKey: ["flashcards-item", itemId] });
+        void qc.invalidateQueries({ queryKey: ["due-flashcards"] });
+        void qc.invalidateQueries({ queryKey: ["due-flashcard-count"] });
+        setFlashcardsOpen(true);
+      } else {
+        toast.error(res.error || "Failed to generate flashcards.");
+      }
     },
   });
 
@@ -63,6 +100,7 @@ function LessonPage() {
 
   const hasContent = Boolean(item?.content);
   const generating = generate.isPending;
+  const cardCount = flashcardData?.count ?? 0;
 
   // Let the Remi dock answer doubts about exactly this sub-topic.
   useRegisterTopic(item ? { itemId: item.id, label: item.title } : null);
@@ -114,19 +152,18 @@ function LessonPage() {
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={item.done}
-            onCheckedChange={(v) => toggleDone.mutate(Boolean(v))}
-            className="rounded-md"
-          />
-          Mark as learned
-        </label>
+        <CheckpointGate
+          itemId={item.id}
+          isDone={item.done}
+          onToggleDone={(d) => toggleDone.mutate(d)}
+        />
+
         {item.estimated_minutes ? (
           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="size-3" />~{item.estimated_minutes} min
           </span>
         ) : null}
+
         <Button
           variant="outline"
           size="sm"
@@ -137,8 +174,62 @@ function LessonPage() {
         >
           Focus on this
         </Button>
+
+        {hasContent && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="press rounded-2xl gap-1.5"
+              onClick={() => setQuizOpen(true)}
+            >
+              <BookOpenCheck className="size-3.5 text-primary" /> Test yourself
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="press rounded-2xl gap-1.5"
+              disabled={makeFlashcards.isPending}
+              onClick={() => {
+                if (cardCount > 0) {
+                  setFlashcardsOpen(true);
+                } else {
+                  makeFlashcards.mutate();
+                }
+              }}
+            >
+              <Layers className="size-3.5 text-primary" />
+              {makeFlashcards.isPending
+                ? "Creating cards…"
+                : cardCount > 0
+                  ? `Flashcards (${cardCount})`
+                  : "Generate flashcards"}
+            </Button>
+          </>
+        )}
       </div>
 
+      <QuizModal
+        itemId={item.id}
+        itemTitle={item.title}
+        open={quizOpen}
+        onOpenChange={setQuizOpen}
+      />
+
+      <Dialog open={flashcardsOpen} onOpenChange={setFlashcardsOpen}>
+        <DialogContent className="rounded-3xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">
+              Flashcards: {item.title}
+            </DialogTitle>
+          </DialogHeader>
+          <FlashcardReview
+            itemId={item.id}
+            onComplete={() => setFlashcardsOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {generating && !hasContent ? (
         <div className="panel-soft mt-8 px-6 py-12 text-center">
@@ -150,6 +241,7 @@ function LessonPage() {
       ) : hasContent ? (
         <article className="mt-8">
           <MessageResponse>{item.content ?? ""}</MessageResponse>
+          <SpeechAndCopyToolbar text={item.content ?? ""} className="mt-4" />
         </article>
       ) : (
         <div className="panel-soft mt-8 px-6 py-10 text-center">
@@ -170,16 +262,17 @@ function LessonPage() {
       {images.length > 0 && (
         <section className="mt-10">
           <h2 className="font-display text-sm font-bold uppercase tracking-wide text-primary">
-            Visuals
+            Key Visuals & Diagrams
           </h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {images.map((img) => (
+          <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2">
+            {images.slice(0, 2).map((img) => (
               <ExpandableImage
                 key={img.url}
                 src={img.url}
-                alt={img.caption ?? `${item.title} illustration`}
-                caption={img.caption}
-                imageClassName="h-48 w-full object-cover"
+                alt={img.caption ?? `${item.title} visual illustration`}
+                caption={img.caption ?? "Visual concept diagram"}
+                imageClassName="h-48 sm:h-56 w-full object-cover"
+                containerClassName="w-full shadow-soft"
               />
             ))}
           </div>
@@ -189,13 +282,13 @@ function LessonPage() {
       {videos.length > 0 && (
         <section className="mt-10">
           <h2 className="font-display text-sm font-bold uppercase tracking-wide text-primary">
-            Keep going — videos
+            Top Video Resources
           </h2>
-          <div className="mt-3 space-y-3">
-            {videos.map((v) => (
+          <div className="mt-4 space-y-5">
+            {videos.slice(0, 2).map((v) => (
               <div
                 key={v.url}
-                className="overflow-hidden rounded-3xl border border-border"
+                className="w-full overflow-hidden rounded-3xl border border-border bg-card shadow-soft transition-all hover:shadow-lift"
               >
                 {v.youtube_id ? (
                   <iframe
@@ -211,9 +304,9 @@ function LessonPage() {
                   href={v.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 px-4 py-3 text-sm font-medium hover:bg-muted/50"
+                  className="flex items-center gap-2.5 p-4 text-sm font-semibold hover:bg-muted/50 transition-colors"
                 >
-                  <Play className="size-3.5 text-primary" />
+                  <Play className="size-4 text-primary shrink-0" />
                   <span className="min-w-0 flex-1 truncate">{v.title}</span>
                 </a>
               </div>

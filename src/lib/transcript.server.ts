@@ -334,7 +334,7 @@ A 3-4 sentence plain-language summary of what this video covers and who it is fo
 Rules:
 - Ground everything strictly in the supplied transcript; never invent content.
 - **Bold** each key term the first time it appears.
-- Write formulas in LaTeX: inline as $a^2+b^2=c^2$, display as $$E = mc^2$$.
+- Write formulas in LaTeX: inline as $a^2+b^2=c^2$, display on dedicated lines as $$E = mc^2$$. Never use plain-text math or bracket delimiters.
 - Be specific and technically accurate. No filler.`;
 
 const NOTEBOOK_PROMPT = `You are a study assistant that converts a video transcript into a structured, comprehensive notebook for a learner.
@@ -361,7 +361,7 @@ A glossary of important terms with brief definitions.
 Rules:
 - Ground everything strictly in the supplied material; never invent content.
 - **Bold** each key term the first time it appears.
-- Write formulas in LaTeX: inline as $x^2$, display as $$\\frac{dy}{dx} = 2x$$.
+- Write formulas in LaTeX: inline as $x^2$, display on dedicated lines as $$\\frac{dy}{dx} = 2x$$. Use explicit operators (\\times, \\cdot), never plain-text math or bracket delimiters.
 - Use fenced code blocks with language tags for code.
 - Be thorough — capture all concepts discussed, not just highlights.
 - Aim for 600-1200 words.`;

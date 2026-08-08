@@ -17,6 +17,8 @@ export type ChatThread = Tables["chat_threads"]["Row"];
 export type Profile = Tables["profiles"]["Row"];
 export type AgentMemory = Tables["agent_memories"]["Row"];
 export type RoadmapResource = Tables["roadmap_resources"]["Row"];
+export type Flashcard = Tables["flashcards"]["Row"];
+export type QuizAttempt = Tables["quiz_attempts"]["Row"];
 
 export function today(): string {
   const d = new Date();
@@ -312,6 +314,10 @@ export async function createFocusSession(input: {
   resource_kind?: string;
   resource_url?: string | null;
   roadmap_item_id?: string | null;
+  intention?: string | null;
+  session_type?: string;
+  work_minutes?: number;
+  break_minutes?: number;
 }) {
   const user_id = await requireUserId();
   return unwrap(
@@ -321,7 +327,14 @@ export async function createFocusSession(input: {
 
 export async function finishFocusSession(
   id: string,
-  patch: { minutes: number; notes?: string | null },
+  patch: {
+    minutes: number;
+    notes?: string | null;
+    reflection?: string | null;
+    stayed_on_task?: boolean | null;
+    tab_away_count?: number;
+    tab_away_seconds?: number;
+  },
 ) {
   return unwrap(
     await supabase

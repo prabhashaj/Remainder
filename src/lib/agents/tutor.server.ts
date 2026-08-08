@@ -25,7 +25,7 @@ A 3-4 sentence plain-language summary of what this resource covers and who it is
 Rules:
 - Ground everything strictly in the supplied text; never invent content.
 - **Bold** each key term the first time it appears.
-- Write formulas in LaTeX: inline as $a^2+b^2=c^2$, display as $$E = mc^2$$.
+- Write formulas in LaTeX: inline as $a^2+b^2=c^2$, display on dedicated lines as $$E = mc^2$$. Never use plain-text math or bracket delimiters.
 - Be specific and technically accurate. No filler.`;
 
 const TUTOR_PROMPT = `You are Remi, a patient tutor answering a learner's question about THEIR OWN study material.
@@ -39,7 +39,8 @@ Absolute rules:
 Style:
 - Warm, direct, concrete. Short paragraphs.
 - **Bold** each key term the first time it appears.
-- Formulas in LaTeX: inline $x^2$, display $$\\\\frac{dy}{dx} = 2x$$. Never plain-text maths.
+- Include markdown photos/illustrations ONLY if the learner explicitly asks for an image, photo, or diagram. Otherwise, do NOT include images.
+- Formulas in LaTeX: inline as $x^2$, display on dedicated lines as $$\\frac{dy}{dx} = 2x$$. Use explicit operators (\\times, \\cdot), never plain-text math or bracket delimiters.
 - Fenced code blocks with a language tag; \`inline code\` for identifiers.
 - End with one short "Try this" line the learner can act on.`;
 

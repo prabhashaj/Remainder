@@ -1,8 +1,18 @@
 import { useChat } from "@ai-sdk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { BookOpen, CheckCircle2, Loader2 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import {
+  AlertCircle,
+  BookOpen,
+  Bot,
+  CheckCircle2,
+  ChevronDown,
+  Compass,
+  Loader2,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import remiLogo from "@/assets/remi.png";
@@ -23,46 +33,101 @@ import {
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { ChatVideoEmbeds } from "@/components/chat-video-embeds";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 import { supabase } from "@/integrations/supabase/client";
 import { renameThread } from "@/lib/db";
+import { cn } from "@/lib/utils";
 
 const toolLabels: Record<string, string> = {
-  delegateToPlanner: "Building your plan",
-  researchResources: "Finding tutorials",
+  delegateToPlanner: "Building learning plan",
+  researchResources: "Finding video tutorials",
   webSearch: "Searching the web",
-  writeLessonForSubtopic: "Writing the lesson",
+  searchPhotos: "Searching photos & diagrams",
+  writeLessonForSubtopic: "Writing subtopic lesson",
   generateNotebook: "Generating study notebook",
-  saveMemory: "Remembering this",
+  editNotebook: "Updating study notebook",
+  saveMemory: "Saving memory note",
 };
 
 type ToolPartLike = { type: string; state: string };
 
-function ToolChip({ part }: { part: ToolPartLike }) {
-  const name =
-    part.type === "dynamic-tool" ? "tool" : part.type.replace(/^tool-/, "");
-  const label = toolLabels[name] ?? name;
-  const done = part.state === "output-available";
-  const errored = part.state === "output-error";
+function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const allDone = parts.every((p) => p.state === "output-available");
+  const anyError = parts.some((p) => p.state === "output-error");
+  const isRunning = !allDone && !anyError;
+
+  const names = Array.from(
+    new Set(
+      parts.map((p) => {
+        const name =
+          p.type === "dynamic-tool" ? "tool" : p.type.replace(/^tool-/, "");
+        return toolLabels[name] ?? name;
+      })
+    )
+  );
+
+  const summaryText = isRunning
+    ? `${names.join(", ")}…`
+    : anyError
+      ? `Completed with warnings (${parts.length})`
+      : parts.length === 1
+        ? names[0]
+        : `Completed ${parts.length} steps (${names.slice(0, 2).join(", ")})`;
 
   return (
-    <div
-      className={`my-1.5 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold ${
-        errored
-          ? "bg-destructive/10 text-destructive"
-          : done
-            ? "bg-accent text-accent-foreground"
-            : "bg-muted text-muted-foreground"
-      }`}
+    <Collapsible
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      className="my-2 flex flex-col items-start"
     >
-      {done ? (
-        <CheckCircle2 className="size-4 text-primary" />
-      ) : errored ? null : (
-        <Loader2 className="size-4 animate-spin" />
-      )}
-      {done ? label : errored ? `${label} failed` : `${label}…`}
-    </div>
+      <CollapsibleTrigger className="group inline-flex items-center gap-2 rounded-xl border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+        {isRunning ? (
+          <Loader2 className="size-3.5 animate-spin text-primary shrink-0" />
+        ) : anyError ? (
+          <AlertCircle className="size-3.5 text-destructive shrink-0" />
+        ) : (
+          <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+        )}
+        <span>{summaryText}</span>
+        <ChevronDown
+          className={cn(
+            "size-3 text-muted-foreground/60 transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+        />
+      </CollapsibleTrigger>
+
+      <CollapsibleContent className="mt-2 ml-2.5 border-l border-border/60 pl-3.5 py-1 space-y-2 text-xs">
+        {parts.map((part, idx) => {
+          const rawName =
+            part.type === "dynamic-tool" ? "tool" : part.type.replace(/^tool-/, "");
+          const label = toolLabels[rawName] ?? rawName;
+          const done = part.state === "output-available";
+          const errored = part.state === "output-error";
+
+          return (
+            <div key={idx} className="flex items-center gap-2.5 text-xs">
+              {!done && !errored ? (
+                <span className="size-1.5 rounded-full bg-primary animate-ping shrink-0" />
+              ) : done ? (
+                <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+              ) : (
+                <span className="size-1.5 rounded-full bg-destructive shrink-0" />
+              )}
+              <span className="font-medium text-foreground">{label}</span>
+            </div>
+          );
+        })}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -112,6 +177,7 @@ export function RemiChat({
       void queryClient.invalidateQueries({ queryKey: ["habits"] });
       void queryClient.invalidateQueries({ queryKey: ["goals"] });
       void queryClient.invalidateQueries({ queryKey: ["pages"] });
+      void queryClient.invalidateQueries({ queryKey: ["blocks"] });
     },
   });
 
@@ -125,9 +191,19 @@ export function RemiChat({
       void queryClient.invalidateQueries({ queryKey: ["threads"] });
     }
     const topicId = topic ? topic.itemId : null;
+    const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+    const pageMatch = pathname.match(/\/page\/([^/]+)/);
+    const activePageId = pageMatch ? pageMatch[1] : undefined;
+
     await sendMessage(
       { text: trimmed },
-      topicId ? { body: { threadId, topicItemId: topicId } } : undefined,
+      {
+        body: {
+          threadId,
+          topicItemId: topicId,
+          activePageId,
+        },
+      },
     );
   }
 
@@ -144,7 +220,6 @@ export function RemiChat({
   }, [seed]);
 
   const busy = status === "submitted" || status === "streaming";
-
 
   return (
     <div className="flex h-full min-h-0 flex-col text-base">
@@ -192,26 +267,48 @@ export function RemiChat({
             {messages.map((message) => (
               <Message from={message.role} key={message.id}>
                 <MessageContent>
-                  {message.parts.map((part, index) => {
-                    if (part.type === "text") {
-                      return (
-                        <div key={index}>
-                          <MessageResponse>{part.text}</MessageResponse>
-                          {message.role === "assistant" && (
-                            <ChatVideoEmbeds text={part.text} />
-                          )}
-                        </div>
-                      );
-                    }
-                    if (
-                      part.type === "dynamic-tool" ||
-                      part.type.startsWith("tool-")
-                    ) {
-                      return <ToolChip key={index} part={part as ToolPartLike} />;
-                    }
-                    return null;
-                  })}
+                  {(() => {
+                    const groupedParts: Array<
+                      | { type: "text"; text: string }
+                      | { type: "tools"; parts: ToolPartLike[] }
+                    > = [];
+                    let currentTools: ToolPartLike[] = [];
 
+                    for (const part of message.parts) {
+                      if (part.type === "text") {
+                        if (currentTools.length > 0) {
+                          groupedParts.push({ type: "tools", parts: currentTools });
+                          currentTools = [];
+                        }
+                        groupedParts.push({ type: "text", text: part.text });
+                      } else if (
+                        part.type === "dynamic-tool" ||
+                        part.type.startsWith("tool-")
+                      ) {
+                        currentTools.push(part as ToolPartLike);
+                      }
+                    }
+                    if (currentTools.length > 0) {
+                      groupedParts.push({ type: "tools", parts: currentTools });
+                    }
+
+                    return groupedParts.map((group, gIdx) => {
+                      if (group.type === "text") {
+                        return (
+                          <div key={gIdx}>
+                            <MessageResponse>{group.text}</MessageResponse>
+                            {message.role === "assistant" && (
+                              <>
+                                <ChatVideoEmbeds text={group.text} />
+                                <SpeechAndCopyToolbar text={group.text} className="mt-2" />
+                              </>
+                            )}
+                          </div>
+                        );
+                      }
+                      return <ToolGroup key={gIdx} parts={group.parts} />;
+                    });
+                  })()}
                 </MessageContent>
               </Message>
             ))}

@@ -16,13 +16,13 @@ import { runResearch } from "@/lib/agents/research.server";
 import { classifyQueryRouting } from "@/lib/agents/router.server";
 import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
 import { fetchYoutubeTranscript } from "@/lib/transcript.server";
-import { tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
+import { searchTopicPhotos, tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const SYSTEM_PROMPT = `You are Remi, the warm, encouraging coach inside Remainder — a calm workspace for notes, habits, goals and learning.
 Voice: personal, kind, concrete. Short paragraphs. Never guilt-trip the user about missed days; help them restart small.
 
-You help with: planning learning roadmaps, breaking goals into milestones, suggesting tasks and habits, reflecting on the user's week, and explaining topics simply.
+You help with: planning learning roadmaps, breaking goals into milestones, suggesting tasks and habits, reflecting on the user's week, and explaining topics simply with clear text, photos, diagrams, and video resources.
 
 You have access to the user's current workspace state and long-term memories (shown below). Use this context to give personalized, relevant coaching — reference their actual tasks, streaks, and goals when relevant.
 
@@ -30,8 +30,10 @@ You delegate to specialists ONLY when the user explicitly requests workspace act
 - delegateToPlanner: Use ONLY when the user explicitly asks to create or build roadmaps, goals, tasks, or habits in their workspace.
 - researchResources: Use ONLY when the user explicitly asks to search for and save learning resources or videos to a roadmap.
 - webSearch: Use whenever answering factual questions that benefit from current web search results.
+- searchPhotos: Use ONLY when the user explicitly asks for photos, images, visual diagrams, or illustrations. NEVER call this tool unless the user explicitly requests an image or diagram.
 - writeLessonForSubtopic: Use ONLY when the user asks to write or expand a specific roadmap subtopic lesson.
 - generateNotebook: Use ONLY when the user explicitly requests to generate, create, or build a notebook, notes, or structured workspace page. Do NOT call this tool for normal conversational questions or topic discussions unless the user explicitly asks to create or generate a notebook page.
+- editNotebook: Use when the user asks to edit a notebook page, append content, or search the web and add visual diagrams/images to the end of a notebook.
 - saveMemory: Use when learning a durable fact, preference, or goal context about the user.
 
 When you delegate, briefly tell the user what you're doing, then summarize what the specialist accomplished. When you propose a plan without tools, format it as clear markdown with phases and short bullet steps, and end with one gentle next action the user could take today.
@@ -39,7 +41,8 @@ When you delegate, briefly tell the user what you're doing, then summarize what 
 Formatting rules (always follow):
 - Use markdown headings and short paragraphs; keep lines readable.
 - **Bold** the key term the first time it appears — never bold whole sentences.
-- Write maths with LaTeX: inline as $x^2 + y^2$, display formulas on their own line as $$E = mc^2$$. Never write formulas as plain text like "x^2" or with unbalanced brackets.
+- Include markdown images ONLY when the user explicitly asks for photos, images, or diagrams in their prompt. Otherwise, do NOT output markdown images.
+- Format all math, chemistry, variables, and formulas in strict LaTeX: inline using single dollar signs $x^2$ or $H_2O$, block equations on dedicated lines with double dollar signs $$E = mc^2$$. Always use explicit operators (\times, \cdot, \frac{a}{b}), never plain-text math, ASCII operators, or bracket delimiters \(...\)/\[...\].
 - Use fenced code blocks with a language tag for code.
 - Use \`inline code\` for identifiers, commands, and file names.`;
 
@@ -47,6 +50,7 @@ type ChatBody = {
   messages?: unknown;
   threadId?: unknown;
   topicItemId?: unknown;
+  activePageId?: unknown;
 };
 
 function fmtDate(d: Date): string {
@@ -283,6 +287,23 @@ ${(item.content ?? "No lesson written yet.").slice(0, 6000)}`;
           }
         }
 
+        let activePageBlock = "";
+        const activePageId =
+          typeof body.activePageId === "string" ? body.activePageId : null;
+        if (activePageId) {
+          const { data: curPage } = await supabase
+            .from("pages")
+            .select("id, title")
+            .eq("id", activePageId)
+            .maybeSingle();
+          if (curPage) {
+            activePageBlock = `\n\n## Notebook Page Currently Open on User's Screen:
+Page ID: ${curPage.id}
+Title: "${curPage.title}"
+(If asked to edit or add images to the notebook page, call editNotebook with page_id: "${curPage.id}")`;
+          }
+        }
+
         // --- Search-Routing: classify query before streaming ---
         let preSearchBlock = "";
         const lastUserMsg = uiMessages
@@ -331,7 +352,7 @@ ${(item.content ?? "No lesson written yet.").slice(0, 6000)}`;
           }
         }
 
-        const systemPrompt = `${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${preSearchBlock}`;
+        const systemPrompt = `${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}`;
 
         const tools = {
           delegateToPlanner: tool({
@@ -433,6 +454,26 @@ ${(item.content ?? "No lesson written yet.").slice(0, 6000)}`;
                   content: r.content.slice(0, 500),
                 })),
                 error: res.error ?? null,
+              };
+            },
+          }),
+
+          searchPhotos: tool({
+            description:
+              "Search for high-quality photos, illustrations, visual diagrams, and images for a topic. Use ONLY when the user explicitly asks for an image, photo, or diagram in their prompt.",
+            inputSchema: z.object({
+              query: z.string().describe("The visual topic or image search query"),
+            }),
+            execute: async ({ query }: { query: string }) => {
+              const res = await searchTopicPhotos(query);
+              const photos = res.map((img) => ({
+                url: img.url,
+                caption: img.description ?? query,
+              }));
+
+              return {
+                query,
+                photos,
               };
             },
           }),
@@ -548,6 +589,7 @@ ${(item.content ?? "No lesson written yet.").slice(0, 6000)}`;
                 apiKey: key,
                 supabase,
                 userId,
+                includeImages: true,
               });
 
               return {
@@ -555,6 +597,170 @@ ${(item.content ?? "No lesson written yet.").slice(0, 6000)}`;
                 pageId: page.id,
                 blockCount: agentResult.blockCount,
                 message: `Successfully generated study notebook page for "${notebookTitle}" with ${agentResult.blockCount} native blocks! Page ID: ${page.id}`,
+              };
+            },
+          }),
+
+          editNotebook: tool({
+            description:
+              "Edit an existing notebook page, append content, or search the web and add visual diagrams/images to the end of the notebook. Call this tool whenever the user asks to add images to a notebook, edit notes, or append sections to a notebook page.",
+            inputSchema: z.object({
+              page_id: z
+                .string()
+                .optional()
+                .describe(
+                  "The notebook page ID to edit. If omitted, automatically targets the user's most recent notebook page.",
+                ),
+              topic_or_query: z
+                .string()
+                .describe(
+                  "The topic name or visual query to search images/diagrams for (e.g., 'photosynthesis diagram')",
+                ),
+              action: z
+                .enum(["add_images", "append_content", "add_section"])
+                .default("add_images")
+                .describe("The notebook edit action to perform"),
+              content: z
+                .string()
+                .optional()
+                .describe("Optional text content to append if adding a text section"),
+            }),
+            execute: async ({
+              page_id,
+              topic_or_query,
+              action,
+              content,
+            }: {
+              page_id?: string | undefined;
+              topic_or_query: string;
+              action: "add_images" | "append_content" | "add_section";
+              content?: string | undefined;
+            }) => {
+              let targetPageId = page_id || (activePageId ? activePageId : undefined);
+
+              if (!targetPageId && topic_or_query) {
+                // 1. First try matching page by exact or fuzzy title
+                const cleanTopic = topic_or_query
+                  .replace(/diagrams?|workflows?|images?|photos?|notebook/gi, "")
+                  .trim();
+                const { data: titleMatches } = await supabase
+                  .from("pages")
+                  .select("id, title")
+                  .eq("user_id", userId)
+                  .ilike("title", `%${cleanTopic || topic_or_query}%`)
+                  .order("updated_at", { ascending: false })
+                  .limit(1);
+
+                if (titleMatches && titleMatches.length > 0 && titleMatches[0]?.id) {
+                  targetPageId = titleMatches[0].id;
+                }
+              }
+
+              if (!targetPageId) {
+                // 2. Fallback to user's most recently updated notebook page
+                const { data: pages } = await supabase
+                  .from("pages")
+                  .select("id, title")
+                  .eq("user_id", userId)
+                  .order("updated_at", { ascending: false })
+                  .limit(1);
+
+                if (pages && pages.length > 0 && pages[0]?.id) {
+                  targetPageId = pages[0].id;
+                }
+              }
+
+              if (!targetPageId) {
+                // 3. Create notebook page if none exists
+                const { data: newPage, error: createErr } = await supabase
+                  .from("pages")
+                  .insert({
+                    user_id: userId,
+                    title: `${topic_or_query} — Notebook`,
+                    icon: "📒",
+                  })
+                  .select("id")
+                  .single();
+
+                if (createErr || !newPage) {
+                  return { success: false, error: "No notebook page found to edit." };
+                }
+                targetPageId = newPage.id;
+              }
+
+              const { data: existingBlocks } = await supabase
+                .from("blocks")
+                .select("position")
+                .eq("page_id", targetPageId)
+                .order("position", { ascending: false })
+                .limit(1);
+
+              const lastPos =
+                existingBlocks && existingBlocks.length > 0
+                  ? (existingBlocks[0]?.position ?? -1)
+                  : -1;
+              let nextPos = lastPos + 1;
+              let addedCount = 0;
+
+              if (action === "add_images" || topic_or_query) {
+                const photos = await searchTopicPhotos(topic_or_query);
+
+                await supabase.from("blocks").insert({
+                  page_id: targetPageId,
+                  user_id: userId,
+                  type: "divider",
+                  content: "",
+                  checked: false,
+                  position: nextPos++,
+                });
+                addedCount++;
+
+                await supabase.from("blocks").insert({
+                  page_id: targetPageId,
+                  user_id: userId,
+                  type: "heading",
+                  content: `Visual Reference & Diagrams — ${topic_or_query}`,
+                  checked: false,
+                  position: nextPos++,
+                });
+                addedCount++;
+
+                for (const img of photos) {
+                  const caption = img.description || `${topic_or_query} diagram`;
+                  await supabase.from("blocks").insert({
+                    page_id: targetPageId,
+                    user_id: userId,
+                    type: "text",
+                    content: `![${caption}](${img.url})`,
+                    checked: false,
+                    position: nextPos++,
+                  });
+                  addedCount++;
+                }
+              }
+
+              if (content) {
+                await supabase.from("blocks").insert({
+                  page_id: targetPageId,
+                  user_id: userId,
+                  type: "text",
+                  content,
+                  checked: false,
+                  position: nextPos++,
+                });
+                addedCount++;
+              }
+
+              await supabase
+                .from("pages")
+                .update({ updated_at: new Date().toISOString() })
+                .eq("id", targetPageId);
+
+              return {
+                success: true,
+                pageId: targetPageId,
+                blocksAdded: addedCount,
+                message: `Successfully edited notebook page (ID: ${targetPageId}) and added ${addedCount} blocks (including visual diagrams at the end).`,
               };
             },
           }),

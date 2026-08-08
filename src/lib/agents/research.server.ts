@@ -1,4 +1,4 @@
-import { stepCountIs, streamText, tool } from "ai";
+import { generateText, stepCountIs, tool } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -135,16 +135,16 @@ export async function runResearch(params: {
   };
 
   try {
-    const result = streamText({
+    const result = await generateText({
       model: gateway(getAiModelName()),
       system: RESEARCH_PROMPT,
       prompt: `Find 2-4 quality learning resources (tutorials, videos, courses) for: ${params.topic}. Save each one using saveResourceToRoadmap.`,
       tools,
-      stopWhen: stepCountIs(50),
+      stopWhen: stepCountIs(10),
     });
-    const text = await result.text;
-    return { summary: text };
+    return { summary: result.text };
   } catch (err) {
+    console.error("[runResearch error]", err);
     return {
       summary: `Research failed: ${err instanceof Error ? err.message : "unknown error"}`,
     };

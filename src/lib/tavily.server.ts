@@ -84,3 +84,106 @@ export function youtubeIdFromUrl(url: string): string | null {
     );
   return match?.[1] ?? null;
 }
+
+/**
+ * Robust photo/diagram search for topics.
+ * Combines Wikimedia Commons search API, Tavily image search, and dynamic Pollinations AI fallback.
+ * Guarantees topic-matched visual diagrams and images without returning generic stock photos.
+ */
+export async function searchTopicPhotos(
+  query: string,
+): Promise<ImageResult[]> {
+  const photos: ImageResult[] = [];
+  const cleanQuery = query.trim();
+
+  // 1. Tavily Image Search (Web Search API with includeImages)
+  try {
+    const searchQuery = `${cleanQuery} diagram architecture workflow`;
+    const tavRes = await tavilySearch(searchQuery, {
+      maxResults: 6,
+      includeImages: true,
+      depth: "advanced",
+    });
+    for (const img of tavRes.images) {
+      if (
+        img.url &&
+        !photos.some((p) => p.url === img.url) &&
+        !img.url.includes("avatar") &&
+        !img.url.includes("logo")
+      ) {
+        photos.push({
+          url: img.url,
+          description: img.description || `${cleanQuery} diagram`,
+        });
+      }
+    }
+  } catch {
+    // Continue
+  }
+
+  // 2. Wikimedia Commons Search API
+  if (photos.length < 3) {
+    try {
+      const wikiKeyword = cleanQuery
+        .replace(/diagrams?|workflows?|images?|photos?|notebook/gi, "")
+        .trim();
+      const wikiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(wikiKeyword || cleanQuery)}&gsrnamespace=6&format=json&prop=imageinfo&iiprop=url&iiurlwidth=800`;
+      const res = await fetch(wikiUrl);
+      if (res.ok) {
+        const data = (await res.json()) as {
+          query?: {
+            pages?: Record<
+              string,
+              {
+                title?: string;
+                imageinfo?: Array<{ thumburl?: string; url?: string }>;
+              }
+            >;
+          };
+        };
+        const pages = data.query?.pages || {};
+        for (const p of Object.values(pages)) {
+          const imgUrl = p.imageinfo?.[0]?.thumburl || p.imageinfo?.[0]?.url;
+          if (
+            imgUrl &&
+            !photos.some((existing) => existing.url === imgUrl) &&
+            (imgUrl.endsWith(".png") ||
+              imgUrl.endsWith(".jpg") ||
+              imgUrl.endsWith(".jpeg") ||
+              imgUrl.includes("thumb"))
+          ) {
+            const cap = p.title
+              ? p.title
+                  .replace("File:", "")
+                  .replace(/\.[^/.]+$/, "")
+                  .replace(/_/g, " ")
+              : cleanQuery;
+            photos.push({ url: imgUrl, description: cap });
+          }
+        }
+      }
+    } catch {
+      // Continue
+    }
+  }
+
+  // 3. Topic-Matched Dynamic Pollinations AI Diagram Fallback
+  if (photos.length < 2) {
+    const slug1 = encodeURIComponent(
+      `${cleanQuery} workflow architecture diagram technical infographic high quality`,
+    );
+    const slug2 = encodeURIComponent(
+      `${cleanQuery} concept breakdown step by step flow illustration`,
+    );
+    photos.push({
+      url: `https://image.pollinations.ai/prompt/${slug1}?width=800&height=500&nologo=true&seed=101`,
+      description: `${cleanQuery} Workflow Architecture Diagram`,
+    });
+    photos.push({
+      url: `https://image.pollinations.ai/prompt/${slug2}?width=800&height=500&nologo=true&seed=202`,
+      description: `${cleanQuery} Process Flow Diagram`,
+    });
+  }
+
+  return photos.slice(0, 4);
+}

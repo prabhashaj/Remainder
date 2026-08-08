@@ -1,4 +1,4 @@
-import { stepCountIs, streamText, tool } from "ai";
+import { generateText, stepCountIs, tool } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -299,16 +299,16 @@ export async function runPlanner(params: {
   const gateway = createAiGatewayProvider(params.apiKey);
   const tools = createPlannerTools(params.supabase, params.userId);
   try {
-    const result = streamText({
+    const result = await generateText({
       model: gateway(getAiModelName()),
       system: PLANNER_PROMPT,
       prompt: params.instruction,
       tools,
-      stopWhen: stepCountIs(50),
+      stopWhen: stepCountIs(10),
     });
-    const text = await result.text;
-    return { summary: text };
+    return { summary: result.text };
   } catch (err) {
+    console.error("[runPlanner error]", err);
     return {
       summary: `Planning failed: ${err instanceof Error ? err.message : "unknown error"}`,
     };

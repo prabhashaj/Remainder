@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ExternalLink, Maximize2 } from "lucide-react";
+import { ExternalLink, ImageIcon, Maximize2 } from "lucide-react";
 
 import {
   Dialog,
@@ -33,13 +33,30 @@ export function ExpandableImage({
   ...props
 }: ExpandableImageProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [imgSrc, setImgSrc] = React.useState(src);
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgSrc(src);
+    setHasError(false);
+  }, [src]);
+
+  const handleError = () => {
+    if (hasError) return;
+    setHasError(true);
+    const topic = (caption || alt || "educational diagram").trim();
+    // Dynamic topic-matched fallback matching actual image context
+    setImgSrc(
+      `https://image.pollinations.ai/prompt/${encodeURIComponent(topic + " scientific diagram educational illustration hd")}?width=800&height=500&nologo=true`
+    );
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <div
           className={cn(
-            "group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-muted/30 transition-all hover:border-primary/50 hover:shadow-md",
+            "group relative flex flex-col cursor-pointer overflow-hidden rounded-2xl border border-border/70 bg-card/90 shadow-xs transition-all hover:border-primary/50 hover:shadow-md max-w-2xl my-3.5",
             containerClassName
           )}
           role="button"
@@ -52,28 +69,35 @@ export function ExpandableImage({
             }
           }}
         >
-          <img
-            src={src}
-            alt={alt}
-            loading="lazy"
-            className={cn(
-              "h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]",
-              imageClassName,
-              className
-            )}
-            {...props}
-          />
-          {/* Hover overlay with zoom hint */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur-md">
-              <Maximize2 className="size-3.5 text-primary" />
-              Expand Image
-            </span>
+          <div className="relative w-full overflow-hidden bg-background/40 flex items-center justify-center p-1 sm:p-2 min-h-[180px]">
+            <img
+              src={imgSrc}
+              alt={alt}
+              loading="lazy"
+              onError={handleError}
+              className={cn(
+                "w-full h-auto max-h-[520px] object-contain rounded-xl transition-transform duration-200 group-hover:scale-[1.01]",
+                imageClassName,
+                className
+              )}
+              {...props}
+            />
+            {/* Top-right subtle zoom button on hover (no blur overlay over image) */}
+            <div className="absolute top-3 right-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1 text-[11px] font-semibold text-foreground shadow-md border border-border/60 backdrop-blur-md">
+                <Maximize2 className="size-3 text-primary" />
+                Expand
+              </span>
+            </div>
           </div>
 
           {showCaption && caption && (
-            <div className="border-t border-border/50 bg-background/80 px-3 py-2 text-xs leading-relaxed text-muted-foreground backdrop-blur-sm">
-              {caption}
+            <div className="flex items-center justify-between gap-2 border-t border-border/40 bg-muted/40 px-3.5 py-2.5 text-xs font-medium leading-relaxed text-muted-foreground/90 rounded-b-2xl">
+              <div className="flex items-center gap-2 truncate">
+                <ImageIcon className="size-3.5 text-primary/70 shrink-0" />
+                <span className="truncate">{caption}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground/60 shrink-0">Click to expand</span>
             </div>
           )}
         </div>

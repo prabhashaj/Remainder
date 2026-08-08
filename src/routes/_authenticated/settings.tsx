@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check } from "lucide-react";
+import { Check, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
       { title: "Settings & themes — Remainder" },
-      { name: "description", content: "Choose your pastel theme, name and reminder preferences." },
+      { name: "description", content: "Choose your pastel theme, dark mode, name and reminder preferences." },
       { property: "og:title", content: "Settings & themes — Remainder" },
       { property: "og:description", content: "Personalize your Remainder workspace." },
     ],
@@ -40,12 +40,17 @@ function SettingsPage() {
     },
   });
 
-  return (
-    <div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
-      <h1 className="font-display text-3xl font-bold">Settings</h1>
-      <p className="mt-2 text-muted-foreground">Make Remainder feel like yours.</p>
+  const lightThemes = THEMES.filter((t) => !t.isDark);
+  const darkThemes = THEMES.filter((t) => t.isDark);
 
-      <section className="card-soft mt-6 p-6">
+  return (
+    <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 space-y-6">
+      <div>
+        <h1 className="font-display text-3xl font-bold">Settings</h1>
+        <p className="mt-2 text-muted-foreground">Make Remainder feel like yours.</p>
+      </div>
+
+      <section className="card-soft p-6">
         <h2 className="font-display text-lg font-semibold">Your name</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           <Input
@@ -63,13 +68,17 @@ function SettingsPage() {
         </div>
       </section>
 
-      <section className="card-soft mt-5 p-6">
-        <h2 className="font-display text-lg font-semibold">Theme</h2>
+      {/* Light Themes */}
+      <section className="card-soft p-6">
+        <div className="flex items-center gap-2">
+          <Sun className="size-5 text-amber-500" />
+          <h2 className="font-display text-lg font-semibold">Soft Light Palettes</h2>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Hover to preview, click to keep. Ten soft palettes.
+          Hover to preview, click to keep. Soft pastel workspace themes.
         </p>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {THEMES.map((t) => (
+          {lightThemes.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -77,14 +86,14 @@ function SettingsPage() {
               onMouseLeave={() => previewTheme(theme)}
               onClick={() => setTheme(t.id as ThemeId)}
               className={`press relative overflow-hidden rounded-3xl border p-3 text-left transition-shadow ${
-                theme === t.id ? "border-primary/50 shadow-soft" : "border-border"
+                theme === t.id ? "border-primary/50 shadow-soft ring-2 ring-primary/20" : "border-border"
               }`}
             >
               <span className="flex gap-1.5">
                 {t.swatches.map((color) => (
                   <span
                     key={color}
-                    className="size-5 rounded-full"
+                    className="size-5 rounded-full border border-border/50"
                     style={{ backgroundColor: color }}
                   />
                 ))}
@@ -98,7 +107,47 @@ function SettingsPage() {
         </div>
       </section>
 
-      <section className="card-soft mt-5 p-6">
+      {/* Dark Themes */}
+      <section className="card-soft p-6">
+        <div className="flex items-center gap-2">
+          <Moon className="size-5 text-indigo-400" />
+          <h2 className="font-display text-lg font-semibold">Rich Dark Palettes</h2>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Deep, immersive dark modes with luminous neon-pastel accents.
+        </p>
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {darkThemes.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onMouseEnter={() => previewTheme(t.id as ThemeId)}
+              onMouseLeave={() => previewTheme(theme)}
+              onClick={() => setTheme(t.id as ThemeId)}
+              className={`press relative overflow-hidden rounded-3xl border p-4 text-left transition-shadow ${
+                theme === t.id ? "border-primary/50 shadow-soft ring-2 ring-primary/20" : "border-border"
+              }`}
+            >
+              <span className="flex gap-2">
+                {t.swatches.map((color) => (
+                  <span
+                    key={color}
+                    className="size-6 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </span>
+              <span className="mt-3 block font-display text-base font-semibold">{t.name}</span>
+              <span className="text-xs text-muted-foreground block mt-0.5">{t.blurb}</span>
+              {theme === t.id && (
+                <Check className="absolute right-4 top-4 size-4 text-primary" aria-hidden />
+              )}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="card-soft p-6">
         <h2 className="font-display text-lg font-semibold">Nudges</h2>
         <div className="mt-4 space-y-4">
           <div className="flex items-center justify-between gap-4">

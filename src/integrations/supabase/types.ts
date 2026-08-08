@@ -155,47 +155,121 @@ export type Database = {
       }
       focus_sessions: {
         Row: {
+          break_minutes: number
           created_at: string
           ended_at: string | null
           id: string
+          intention: string | null
           minutes: number
           notes: string | null
+          reflection: string | null
           resource_kind: string
           resource_url: string | null
           roadmap_item_id: string | null
+          session_type: string
+          stayed_on_task: boolean | null
+          tab_away_count: number
+          tab_away_seconds: number
           title: string
+          updated_at: string
+          user_id: string
+          work_minutes: number
+        }
+        Insert: {
+          break_minutes?: number
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          intention?: string | null
+          minutes?: number
+          notes?: string | null
+          reflection?: string | null
+          resource_kind?: string
+          resource_url?: string | null
+          roadmap_item_id?: string | null
+          session_type?: string
+          stayed_on_task?: boolean | null
+          tab_away_count?: number
+          tab_away_seconds?: number
+          title: string
+          updated_at?: string
+          user_id: string
+          work_minutes?: number
+        }
+        Update: {
+          break_minutes?: number
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          intention?: string | null
+          minutes?: number
+          notes?: string | null
+          reflection?: string | null
+          resource_kind?: string
+          resource_url?: string | null
+          roadmap_item_id?: string | null
+          session_type?: string
+          stayed_on_task?: boolean | null
+          tab_away_count?: number
+          tab_away_seconds?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+          work_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "focus_sessions_roadmap_item_id_fkey"
+            columns: ["roadmap_item_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flashcards: {
+        Row: {
+          back: string
+          created_at: string
+          due_date: string
+          ease: number
+          front: string
+          id: string
+          interval_days: number
+          repetitions: number
+          roadmap_item_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          back: string
           created_at?: string
-          ended_at?: string | null
+          due_date?: string
+          ease?: number
+          front: string
           id?: string
-          minutes?: number
-          notes?: string | null
-          resource_kind?: string
-          resource_url?: string | null
+          interval_days?: number
+          repetitions?: number
           roadmap_item_id?: string | null
-          title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          back?: string
           created_at?: string
-          ended_at?: string | null
+          due_date?: string
+          ease?: number
+          front?: string
           id?: string
-          minutes?: number
-          notes?: string | null
-          resource_kind?: string
-          resource_url?: string | null
+          interval_days?: number
+          repetitions?: number
           roadmap_item_id?: string | null
-          title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "focus_sessions_roadmap_item_id_fkey"
+            foreignKeyName: "flashcards_roadmap_item_id_fkey"
             columns: ["roadmap_item_id"]
             isOneToOne: false
             referencedRelation: "roadmap_items"
@@ -457,6 +531,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      quiz_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          questions: Json
+          roadmap_item_id: string | null
+          score: number
+          total: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          questions?: Json
+          roadmap_item_id?: string | null
+          score?: number
+          total?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          questions?: Json
+          roadmap_item_id?: string | null
+          score?: number
+          total?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_roadmap_item_id_fkey"
+            columns: ["roadmap_item_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resource_highlights: {
         Row: {

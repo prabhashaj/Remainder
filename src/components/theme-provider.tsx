@@ -18,7 +18,7 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function readStored(): ThemeId {
+function readStoredTheme(): ThemeId {
   if (typeof window === "undefined") return "blush";
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
   return isThemeId(stored) ? stored : "blush";
@@ -29,9 +29,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Hydrate from this browser first (instant), then reconcile with the profile.
   useEffect(() => {
-    const local = readStored();
-    setThemeState(local);
-    applyThemeClass(local);
+    const localTheme = readStoredTheme();
+    setThemeState(localTheme);
+    applyThemeClass(localTheme);
 
     let cancelled = false;
     void (async () => {

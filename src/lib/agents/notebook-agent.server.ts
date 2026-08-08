@@ -23,6 +23,8 @@ export type NotebookOutput = {
  * (transcripts, web research, topic explanations) and generates a
  * structured study notebook page made of native blocks (heading, text, todo, quote, divider).
  */
+import { searchTopicPhotos } from "@/lib/tavily.server";
+
 export async function runNotebookAgent(params: {
   pageId: string;
   sourceMaterial: string;
@@ -30,8 +32,9 @@ export async function runNotebookAgent(params: {
   apiKey: string;
   supabase: Supabase;
   userId: string;
+  includeImages?: boolean;
 }): Promise<{ success: boolean; blockCount: number; error?: string }> {
-  const { pageId, sourceMaterial, topicTitle, apiKey, supabase, userId } = params;
+  const { pageId, sourceMaterial, topicTitle, apiKey, supabase, userId, includeImages } = params;
 
   const clippedMaterial =
     sourceMaterial.length > 25000
@@ -81,8 +84,7 @@ Block Type Rules:
 
 Formatting Rules:
 - Ground everything strictly in the supplied source material.
-- **Bold** key terminology the first time it appears.
-- Write mathematical or code concepts with LaTeX ($x^2$, $$\\frac{dy}{dx}$$) or inline code.
+- Write mathematical and chemical concepts with strict standard LaTeX formatting. Use single dollar signs ($H_2O$ or $x^2$) for inline variables and chemical/math terms inside text paragraphs. Use double dollar signs ($$ ... $$) ONLY on dedicated block lines for standalone equations. Never use double dollar signs inline inside sentences.
 - Return ONLY valid JSON. No markdown code blocks, no trailing commas.`;
 
   try {
@@ -124,6 +126,45 @@ Formatting Rules:
         });
 
         if (!error) insertedCount++;
+      }
+
+      // 3. If images were requested, search the web and append visual diagrams at the end
+      if (includeImages) {
+        const photos = await searchTopicPhotos(topicTitle);
+        if (photos.length > 0) {
+          await supabase.from("blocks").insert({
+            page_id: pageId,
+            user_id: userId,
+            type: "divider",
+            content: "",
+            checked: false,
+            position: position++,
+          });
+          insertedCount++;
+
+          await supabase.from("blocks").insert({
+            page_id: pageId,
+            user_id: userId,
+            type: "heading",
+            content: `Visual Reference & Diagrams — ${topicTitle}`,
+            checked: false,
+            position: position++,
+          });
+          insertedCount++;
+
+          for (const img of photos) {
+            const caption = img.description || `${topicTitle} diagram`;
+            await supabase.from("blocks").insert({
+              page_id: pageId,
+              user_id: userId,
+              type: "text",
+              content: `![${caption}](${img.url})`,
+              checked: false,
+              position: position++,
+            });
+            insertedCount++;
+          }
+        }
       }
 
       return { success: true, blockCount: insertedCount };
