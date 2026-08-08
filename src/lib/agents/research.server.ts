@@ -1,0 +1,152 @@
+import { stepCountIs, streamText, tool } from "ai";
+import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import type { Database } from "@/integrations/supabase/types";
+
+const RESEARCH_PROMPT = `You are the research specialist inside Remainder, a calm learning workspace.
+Your job: find quality learning resources (tutorials, videos, courses) for a given topic and save them to the user's roadmap.
+
+Steps:
+1. Use webSearch to find 2-4 high-quality, free resources for the topic. Try different search queries if the first doesn't yield good results.
+2. For each good result, use saveResourceToRoadmap to save it with an appropriate kind (video, article, course, interactive).
+3. Prefer well-regarded resources — YouTube tutorials, official documentation, free university courses, interactive platforms.
+4. Give a brief summary of what you found.
+
+If web search is unavailable, say so and suggest the user try again later.`;
+
+type Supabase = SupabaseClient<Database>;
+
+type SearchResult = { title: string; url: string; content: string };
+
+export async function runResearch(params: {
+  topic: string;
+  roadmapId: string | null;
+  apiKey: string;
+  supabase: Supabase;
+  userId: string;
+}) {
+  const gateway = createAiGatewayProvider(params.apiKey);
+  const tavilyKey = process.env["TAVILY_API_KEY"];
+
+  const tools = {
+    webSearch: tool({
+      description: "Search the web for learning resources, tutorials, and videos.",
+      inputSchema: z.object({ query: z.string().describe("The search query") }),
+      execute: async ({ query }: { query: string }) => {
+        if (!tavilyKey) {
+          return {
+            results: [] as SearchResult[],
+            error: "Web search is not configured.",
+          };
+        }
+        try {
+          const res = await fetch("https://api.tavily.com/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              api_key: tavilyKey,
+              query,
+              search_depth: "basic",
+              max_results: 5,
+              include_answer: true,
+            }),
+          });
+          if (!res.ok) {
+            return {
+              results: [] as SearchResult[],
+              error: `Search failed (${res.status})`,
+            };
+          }
+          const data = (await res.json()) as {
+            results?: Array<{ title: string; url: string; content?: string }>;
+            answer?: string;
+          };
+          return {
+            results: (data.results ?? []).map((r) => ({
+              title: r.title,
+              url: r.url,
+              content: (r.content ?? "").slice(0, 500),
+            })),
+            answer: data.answer ?? null,
+          };
+        } catch {
+          return {
+            results: [] as SearchResult[],
+            error: "Search request failed.",
+          };
+        }
+      },
+    }),
+
+    saveResourceToRoadmap: tool({
+      description: "Save a discovered learning resource to the user's roadmap.",
+      inputSchema: z.object({
+        title: z.string().describe("Resource title"),
+        url: z.string().describe("Resource URL"),
+        kind: z
+          .enum(["video", "article", "course", "interactive"])
+          .nullable()
+          .describe("Type of resource, or null"),
+        roadmap_item_id: z
+          .string()
+          .nullable()
+          .describe("ID of the roadmap step this resource belongs to, or null"),
+        thumbnail: z.string().nullable().describe("Thumbnail URL, or null"),
+        duration_text: z
+          .string()
+          .nullable()
+          .describe("Duration text like '12 min', or null"),
+      }),
+      execute: async ({
+        title,
+        url,
+        kind,
+        roadmap_item_id,
+        thumbnail,
+        duration_text,
+      }: {
+        title: string;
+        url: string;
+        kind: "video" | "article" | "course" | "interactive" | null;
+        roadmap_item_id: string | null;
+        thumbnail: string | null;
+        duration_text: string | null;
+      }) => {
+        const { data, error } = await params.supabase
+          .from("roadmap_resources")
+          .insert({
+            user_id: params.userId,
+            roadmap_id: params.roadmapId,
+            roadmap_item_id: roadmap_item_id ?? null,
+            title,
+            url,
+            kind: kind ?? "article",
+            thumbnail: thumbnail ?? null,
+            duration_text: duration_text ?? null,
+          })
+          .select("id")
+          .single();
+        if (error) return { success: false, error: error.message };
+        return { success: true, id: data.id };
+      },
+    }),
+  };
+
+  try {
+    const result = streamText({
+      model: gateway(getAiModelName()),
+      system: RESEARCH_PROMPT,
+      prompt: `Find 2-4 quality learning resources (tutorials, videos, courses) for: ${params.topic}. Save each one using saveResourceToRoadmap.`,
+      tools,
+      stopWhen: stepCountIs(50),
+    });
+    const text = await result.text;
+    return { summary: text };
+  } catch (err) {
+    return {
+      summary: `Research failed: ${err instanceof Error ? err.message : "unknown error"}`,
+    };
+  }
+}
