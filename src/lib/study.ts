@@ -68,8 +68,29 @@ export async function deleteStudyResource(resource: StudyResource) {
 
 /** Uploads a document to the private materials bucket under the user's folder. */
 export async function uploadMaterial(file: File): Promise<string> {
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "application/json",
+  ];
+
+  if (!file.type || !allowedMimeTypes.includes(file.type)) {
+    throw new Error(`File type ${file.type || "unknown"} is not allowed.`);
+  }
+
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error("File exceeds the 50MB size limit.");
+  }
+
   const userId = await requireUserId();
-  const safe = file.name.replace(/[^\w.-]+/g, "_");
+  const safe = file.name.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/\.+/g, ".");
   const path = `${userId}/${Date.now()}-${safe}`;
 
   const { error } = await supabase.storage

@@ -159,19 +159,5 @@ export async function searchTopicPhotos(query: string): Promise<ImageResult[]> {
     }
   }
 
-  // 3. Topic-Matched Dynamic Pollinations AI Fallback
-  if (photos.length < 2) {
-    const slug1 = encodeURIComponent(`${cleanQuery} high quality photograph`);
-    const slug2 = encodeURIComponent(`${cleanQuery} creative illustration`);
-    photos.push({
-      url: `https://image.pollinations.ai/prompt/${slug1}?width=800&height=500&nologo=true&seed=101`,
-      description: `${cleanQuery}`,
-    });
-    photos.push({
-      url: `https://image.pollinations.ai/prompt/${slug2}?width=800&height=500&nologo=true&seed=202`,
-      description: `${cleanQuery}`,
-    });
-  }
-
   return photos.slice(0, 4);
 }

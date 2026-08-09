@@ -31,7 +31,11 @@ import {
   updateStudyResource,
   youtubeId,
 } from "@/lib/study";
-import { summarizeMaterial, generateNotebookFromTranscript, saveExtractedTextFn } from "@/lib/study.functions";
+import {
+  summarizeMaterial,
+  generateNotebookFromTranscript,
+  saveExtractedTextFn,
+} from "@/lib/study.functions";
 
 const PdfReader = lazy(() => import("@/components/study/pdf-reader"));
 

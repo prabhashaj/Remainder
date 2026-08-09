@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
 import { tavilySearch } from "@/lib/tavily.server";
+import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const PLANNER_PROMPT = `You are the planning specialist inside Remainder, a calm productivity and learning workspace.
@@ -285,9 +286,16 @@ export async function runPlanner(params: {
   apiKey: string;
   supabase: Supabase;
   userId: string;
+  traceId?: string;
 }) {
   const gateway = createAiGatewayProvider(params.apiKey);
   const tools = createPlannerTools(params.supabase, params.userId);
+  log(
+    "info",
+    "agent_start",
+    { agent: "planner", instruction: params.instruction.slice(0, 200) },
+    { userId: params.userId, traceId: params.traceId },
+  );
   try {
     const result = await generateText({
       model: gateway(getAiModelName()),
@@ -298,7 +306,12 @@ export async function runPlanner(params: {
     });
     return { summary: result.text };
   } catch (err) {
-    console.error("[runPlanner error]", err);
+    log(
+      "error",
+      "agent_error",
+      { agent: "planner", error: err instanceof Error ? err.message : String(err) },
+      { userId: params.userId, traceId: params.traceId },
+    );
     return {
       summary: `Planning failed: ${err instanceof Error ? err.message : "unknown error"}`,
     };

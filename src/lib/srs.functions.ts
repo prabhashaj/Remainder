@@ -4,6 +4,7 @@ import { z } from "zod";
 import { writeFlashcards } from "@/lib/agents/flashcard-generator.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAiApiKey } from "@/lib/ai-gateway.server";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 function sm2(params: { quality: number; ease: number; interval: number; repetitions: number }): {
   ease: number;
@@ -60,8 +61,13 @@ export type FlashcardRecord = {
 /** Generate flashcards for a roadmap item using AI. */
 export const generateFlashcardsForItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
+  .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "srs_generate", 50, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
     return writeFlashcards({
@@ -130,7 +136,7 @@ export const fetchDueFlashcards = createServerFn({ method: "GET" })
 /** Fetch all flashcards for a specific roadmap item. */
 export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
+  .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
     const today = todayStr();
 
@@ -224,7 +230,7 @@ export const fetchDueFlashcardCount = createServerFn({ method: "GET" })
 /** Fetch flashcard count for a specific roadmap item. */
 export const fetchFlashcardCountForItem = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
+  .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
     // 1. Try flashcards table
     try {
@@ -262,15 +268,20 @@ export const fetchFlashcardCountForItem = createServerFn({ method: "GET" })
 /** Review a flashcard: apply SM-2 algorithm and schedule next review. */
 export const reviewFlashcard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
-        cardId: z.string(),
+        cardId: z.string().max(100),
         quality: z.number().int().min(0).max(5),
       })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "srs_review", 1000, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     // 1. Try updating flashcards table
     try {
       const { data: card, error: fetchErr } = await context.supabase

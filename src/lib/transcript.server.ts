@@ -13,7 +13,9 @@ type CaptionTrack = { baseUrl: string; languageCode: string };
 
 function isCaptionTrack(value: unknown): value is CaptionTrack {
   const rec = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-  return Boolean(rec) && typeof rec!["baseUrl"] === "string" && typeof rec!["languageCode"] === "string";
+  return (
+    Boolean(rec) && typeof rec!["baseUrl"] === "string" && typeof rec!["languageCode"] === "string"
+  );
 }
 
 /**

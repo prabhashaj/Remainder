@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
 import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
+import { checkRateLimit, handleRateLimitError } from "@/lib/rate-limit.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const TUTOR_PROMPT = `You are Remi, a patient tutor answering a learner's question about THEIR OWN study material.
@@ -113,6 +114,13 @@ export const Route = createFileRoute("/api/material-chat")({
 
         const { data: userData, error: userError } = await supabase.auth.getUser(token);
         if (userError || !userData.user) return new Response("Unauthorized", { status: 401 });
+        const userId = userData.user.id;
+
+        try {
+          await checkRateLimit(supabase, userId, "api_material_chat", 50, 60);
+        } catch (error) {
+          return handleRateLimitError(error, 60);
+        }
 
         const key = getAiApiKey();
         if (!key) return new Response("Missing AI API Key", { status: 500 });

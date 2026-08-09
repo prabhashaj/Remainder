@@ -160,6 +160,7 @@ export async function classifyQueryRouting(params: {
   query: string;
   apiKey: string;
   conversationContext?: string;
+  traceId?: string;
 }): Promise<RoutingDecision> {
   const { query, apiKey, conversationContext } = params;
 

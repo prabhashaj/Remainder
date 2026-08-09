@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type Supabase = SupabaseClient<Database>;
@@ -47,12 +48,19 @@ export async function writeFlashcards(params: {
   apiKey: string;
   supabase: Supabase;
   userId: string;
+  traceId?: string;
 }): Promise<{
   success: boolean;
   count?: number;
   error?: string;
 }> {
   const { supabase, itemId, userId, apiKey } = params;
+  log(
+    "info",
+    "agent_start",
+    { agent: "flashcard_generator", itemId },
+    { userId, traceId: params.traceId },
+  );
 
   // Fetch the lesson content
   const { data: item, error: itemErr } = await supabase

@@ -11,13 +11,19 @@ import {
   generateNotebook,
 } from "@/lib/transcript.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 export const summarizeMaterial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ resourceId: z.string(), force: z.boolean().optional() }).parse(data),
+  .validator((data: unknown) =>
+    z.object({ resourceId: z.string().max(100), force: z.boolean().optional() }).parse(data),
   )
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "study_summarize", 50, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
     return summarizeResource({
@@ -30,10 +36,17 @@ export const summarizeMaterial = createServerFn({ method: "POST" })
 
 export const askAboutMaterial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ resourceId: z.string(), question: z.string().min(1) }).parse(data),
+  .validator((data: unknown) =>
+    z
+      .object({ resourceId: z.string().max(100), question: z.string().min(1).max(2000) })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "study_ask", 100, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
     return askMaterial({
@@ -47,10 +60,15 @@ export const askAboutMaterial = createServerFn({ method: "POST" })
 /** Fetch YouTube transcript for a video resource. */
 export const fetchTranscript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ videoId: z.string(), resourceId: z.string() }).parse(data),
+  .validator((data: unknown) =>
+    z.object({ videoId: z.string().max(100), resourceId: z.string().max(100) }).parse(data),
   )
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "study_transcript", 100, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     // Check if we already have a cached transcript
     const { data: resource } = await context.supabase
       .from("study_resources")
@@ -76,8 +94,13 @@ export const fetchTranscript = createServerFn({ method: "POST" })
 /** Fetch transcript directly from any YouTube link or video ID. */
 export const getTranscriptFromUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ urlOrId: z.string().min(1) }).parse(data))
-  .handler(async ({ data }) => {
+  .validator((data: unknown) => z.object({ urlOrId: z.string().min(1).max(1000) }).parse(data))
+  .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "study_transcript", 100, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const raw = data.urlOrId.trim();
     const match = raw.match(
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{11})/,
@@ -110,16 +133,21 @@ export const getTranscriptFromUrl = createServerFn({ method: "POST" })
 /** Auto-generate a note from transcript at a specific timestamp. */
 export const autoNoteFromTranscript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
-        videoId: z.string(),
-        resourceId: z.string(),
+        videoId: z.string().max(100),
+        resourceId: z.string().max(100),
         seconds: z.number(),
       })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "study_autonote", 100, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     // Check cached transcript first
     const { data: resource } = await context.supabase
       .from("study_resources")
@@ -160,10 +188,21 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
 /** Generate a notebook from video transcript and create a page. */
 export const generateNotebookFromTranscript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ videoId: z.string(), resourceId: z.string(), title: z.string() }).parse(data),
+  .validator((data: unknown) =>
+    z
+      .object({
+        videoId: z.string().max(100),
+        resourceId: z.string().max(100),
+        title: z.string().max(200),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "study_generate_notebook", 20, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
 
@@ -232,10 +271,64 @@ export const generateNotebookFromTranscript = createServerFn({ method: "POST" })
 /** Client-callable mutation to save text and trigger embedding generation. */
 export const saveExtractedTextFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ resourceId: z.string(), text: z.string(), pages: z.number().optional() }).parse(data),
+  .validator((data: unknown) =>
+    z
+      .object({
+        resourceId: z.string().max(100),
+        text: z.string().max(1000000),
+        pages: z.number().optional(),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "study_save_text", 50, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     await saveDocumentTextAndEmbed(context.supabase, data.resourceId, data.text, data.pages);
+    return { success: true };
+  });
+
+/** Client-callable mutation to trigger background PDF extraction and embedding. */
+export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        resourceId: z.string().max(100),
+        storagePath: z.string().max(1000),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    // Fire and forget background job
+    (async () => {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
+          .from("materials")
+          .download(data.storagePath);
+
+        if (downloadErr || !fileData) {
+          console.error("Failed to download material for extraction:", downloadErr);
+          return;
+        }
+
+        const buffer = Buffer.from(await fileData.arrayBuffer());
+        const { extractPdfTextServer } = await import("@/lib/pdf-parser.server");
+        const text = await extractPdfTextServer(buffer);
+
+        if (text && text.trim().length > 0) {
+          const { saveDocumentTextAndEmbed } = await import("@/lib/document-processor.server");
+          await saveDocumentTextAndEmbed(supabaseAdmin, data.resourceId, text);
+          console.log(`[DocumentExtraction] Successfully extracted and embedded ${data.resourceId}`);
+        } else {
+          console.warn(`[DocumentExtraction] Empty text extracted for ${data.resourceId}`);
+        }
+      } catch (e) {
+        console.error("Failed background extraction:", e);
+      }
+    })();
     return { success: true };
   });

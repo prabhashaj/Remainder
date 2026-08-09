@@ -38,6 +38,81 @@ export type Database = {
         };
         Relationships: [];
       };
+      agent_actions: {
+        Row: {
+          id: string;
+          user_id: string;
+          trace_id: string;
+          thread_id: string | null;
+          tool_name: string;
+          input: Json;
+          output: Json | null;
+          status: string;
+          error_message: string | null;
+          duration_ms: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          trace_id: string;
+          thread_id?: string | null;
+          tool_name: string;
+          input?: Json;
+          output?: Json | null;
+          status?: string;
+          error_message?: string | null;
+          duration_ms?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          trace_id?: string;
+          thread_id?: string | null;
+          tool_name?: string;
+          input?: Json;
+          output?: Json | null;
+          status?: string;
+          error_message?: string | null;
+          duration_ms?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      background_jobs: {
+        Row: {
+          id: string;
+          user_id: string;
+          job_type: string;
+          resource_id: string | null;
+          status: string;
+          error_message: string | null;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          job_type: string;
+          resource_id?: string | null;
+          status?: string;
+          error_message?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          job_type?: string;
+          resource_id?: string | null;
+          status?: string;
+          error_message?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Relationships: [];
+      };
       blocks: {
         Row: {
           checked: boolean;

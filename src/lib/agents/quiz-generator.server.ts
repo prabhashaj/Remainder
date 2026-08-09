@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type Supabase = SupabaseClient<Database>;
@@ -56,9 +57,7 @@ function questionFromUnknown(value: unknown, checkpoint = false): QuizQuestion {
 
   return {
     type:
-      checkpoint ||
-      qType.toLowerCase().includes("mcq") ||
-      options.length > 0
+      checkpoint || qType.toLowerCase().includes("mcq") || options.length > 0
         ? "mcq"
         : "short_answer",
     question: qQuestion,
@@ -88,12 +87,14 @@ export async function generateQuiz(params: {
   itemId: string;
   apiKey: string;
   supabase: Supabase;
+  traceId?: string;
 }): Promise<{
   success: boolean;
   quiz?: Quiz;
   error?: string;
 }> {
   const { supabase, itemId, apiKey } = params;
+  log("info", "agent_start", { agent: "quiz_generator", itemId }, { traceId: params.traceId });
 
   const { data: item, error: itemErr } = await supabase
     .from("roadmap_items")
@@ -160,7 +161,8 @@ Generate the 5-question quiz now in JSON {"questions": [...]}.`;
         const rawJson = (jsonMatch[1] || res.text).trim();
         const parsed: unknown = JSON.parse(rawJson);
 
-        const rec = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+        const rec =
+          parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
         const list: unknown[] = Array.isArray(parsed)
           ? parsed
           : Array.isArray(rec?.["questions"])
@@ -194,6 +196,7 @@ export async function generateCheckpoint(params: {
   itemId: string;
   apiKey: string;
   supabase: Supabase;
+  traceId?: string;
 }): Promise<{
   success: boolean;
   questions?: QuizQuestion[];

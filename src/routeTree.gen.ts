@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated/activity'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedFocusRouteImport } from './routes/_authenticated/focus'
@@ -23,6 +24,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedStudyRouteImport } from './routes/_authenticated/study'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiLogErrorRouteImport } from './routes/api/log-error'
 import { Route as ApiMaterialChatRouteImport } from './routes/api/material-chat'
 import { Route as AuthenticatedConversationIndexRouteImport } from './routes/_authenticated/conversation.index'
 import { Route as AuthenticatedConversationThreadIdRouteImport } from './routes/_authenticated/conversation.$threadId'
@@ -45,6 +47,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedActivityRoute = AuthenticatedActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
@@ -101,6 +108,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLogErrorRoute = ApiLogErrorRouteImport.update({
+  id: '/api/log-error',
+  path: '/api/log-error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMaterialChatRoute = ApiMaterialChatRouteImport.update({
   id: '/api/material-chat',
   path: '/api/material-chat',
@@ -151,6 +163,7 @@ const AuthenticatedRoadmapRoadmapIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/activity': typeof AuthenticatedActivityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documents': typeof AuthenticatedDocumentsRoute
   '/focus': typeof AuthenticatedFocusRoute
@@ -162,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/study': typeof AuthenticatedStudyRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
@@ -174,6 +188,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/activity': typeof AuthenticatedActivityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documents': typeof AuthenticatedDocumentsRoute
   '/focus': typeof AuthenticatedFocusRoute
@@ -185,6 +200,7 @@ export interface FileRoutesByTo {
   '/study': typeof AuthenticatedStudyRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
@@ -199,6 +215,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/activity': typeof AuthenticatedActivityRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/focus': typeof AuthenticatedFocusRoute
@@ -210,6 +227,7 @@ export interface FileRoutesById {
   '/_authenticated/study': typeof AuthenticatedStudyRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/_authenticated/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/_authenticated/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
@@ -224,6 +242,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/activity'
     | '/dashboard'
     | '/documents'
     | '/focus'
@@ -235,6 +254,7 @@ export interface FileRouteTypes {
     | '/study'
     | '/tasks'
     | '/api/chat'
+    | '/api/log-error'
     | '/api/material-chat'
     | '/conversation/$threadId'
     | '/lesson/$itemId'
@@ -247,6 +267,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/activity'
     | '/dashboard'
     | '/documents'
     | '/focus'
@@ -258,6 +279,7 @@ export interface FileRouteTypes {
     | '/study'
     | '/tasks'
     | '/api/chat'
+    | '/api/log-error'
     | '/api/material-chat'
     | '/conversation/$threadId'
     | '/lesson/$itemId'
@@ -271,6 +293,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/activity'
     | '/_authenticated/dashboard'
     | '/_authenticated/documents'
     | '/_authenticated/focus'
@@ -282,6 +305,7 @@ export interface FileRouteTypes {
     | '/_authenticated/study'
     | '/_authenticated/tasks'
     | '/api/chat'
+    | '/api/log-error'
     | '/api/material-chat'
     | '/_authenticated/conversation/$threadId'
     | '/_authenticated/lesson/$itemId'
@@ -297,6 +321,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiLogErrorRoute: typeof ApiLogErrorRoute
   ApiMaterialChatRoute: typeof ApiMaterialChatRoute
 }
 
@@ -322,6 +347,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/activity': {
+      id: '/_authenticated/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof AuthenticatedActivityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
@@ -400,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/log-error': {
+      id: '/api/log-error'
+      path: '/api/log-error'
+      fullPath: '/api/log-error'
+      preLoaderRoute: typeof ApiLogErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/material-chat': {
       id: '/api/material-chat'
       path: '/api/material-chat'
@@ -460,6 +499,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedFocusRoute: typeof AuthenticatedFocusRoute
@@ -480,6 +520,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedActivityRoute: AuthenticatedActivityRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedFocusRoute: AuthenticatedFocusRoute,
@@ -508,6 +549,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiLogErrorRoute: ApiLogErrorRoute,
   ApiMaterialChatRoute: ApiMaterialChatRoute,
 }
 export const routeTree = rootRouteImport

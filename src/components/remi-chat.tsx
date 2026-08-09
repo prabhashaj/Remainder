@@ -187,7 +187,12 @@ interface SpeechRecognitionInstance {
   onstart: (() => void) | null;
   onend: (() => void) | null;
   onerror: ((e: { error: string }) => void) | null;
-  onresult: ((e: { resultIndex: number; results: { isFinal?: boolean; 0: { transcript: string } }[] }) => void) | null;
+  onresult:
+    | ((e: {
+        resultIndex: number;
+        results: { isFinal?: boolean; 0: { transcript: string } }[];
+      }) => void)
+    | null;
 }
 
 /** Voice input button using Web Speech API (Chrome / Edge / Safari). */
@@ -208,10 +213,9 @@ function VoiceInputButton({
   }, []);
 
   const toggle = useCallback(() => {
-    const Ctor = (
-      (window as unknown as Record<string, unknown>)["SpeechRecognition"] ??
-      (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"]
-    ) as (new () => SpeechRecognitionInstance) | undefined;
+    const Ctor = ((window as unknown as Record<string, unknown>)["SpeechRecognition"] ??
+      (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"]) as
+      (new () => SpeechRecognitionInstance) | undefined;
 
     if (!Ctor) {
       toast.error("Voice input is not supported in this browser.");
@@ -235,7 +239,10 @@ function VoiceInputButton({
     // Accumulate final segments as they are committed by the browser.
     // Do NOT call stop() here — let recognition run until natural end.
     let accumulated = "";
-    recognition.onresult = (e: { resultIndex: number; results: { isFinal?: boolean; 0: { transcript: string } }[] }) => {
+    recognition.onresult = (e: {
+      resultIndex: number;
+      results: { isFinal?: boolean; 0: { transcript: string } }[];
+    }) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const result = e.results[i];
         if (result && result.isFinal !== false) {

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
 import { searchTopicPhotos, tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
+import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type Supabase = SupabaseClient<Database>;
@@ -48,6 +49,7 @@ export async function writeLesson(params: {
   supabase: Supabase;
   userId: string;
   force?: boolean;
+  traceId?: string;
 }): Promise<{
   success: boolean;
   error?: string;
@@ -55,6 +57,12 @@ export async function writeLesson(params: {
   cached?: boolean;
 }> {
   const { supabase, itemId } = params;
+  log(
+    "info",
+    "agent_start",
+    { agent: "curriculum", itemId },
+    { userId: params.userId, traceId: params.traceId },
+  );
 
   const { data: item, error: itemErr } = await supabase
     .from("roadmap_items")
@@ -81,9 +89,7 @@ export async function writeLesson(params: {
   // Only include phase/parent if they add meaningful disambiguating words not already present.
   const cleanTitle = (t: string | null | undefined): string => {
     if (!t) return "";
-    return t
-      .replace(/^(Phase|Part|Section|Chapter|\d+\.)\s*\d*:?\s*/i, "")
-      .trim();
+    return t.replace(/^(Phase|Part|Section|Chapter|\d+\.)\s*\d*:?\s*/i, "").trim();
   };
 
   const cleanRoadmap = cleanTitle(subject);
@@ -92,7 +98,12 @@ export async function writeLesson(params: {
 
   // Check if a string adds unique words not already covered by the base
   const addsUniqueWords = (candidate: string, base: string): boolean => {
-    const baseWords = new Set(base.toLowerCase().split(/\s+/).filter((w) => w.length > 2));
+    const baseWords = new Set(
+      base
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 2),
+    );
     return candidate
       .toLowerCase()
       .split(/\s+/)
@@ -188,7 +199,22 @@ Write the lesson now.`,
     .filter(
       (w) =>
         w.length > 2 &&
-        !["with", "from", "into", "that", "this", "your", "for", "and", "the", "phase", "part", "section", "chapter", "topic"].includes(w),
+        ![
+          "with",
+          "from",
+          "into",
+          "that",
+          "this",
+          "your",
+          "for",
+          "and",
+          "the",
+          "phase",
+          "part",
+          "section",
+          "chapter",
+          "topic",
+        ].includes(w),
     );
 
   const sortedVideoResults = [...videoSearch.results].sort((a, b) => {
@@ -212,10 +238,9 @@ Write the lesson now.`,
   // Fallback: if no valid YouTube watch URLs came back from the first search,
   // retry with a broader query (no site: operator).
   if (videos.length === 0) {
-    const fallbackVideoSearch = await tavilySearch(
-      `${cleanSubtopic} in ${cleanRoadmap} youtube`,
-      { maxResults: 10 },
-    );
+    const fallbackVideoSearch = await tavilySearch(`${cleanSubtopic} in ${cleanRoadmap} youtube`, {
+      maxResults: 10,
+    });
     const fallbackSorted = [...fallbackVideoSearch.results].sort((a, b) => {
       const scoreA = contextKeywords.filter((k) => a.title.toLowerCase().includes(k)).length;
       const scoreB = contextKeywords.filter((k) => b.title.toLowerCase().includes(k)).length;

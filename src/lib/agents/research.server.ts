@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const RESEARCH_PROMPT = `You are the research specialist inside Remainder, a calm learning workspace.
@@ -26,6 +27,7 @@ export async function runResearch(params: {
   apiKey: string;
   supabase: Supabase;
   userId: string;
+  traceId?: string;
 }) {
   const gateway = createAiGatewayProvider(params.apiKey);
   const tavilyKey = process.env["TAVILY_API_KEY"];
@@ -153,7 +155,12 @@ export async function runResearch(params: {
     });
     return { summary: result.text };
   } catch (err) {
-    console.error("[runResearch error]", err);
+    log(
+      "error",
+      "agent_error",
+      { agent: "research", error: err instanceof Error ? err.message : String(err) },
+      { userId: params.userId, traceId: params.traceId },
+    );
     return {
       summary: `Research failed: ${err instanceof Error ? err.message : "unknown error"}`,
     };

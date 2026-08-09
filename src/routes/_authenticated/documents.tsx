@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Download,
   FileText,
@@ -44,6 +45,7 @@ import {
   uploadMaterial,
   type StudyResource,
 } from "@/lib/study";
+import { triggerDocumentExtractionFn } from "@/lib/study.functions";
 
 export const Route = createFileRoute("/_authenticated/documents")({
   head: () => ({
@@ -162,6 +164,7 @@ function DocumentsPage() {
   const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
   const [uploading, setUploading] = useState(false);
+  const triggerExtraction = useServerFn(triggerDocumentExtractionFn);
   const [deleteTarget, setDeleteTarget] = useState<StudyResource | null>(null);
 
   const { data: resources = [], isLoading } = useQuery({
@@ -203,13 +206,18 @@ function DocumentsPage() {
       else if (mime === "application/pdf") kind = "pdf";
       else kind = "note";
 
-      await createStudyResource({
+      const resource = await createStudyResource({
         title: file.name.replace(/\.[^.]+$/, ""),
         kind,
         storage_path: path,
         mime_type: mime,
         roadmap_id: null,
       });
+      
+      if (kind === "pdf") {
+        await triggerExtraction({ data: { resourceId: resource.id, storagePath: path } });
+      }
+      
       refreshResources();
       toast.success("Uploaded to your library");
     } catch (err) {

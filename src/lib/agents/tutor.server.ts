@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
 import { saveDocumentTextAndEmbed } from "../document-processor.server";
 import { fetchYoutubeTranscript, summarizeTranscript } from "@/lib/transcript.server";
+import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type Supabase = SupabaseClient<Database>;
@@ -134,6 +135,7 @@ export async function summarizeResource(params: {
   apiKey: string;
   supabase: Supabase;
   force?: boolean;
+  traceId?: string;
 }): Promise<{ success: boolean; error?: string; summary?: string }> {
   const { supabase, resourceId } = params;
 
@@ -177,7 +179,7 @@ export async function summarizeResource(params: {
       }
       transcript = result.fullText;
       // Cache the transcript in extracted_text and generate embeddings
-      await saveDocumentTextAndEmbed(supabase as any, resourceId, transcript);
+      await saveDocumentTextAndEmbed(supabase, resourceId, transcript);
     }
 
     try {
@@ -261,8 +263,10 @@ export async function askMaterial(params: {
   question: string;
   apiKey: string;
   supabase: Supabase;
+  traceId?: string;
 }): Promise<{ success: boolean; error?: string; answer?: string }> {
   const { supabase, resourceId } = params;
+  log("info", "agent_start", { agent: "tutor", resourceId }, { traceId: params.traceId });
 
   const [{ data: resource }, { data: highlights }, { data: notes }] = await Promise.all([
     supabase

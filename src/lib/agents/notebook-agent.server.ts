@@ -2,6 +2,7 @@ import { generateText } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type Supabase = SupabaseClient<Database>;
@@ -33,8 +34,15 @@ export async function runNotebookAgent(params: {
   supabase: Supabase;
   userId: string;
   includeImages?: boolean;
+  traceId?: string;
 }): Promise<{ success: boolean; blockCount: number; error?: string }> {
   const { pageId, sourceMaterial, topicTitle, apiKey, supabase, userId, includeImages } = params;
+  log(
+    "info",
+    "agent_start",
+    { agent: "notebook", pageId, topicTitle },
+    { userId, traceId: params.traceId },
+  );
 
   const clippedMaterial =
     sourceMaterial.length > 25000

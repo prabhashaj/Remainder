@@ -1,4 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createMistral } from "@ai-sdk/mistral";
 
 export function getAiApiKey(): string | undefined {
   return (
@@ -32,12 +33,9 @@ export function createAiGatewayProvider(apiKey?: string) {
 
   // 1. Mistral AI
   if (process.env["MISTRAL_API_KEY"] || key === process.env["MISTRAL_API_KEY"]) {
-    return createOpenAICompatible({
-      name: "mistral",
+    return createMistral({
+      apiKey: key,
       baseURL: process.env["MISTRAL_BASE_URL"] || "https://api.mistral.ai/v1",
-      headers: {
-        Authorization: `Bearer ${key}`,
-      },
     });
   }
 

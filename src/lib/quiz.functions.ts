@@ -4,12 +4,18 @@ import { z } from "zod";
 import { generateQuiz, generateCheckpoint } from "@/lib/agents/quiz-generator.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAiApiKey } from "@/lib/ai-gateway.server";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 /** Generate a quiz for a roadmap item. Returns questions without persisting. */
 export const generateQuizForItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
+  .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "quiz_generate", 50, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
     return generateQuiz({
@@ -22,22 +28,29 @@ export const generateQuizForItem = createServerFn({ method: "POST" })
 /** Submit a quiz attempt — persist results and update roadmap progress. */
 export const submitQuizAttempt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
-        itemId: z.string(),
-        questions: z.array(
-          z.object({
-            question: z.string(),
-            correct_answer: z.string(),
-            user_answer: z.string(),
-            is_correct: z.boolean(),
-          }),
-        ),
+        itemId: z.string().max(100),
+        questions: z
+          .array(
+            z.object({
+              question: z.string().max(2000),
+              correct_answer: z.string().max(1000),
+              user_answer: z.string().max(1000),
+              is_correct: z.boolean(),
+            }),
+          )
+          .max(100),
       })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "quiz_submit", 200, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const correct = data.questions.filter((q) => q.is_correct).length;
     const total = data.questions.length;
     const score = total > 0 ? Math.round((correct / total) * 100) : 0;
@@ -83,8 +96,13 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
 /** Generate confidence checkpoint questions for a roadmap item. */
 export const generateCheckpointForItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
+  .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "quiz_checkpoint", 50, 60);
+    } catch {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
     return generateCheckpoint({

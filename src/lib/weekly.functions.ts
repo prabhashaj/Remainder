@@ -3,6 +3,7 @@ import { streamText } from "ai";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 function fmtDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -22,6 +23,11 @@ Rules: use their real data only, never invent activity, never guilt-trip a quiet
 export const generateWeeklyReflection = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    try {
+      await checkRateLimit(context.supabase, context.userId, "generate_weekly", 20, 60);
+    } catch {
+      return { text: "" };
+    }
     const { supabase } = context;
     const key = getAiApiKey();
     if (!key) return { text: "" };

@@ -117,7 +117,7 @@ export function applyThemeClass(theme: ThemeId) {
   const root = document.documentElement;
   THEME_IDS.forEach((id) => root.classList.remove(`theme-${id}`));
   root.classList.add(`theme-${theme}`);
-  
+
   const selectedTheme = THEMES.find((t) => t.id === theme);
   if (selectedTheme?.isDark) {
     root.classList.add("dark");

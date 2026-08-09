@@ -37,8 +37,22 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error("[App Error]", error);
   const router = useRouter();
+
+  // Report client errors to server logs
+  useEffect(() => {
+    void fetch("/api/log-error", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        route: typeof window !== "undefined" ? window.location.pathname : undefined,
+      }),
+    }).catch(() => {
+      /* best-effort */
+    });
+  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -131,6 +145,22 @@ function RootComponent() {
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
+
+    // Report TanStack Query errors to server logs
+    queryClient.getQueryCache().config.onError = (error) => {
+      void fetch("/api/log-error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          route: typeof window !== "undefined" ? window.location.pathname : undefined,
+        }),
+      }).catch(() => {
+        /* best-effort */
+      });
+    };
+
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
 

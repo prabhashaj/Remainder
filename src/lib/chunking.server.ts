@@ -29,7 +29,7 @@ export function chunkText(text: string, chunkSize: number = 1000, overlap: numbe
       Math.max(startIndex + chunkSize * 0.8, startIndex),
       endIndex,
     );
-    
+
     let breakIndex = -1;
 
     // Prefer paragraph breaks
@@ -62,10 +62,10 @@ export function chunkText(text: string, chunkSize: number = 1000, overlap: numbe
 
     // Move start index forward, accounting for overlap
     startIndex = endIndex - overlap;
-    
+
     // Ensure we always move forward
     if (startIndex <= 0 || endIndex - startIndex <= 0) {
-       startIndex = endIndex;
+      startIndex = endIndex;
     }
   }
 

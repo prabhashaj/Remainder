@@ -20,6 +20,7 @@ import {
   Target,
   Timer,
   Trash2,
+  Activity,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -92,6 +93,7 @@ const navItems = [
   { title: "Roadmaps", to: "/roadmaps", icon: Compass },
   { title: "Study Place", to: "/study", icon: BookOpen },
   { title: "Documents", to: "/documents", icon: FolderOpen },
+  { title: "Activity", to: "/activity", icon: Activity },
 ] as const;
 
 const SIDEBAR_WIDTH_KEY = "remainder.sidebar.width";

@@ -91,6 +91,10 @@ export function QuizModal({
       });
     },
     onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error || "Submission failed");
+        return;
+      }
       setSubmitted(true);
       setResultScore(res.score);
       toast.success(`Quiz completed! Score: ${res.score}%`);
