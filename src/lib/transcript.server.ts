@@ -5,9 +5,16 @@ import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server
 
 export type TranscriptSegment = {
   text: string;
-  offset: number;   // seconds
-  duration: number;  // seconds
+  offset: number; // seconds
+  duration: number; // seconds
 };
+
+type CaptionTrack = { baseUrl: string; languageCode: string };
+
+function isCaptionTrack(value: unknown): value is CaptionTrack {
+  const rec = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  return Boolean(rec) && typeof rec!["baseUrl"] === "string" && typeof rec!["languageCode"] === "string";
+}
 
 /**
  * Robustly fetches YouTube transcripts using youtube-caption-extractor,
@@ -88,7 +95,7 @@ export async function fetchYoutubeTranscript(
 
 /* ---------- Helpers ---------- */
 
-async function fetchCaptionTracksFromInnerTube(videoId: string): Promise<any[] | null> {
+async function fetchCaptionTracksFromInnerTube(videoId: string): Promise<CaptionTrack[] | null> {
   const res = await fetch("https://www.youtube.com/youtubei/v1/player", {
     method: "POST",
     headers: {
@@ -108,12 +115,18 @@ async function fetchCaptionTracksFromInnerTube(videoId: string): Promise<any[] |
     }),
   });
   if (!res.ok) return null;
-  const data = await res.json();
-  return data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? null;
+  const data: unknown = await res.json();
+  if (!data || typeof data !== "object") return null;
+  const captions = (data as Record<string, unknown>)["captions"];
+  if (!captions || typeof captions !== "object") return null;
+  const renderer = (captions as Record<string, unknown>)["playerCaptionsTracklistRenderer"];
+  if (!renderer || typeof renderer !== "object") return null;
+  const tracks = (renderer as Record<string, unknown>)["captionTracks"];
+  return Array.isArray(tracks) ? tracks.filter(isCaptionTrack) : null;
 }
 
 async function fetchSegmentsFromCaptionTracks(
-  captionTracks: Array<{ baseUrl: string; languageCode: string }>,
+  captionTracks: CaptionTrack[],
 ): Promise<TranscriptSegment[]> {
   const track =
     captionTracks.find((t) => t.languageCode === "en") ??
@@ -135,7 +148,7 @@ async function fetchSegmentsFromCaptionTracks(
   return parseTranscriptXml(text);
 }
 
-function extractJsonArrayFromKey(html: string, key: string): any[] | null {
+function extractJsonArrayFromKey(html: string, key: string): CaptionTrack[] | null {
   const idx = html.indexOf(key);
   if (idx === -1) return null;
   const startBracket = html.indexOf("[", idx);
@@ -166,7 +179,8 @@ function extractJsonArrayFromKey(html: string, key: string): any[] | null {
         if (depth === 0) {
           try {
             const rawJson = html.slice(startBracket, i + 1);
-            return JSON.parse(rawJson);
+            const parsed: unknown = JSON.parse(rawJson);
+            return Array.isArray(parsed) ? parsed.filter(isCaptionTrack) : null;
           } catch {
             return null;
           }
@@ -224,9 +238,7 @@ export function getTranscriptAtTimestamp(
   const start = Math.max(0, seconds - windowSeconds / 2);
   const end = seconds + windowSeconds / 2;
 
-  const matched = segments.filter(
-    (s) => s.offset + s.duration >= start && s.offset <= end,
-  );
+  const matched = segments.filter((s) => s.offset + s.duration >= start && s.offset <= end);
 
   return {
     text: matched.map((s) => s.text).join(" "),

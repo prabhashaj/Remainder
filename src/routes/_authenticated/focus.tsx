@@ -25,7 +25,10 @@ export const Route = createFileRoute("/_authenticated/focus")({
   head: () => ({
     meta: [
       { title: "Focus — Remainder" },
-      { name: "description", content: "A distraction-free timer with notes, kept inside your workspace." },
+      {
+        name: "description",
+        content: "A distraction-free timer with notes, kept inside your workspace.",
+      },
       { property: "og:title", content: "Focus — Remainder" },
       { property: "og:description", content: "Focused learning sessions inside Remainder." },
     ],

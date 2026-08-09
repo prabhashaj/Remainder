@@ -28,13 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  fetchRoadmapItems,
-  fetchRoadmaps,
-  fetchTasks,
-  today,
-  updateTask,
-} from "@/lib/db";
+import { fetchRoadmapItems, fetchRoadmaps, fetchTasks, today, updateTask } from "@/lib/db";
 import {
   createStudyResource,
   deleteStudyResource,
@@ -56,8 +50,7 @@ export const Route = createFileRoute("/_authenticated/study")({
       { property: "og:title", content: "Study Place — Remainder" },
       {
         property: "og:description",
-        content:
-          "Lesson, tasks, timer and your whole resource library in one calm place.",
+        content: "Lesson, tasks, timer and your whole resource library in one calm place.",
       },
     ],
   }),
@@ -95,34 +88,22 @@ function StudyPlacePage() {
   const roadmapId = subject === "all" ? null : subject;
 
   const subjectItems = useMemo(
-    () =>
-      items.filter(
-        (i) => (!roadmapId || i.roadmap_id === roadmapId) && i.parent_id,
-      ),
+    () => items.filter((i) => (!roadmapId || i.roadmap_id === roadmapId) && i.parent_id),
     [items, roadmapId],
   );
   const nextLesson = subjectItems.find((i) => !i.done) ?? null;
   const learned = subjectItems.filter((i) => i.done).length;
-  const pct = subjectItems.length
-    ? Math.round((learned / subjectItems.length) * 100)
-    : 0;
+  const pct = subjectItems.length ? Math.round((learned / subjectItems.length) * 100) : 0;
 
   const day = today();
-  const openTasks = tasks
-    .filter((t) => !t.done && (!t.due_date || t.due_date <= day))
-    .slice(0, 6);
+  const openTasks = tasks.filter((t) => !t.done && (!t.due_date || t.due_date <= day)).slice(0, 6);
 
-  const visibleResources = resources.filter(
-    (r) => !roadmapId || r.roadmap_id === roadmapId,
-  );
+  const visibleResources = resources.filter((r) => !roadmapId || r.roadmap_id === roadmapId);
 
   // Roadmaps for inline viewer (filtered by subject)
-  const visibleRoadmaps = roadmapId
-    ? roadmaps.filter((r) => r.id === roadmapId)
-    : roadmaps;
+  const visibleRoadmaps = roadmapId ? roadmaps.filter((r) => r.id === roadmapId) : roadmaps;
 
-  const refreshResources = () =>
-    void qc.invalidateQueries({ queryKey: ["study-resources"] });
+  const refreshResources = () => void qc.invalidateQueries({ queryKey: ["study-resources"] });
 
   const addLink = useMutation({
     mutationFn: () =>
@@ -203,12 +184,8 @@ function StudyPlacePage() {
           </h2>
           {nextLesson ? (
             <>
-              <p className="mt-2 text-xs font-medium text-muted-foreground">
-                {nextLesson.phase}
-              </p>
-              <h3 className="mt-1 font-display text-xl font-bold">
-                {nextLesson.title}
-              </h3>
+              <p className="mt-2 text-xs font-medium text-muted-foreground">{nextLesson.phase}</p>
+              <h3 className="mt-1 font-display text-xl font-bold">{nextLesson.title}</h3>
               {nextLesson.detail && (
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {nextLesson.detail}
@@ -216,10 +193,7 @@ function StudyPlacePage() {
               )}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button asChild className="press gap-1.5 rounded-2xl">
-                  <Link
-                    to="/lesson/$itemId"
-                    params={{ itemId: nextLesson.id }}
-                  >
+                  <Link to="/lesson/$itemId" params={{ itemId: nextLesson.id }}>
                     <BookOpen className="size-4" /> Open lesson
                   </Link>
                 </Button>
@@ -227,11 +201,7 @@ function StudyPlacePage() {
                   variant="outline"
                   className="press gap-1.5 rounded-2xl"
                   onClick={() =>
-                    startTimer(
-                      nextLesson.estimated_minutes || 25,
-                      nextLesson.title,
-                      nextLesson.id,
-                    )
+                    startTimer(nextLesson.estimated_minutes || 25, nextLesson.title, nextLesson.id)
                   }
                 >
                   <Timer className="size-4" /> Start focus
@@ -276,9 +246,7 @@ function StudyPlacePage() {
                 variant="secondary"
                 size="sm"
                 className="press rounded-2xl"
-                onClick={() =>
-                  startTimer(m, nextLesson?.title ?? "Study session")
-                }
+                onClick={() => startTimer(m, nextLesson?.title ?? "Study session")}
               >
                 {m}m
               </Button>
@@ -293,9 +261,7 @@ function StudyPlacePage() {
               <li key={task.id} className="flex items-start gap-2.5">
                 <Checkbox
                   checked={task.done}
-                  onCheckedChange={(v) =>
-                    toggleTask.mutate({ id: task.id, done: Boolean(v) })
-                  }
+                  onCheckedChange={(v) => toggleTask.mutate({ id: task.id, done: Boolean(v) })}
                   className="mt-0.5 rounded-md"
                 />
                 <span className="text-sm leading-snug">{task.title}</span>
@@ -386,18 +352,13 @@ function StudyPlacePage() {
             const video = resource.url ? youtubeId(resource.url) : null;
             const Icon = video ? Play : resource.storage_path ? FileText : Link2;
             return (
-              <article
-                key={resource.id}
-                className="card-soft flex flex-col gap-3 p-4"
-              >
+              <article key={resource.id} className="card-soft flex flex-col gap-3 p-4">
                 <div className="flex items-start gap-2.5">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <Icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-semibold">
-                      {resource.title}
-                    </h3>
+                    <h3 className="truncate text-sm font-semibold">{resource.title}</h3>
                     <p className="mt-0.5 text-xs capitalize text-muted-foreground">
                       {resource.kind}
                       {resource.summary ? " · brief ready" : ""}
@@ -413,16 +374,8 @@ function StudyPlacePage() {
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="press rounded-2xl"
-                >
-                  <Link
-                    to="/material/$resourceId"
-                    params={{ resourceId: resource.id }}
-                  >
+                <Button asChild variant="outline" size="sm" className="press rounded-2xl">
+                  <Link to="/material/$resourceId" params={{ resourceId: resource.id }}>
                     Open & annotate
                   </Link>
                 </Button>
@@ -431,16 +384,13 @@ function StudyPlacePage() {
           })}
           {visibleResources.length === 0 && (
             <p className="rounded-3xl bg-muted/50 px-5 py-10 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">
-              Add your first PDF or link and everything for this subject lives
-              here.
+              Add your first PDF or link and everything for this subject lives here.
             </p>
           )}
         </div>
       </section>
 
-      <p className="mt-8 text-xs text-muted-foreground">
-        Kinds supported: {KINDS.join(", ")}.
-      </p>
+      <p className="mt-8 text-xs text-muted-foreground">Kinds supported: {KINDS.join(", ")}.</p>
     </div>
   );
 }

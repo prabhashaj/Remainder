@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
+import { convertToModelMessages, stepCountIs, streamText, tool, generateId, type UIMessage } from "ai";
 import { z } from "zod";
 
 import { writeLesson } from "@/lib/agents/curriculum.server";
@@ -11,6 +11,10 @@ import { classifyQueryRouting } from "@/lib/agents/router.server";
 import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
 import { fetchYoutubeTranscript } from "@/lib/transcript.server";
 import { searchTopicPhotos, tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
+import { extractPdfTextServer } from "@/lib/pdf-parser.server";
+import { chunkText } from "@/lib/chunking.server";
+import { generateEmbeddings, generateEmbedding } from "@/lib/embeddings.server";
+import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const SYSTEM_PROMPT = `You are Remi, an intelligent, versatile AI assistant inside Remainder — a calm, modern workspace for notes, learning, goals, habits, and productivity across any topic or domain.
@@ -21,7 +25,7 @@ Voice & Tone:
 
 Capabilities & Media Rendering Rules:
 - Answer questions, explain concepts simply, solve problems, brainstorm, and assist with any user request.
-- When the user asks to see, get, or show images, photos, illustrations, or visual diagrams: call \`searchPhotos\` AND render each returned photo directly inside your response text using markdown image syntax: \`![caption](url)\`. Always embed the actual markdown images directly in the chat interface so the user sees the visual photos/diagrams inline. Limit to max 4 images.
+- ONLY when the user EXPLICITLY asks to see, get, or show images/photos: call \`searchPhotos\` AND render each returned photo directly inside your response text using markdown image syntax: \`![caption](url)\`. Do NOT fetch or show images proactively without a direct request.
 - When the user asks for video tutorials or YouTube videos: call \`researchResources\` or search the web and include the YouTube watch URLs (e.g., \`https://www.youtube.com/watch?v=...\`) directly in your message text so an inline video player renders in the chat interface.
 - Analyze and discuss attached images, PDFs, and text documents accurately when provided by the user.
 
@@ -33,18 +37,21 @@ Tool Delegation:
 - updateGoal: Use to update the progress percentage of an existing goal.
 - updateHabit: Use to update or archive an existing habit.
 - researchResources: Use when asked to search for and save learning resources or video tutorials.
-- webSearch: Use when answering factual or technical questions that benefit from up-to-date web search results.
-- searchPhotos: Use when the user asks to see, show, or get photos, images, visual diagrams, or illustrations.
+- webSearch: Use ALWAYS when answering questions about current events, news, live sports scores, recent facts, or technical questions that benefit from up-to-date web search results. NEVER guess or hallucinate live scores or news.
+- searchPhotos: Use ONLY when the user explicitly asks to see, show, or get photos, images, or visual diagrams. Do NOT use proactively.
+- readDocument: Use when asked to read, summarize, or analyze a specific document, PDF, or study resource from the workspace.
 - writeLessonForSubtopic: Use when asked to write or expand a specific roadmap subtopic lesson.
 - generateNotebook: Use when the user asks to generate, create, or build a structured notebook or notes page.
 - editNotebook: Use when asked to edit a notebook page, append content, or add visual diagrams to a notebook.
 - saveMemory: Use to remember durable facts or preferences about the user.
+- getCurrentTime: Use whenever the user asks for the current time or date, either locally or in a specific timezone.
 
 Workspace Context Usage:
 - Workspace state and active roadmaps (shown below) provide helpful background context. Do NOT repeat or fixate on the user's active roadmap topic when providing general examples, lists, or bullet points. Keep example suggestions varied across multiple distinct subjects (e.g. astronomy, design, history, biology, coding) unless the user specifically asks about their active topic.
 
 Formatting:
 - Use markdown headings and short, readable paragraphs.
+- When explaining or summarizing documents from RAG, use clean formatting like bullet points, clear headings, and numbered lists. Do not output unstructured walls of text.
 - **Bold** key terms when introduced — avoid bolding entire sentences.
 - Format all math, formulas, and variables in strict LaTeX ($inline$ or $$block$$).
 - Use fenced code blocks with language tags for code snippet formatting.`;
@@ -80,6 +87,7 @@ async function buildUserContext(
     { data: moods },
     { data: focusSessions },
     { data: memories },
+    { data: studyResources },
   ] = await Promise.all([
     supabase
       .from("tasks")
@@ -103,6 +111,11 @@ async function buildUserContext(
       .order("importance", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("study_resources")
+      .select("id,title,kind,status")
+      .order("created_at", { ascending: false })
+      .limit(15),
   ]);
 
   const lines: string[] = [];
@@ -116,7 +129,23 @@ async function buildUserContext(
   }
 
   lines.push("## Their workspace right now");
-  lines.push(`Current Date: ${todayStr}`);
+  // Inject precise current time so the model never guesses from training data
+  const utcIso = now.toISOString();
+  const istTime = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "full",
+    timeStyle: "long",
+  }).format(now);
+  const utcTime = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    dateStyle: "full",
+    timeStyle: "long",
+  }).format(now);
+  lines.push(`Current Date (UTC): ${todayStr}`);
+  lines.push(`Current Time (UTC): ${utcTime}`);
+  lines.push(`Current Time (IST / Asia/Kolkata): ${istTime}`);
+  lines.push(`Current Time (ISO 8601): ${utcIso}`);
+  lines.push(`IMPORTANT: Always use the above times — never guess or rely on training knowledge for the current date/time.`);
 
   const openTasks = tasks ?? [];
   if (openTasks.length > 0) {
@@ -126,6 +155,16 @@ async function buildUserContext(
     lines.push(`- Open task(s):\n  ${taskStr}`);
   } else {
     lines.push("- No open tasks");
+  }
+
+  const docs = studyResources ?? [];
+  if (docs.length > 0) {
+    const docStr = docs
+      .map((d) => `[ID: ${d.id}] "${d.title}" (${d.kind}) - ${d.status}`)
+      .join("\n  ");
+    lines.push(`- Documents / Study Resources available in workspace:\n  ${docStr}`);
+  } else {
+    lines.push("- No documents available in workspace");
   }
 
   const habitsList = habits ?? [];
@@ -232,6 +271,79 @@ export const Route = createFileRoute("/api/chat")({
             client_id: last.id,
           });
           if (error) console.error("Failed to persist user message", error.message);
+        }
+
+        // --- 1. Persist chat attachments as study_resources BEFORE building user context ---
+        const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
+        for (const att of rawAttachments) {
+          try {
+            if (typeof att.dataUrl !== "string" || typeof att.filename !== "string") continue;
+
+            // Decode base64 data URL → Buffer
+            const match = att.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+            if (!match || !match[2]) continue;
+            const buffer = Buffer.from(match[2], "base64");
+            const mime =
+              typeof att.mimeType === "string" && att.mimeType
+                ? att.mimeType
+                : (match[1] ?? "application/octet-stream");
+
+            // Determine kind from mime type
+            let kind: string;
+            if (mime.startsWith("image/")) kind = "image";
+            else if (mime === "application/pdf") kind = "pdf";
+            else kind = "note";
+
+            // Upload to storage
+            const safeName = att.filename.replace(/[^\w.-]+/g, "_");
+            const storagePath = `${userId}/${Date.now()}-${safeName}`;
+            const { error: uploadErr } = await supabase.storage
+              .from("materials")
+              .upload(storagePath, buffer, {
+                contentType: mime,
+                upsert: true,
+              });
+            if (uploadErr) {
+              console.error("Failed to upload chat attachment", uploadErr.message);
+              continue;
+            }
+
+            // Server-side text extraction for PDFs and text documents
+            let extractedText: string | null = null;
+            if (kind === "pdf") {
+              extractedText = await extractPdfTextServer(buffer);
+            } else if (kind === "note" || mime.startsWith("text/")) {
+              extractedText = buffer.toString("utf-8");
+            }
+
+            // Insert study_resources row
+            const title = att.filename.replace(/\.[^.]+$/, "");
+            const { data: insertedResource, error: insertErr } = await supabase
+              .from("study_resources")
+              .insert({
+                user_id: userId,
+                title,
+                kind,
+                storage_path: storagePath,
+                mime_type: mime,
+                roadmap_id: null,
+                extracted_text: extractedText,
+                status: "ready",
+              })
+              .select("id")
+              .single();
+
+            if (insertErr) {
+              console.error("Failed to save chat attachment resource", insertErr.message);
+            } else if (insertedResource && extractedText && extractedText.length > 0) {
+              // Trigger background chunking and embedding
+              saveDocumentTextAndEmbed(supabase as any, insertedResource.id, extractedText).catch(e => {
+                console.error("Failed to trigger document processor:", e);
+              });
+            }
+          } catch (attErr) {
+            console.error("Error persisting chat attachment", attErr);
+          }
         }
 
         const userContext = await buildUserContext(supabase);
@@ -572,7 +684,7 @@ Title: "${curPage.title}"
 
           webSearch: tool({
             description:
-              "Search the web for current information. Use whenever the answer depends on recent facts, versions, prices, news, or anything you are unsure about.",
+              "Search the web for current information. Use ALWAYS for live sports scores, current events, recent facts, versions, prices, news, or anything you are unsure about. ALWAYS include the current date/time (from your Workspace Context) in the search query for live events to ensure the freshest results. NEVER guess these facts.",
             inputSchema: z.object({
               query: z.string().describe("The search query"),
             }),
@@ -598,10 +710,11 @@ Title: "${curPage.title}"
               "Search for high-quality photos, illustrations, visual diagrams, and images for a topic. Use ONLY when the user explicitly asks for an image, photo, or diagram in their prompt.",
             inputSchema: z.object({
               query: z.string().describe("The visual topic or image search query"),
+              limit: z.number().optional().describe("Maximum number of images to return (default: 1)"),
             }),
-            execute: async ({ query }: { query: string }) => {
+            execute: async ({ query, limit }) => {
               const res = await searchTopicPhotos(query);
-              const photos = res.slice(0, 4).map((img) => ({
+              const photos = res.slice(0, limit || 1).map((img) => ({
                 url: img.url,
                 caption: img.description ?? query,
               }));
@@ -615,13 +728,162 @@ Title: "${curPage.title}"
             },
           }),
 
+          readDocument: tool({
+            description:
+              "Read the contents, summary, and key points of a document/study resource from the workspace.",
+            inputSchema: z.object({
+              document_id: z
+                .string()
+                .describe(
+                  "The EXACT Document ID (UUID format) from the 'Documents available in workspace' list (e.g., '123e4567-e89b...'). NEVER use the title.",
+                ),
+              query: z
+                .string()
+                .optional()
+                .describe(
+                  "Optional. The specific topic, question, or chapter you are looking for in the document (e.g., 'Chapter 2' or 'methodology'). If provided, semantic search will be used to extract the most relevant chunks.",
+                ),
+            }),
+            execute: async ({ document_id, query }) => {
+              const cleanInput = document_id.trim();
+              const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                cleanInput,
+              );
+
+              // 1. Try exact UUID match first
+              if (isUuid) {
+                const { data: exactDoc } = await supabase
+                  .from("study_resources")
+                  .select("title, kind, status, summary, key_points, extracted_text")
+                  .eq("id", cleanInput)
+                  .single();
+
+                if (exactDoc) {
+                  return {
+                    success: true,
+                    title: exactDoc.title,
+                    kind: exactDoc.kind,
+                    status: exactDoc.status,
+                    summary: exactDoc.summary,
+                    key_points: exactDoc.key_points,
+                    extracted_text: exactDoc.extracted_text
+                      ? exactDoc.extracted_text.slice(0, 8000)
+                      : null,
+                  };
+                }
+              }
+
+              // 2. Fetch all user's study resources to find best title match
+              const { data: allDocs } = await supabase
+                .from("study_resources")
+                .select("id, title, kind, status, summary, key_points, extracted_text")
+                .order("created_at", { ascending: false })
+                .limit(50);
+
+              if (!allDocs || allDocs.length === 0) {
+                return { success: false, error: `No documents available in workspace.` };
+              }
+
+              // Strip filler words from input: "rmit_sop document" -> "rmitsop"
+              const normalize = (str: string) =>
+                str
+                  .toLowerCase()
+                  .replace(/_|-/g, " ")
+                  .replace(/\b(document|pdf|file|book|notes|resource|section)\b/gi, "")
+                  .replace(/[^\w\s]/g, "")
+                  .trim();
+
+              const searchNormalized = normalize(cleanInput);
+
+              // Find best matching document
+              let bestDoc = allDocs.find((d) => normalize(d.title) === searchNormalized);
+
+              if (!bestDoc) {
+                // Partial keyword match: check if document title contains search keywords or vice versa
+                const keywords = searchNormalized.split(/\s+/).filter((k) => k.length > 1);
+                bestDoc = allDocs.find((d) => {
+                  const docNorm = normalize(d.title);
+                  return (
+                    keywords.some((k) => docNorm.includes(k)) ||
+                    docNorm.split(/\s+/).some((k) => searchNormalized.includes(k))
+                  );
+                });
+              }
+
+              // Fallback to first available document if only 1 document exists
+              if (!bestDoc && allDocs.length === 1) {
+                bestDoc = allDocs[0];
+              }
+
+              if (!bestDoc) {
+                return {
+                  success: false,
+                  error: `Could not match document '${document_id}'. Available documents: ${allDocs
+                    .map((d) => `"${d.title}"`)
+                    .join(", ")}`,
+                };
+              }
+
+              const doc = bestDoc;
+
+              // If a query is provided, use RAG (semantic search) to fetch the most relevant chunks
+              let semanticContext: string | null = null;
+              if (query && query.trim()) {
+                try {
+                  const queryEmbedding = await generateEmbedding(query.trim());
+                  
+                  // @ts-ignore - Supabase types don't have match_document_chunks yet since we just migrated
+                  const { data: rawChunks, error: matchErr } = await (supabase as any).rpc("match_document_chunks", {
+                    query_embedding: `[${queryEmbedding.join(",")}]`,
+                    match_threshold: 0.2, // low threshold to ensure we get some results
+                    match_count: 25, // retrieve top 25 chunks for better context
+                    filter_document_id: doc.id
+                  });
+                  
+                  const chunks = rawChunks as any[] | null;
+                  if (!matchErr && chunks && chunks.length > 0) {
+                    semanticContext = chunks.map((c: any, i: number) => `--- CHUNK ${i+1} ---\n${c.content}`).join("\n\n");
+                  } else if (matchErr) {
+                    console.error("Semantic search failed:", matchErr);
+                  }
+                } catch (e) {
+                  console.error("Embedding generation failed for query:", e);
+                }
+              }
+
+              let returnedText = "";
+              // ALWAYS include the first 4000 characters so the model has the Table of Contents & Preface
+              if (doc.extracted_text) {
+                returnedText += "--- DOCUMENT BEGINNING (TOC/PREFACE) ---\n" + doc.extracted_text.slice(0, 4000) + "\n\n";
+              }
+
+              if (semanticContext) {
+                returnedText += "--- SEMANTIC SEARCH RESULTS FOR YOUR QUERY ---\n" + semanticContext;
+              } else if (doc.extracted_text) {
+                // If no semantic search, include more of the beginning
+                returnedText += "--- EXTRACTED TEXT ---\n" + doc.extracted_text.slice(4000, 15000);
+              }
+
+              return {
+                success: true,
+                title: doc.title,
+                kind: doc.kind,
+                status: doc.status,
+                summary: doc.summary,
+                key_points: doc.key_points,
+                extracted_text: returnedText,
+                semantic_search_used: !!semanticContext,
+              };
+            },
+          }),
+
           writeLessonForSubtopic: tool({
             description:
               "Research and write the full lesson (markdown content, images, and videos) for one roadmap sub-topic, given its id.",
             inputSchema: z.object({
               item_id: z.string().describe("The roadmap sub-topic id"),
             }),
-            execute: async ({ item_id }: { item_id: string }) => {
+            execute: async ({ item_id }) => {
               return writeLesson({
                 itemId: item_id,
                 apiKey: key,
@@ -898,18 +1160,75 @@ Title: "${curPage.title}"
               };
             },
           }),
+
+          getCurrentTime: tool({
+            description:
+              "Get the current date and time for a specific timezone. You MUST provide a valid IANA Time Zone Database name (e.g., 'Asia/Kolkata', 'America/New_York'). Do NOT use abbreviations like 'IST' or country names like 'India'.",
+            inputSchema: z.object({
+              timezone: z
+                .string()
+                .optional()
+                .describe(
+                  "Valid IANA timezone string (e.g., 'Asia/Kolkata', 'Europe/London'). Defaults to UTC if omitted.",
+                ),
+            }),
+            execute: async ({ timezone }) => {
+              const now = new Date();
+              const tz = timezone || "UTC";
+              try {
+                const formatter = new Intl.DateTimeFormat("en-US", {
+                  timeZone: tz,
+                  dateStyle: "full",
+                  timeStyle: "long",
+                });
+                return {
+                  timezone: tz,
+                  formattedTime: formatter.format(now),
+                  iso: now.toISOString(),
+                };
+              } catch (err) {
+                // Fallback if timezone is invalid
+                return {
+                  error: `Invalid timezone provided: "${tz}". You MUST use a valid IANA timezone name (e.g., 'Asia/Kolkata', 'Europe/Paris', 'America/Los_Angeles').`,
+                  utcTime: now.toISOString(),
+                };
+              }
+            },
+          }),
         };
+
+        // --- Sanitize UI messages to prevent raw PDF dataUrl payloads from crashing AI Gateway ---
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sanitizedUiMessages = uiMessages.map((m: any) => {
+          if (!Array.isArray(m.parts)) return m;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cleanParts = m.parts.map((p: any) => {
+            if (p.type === "text") return p;
+            if (p.type === "image" || (p.type === "file" && p.mediaType?.startsWith("image/"))) {
+              return p;
+            }
+            if (p.type === "file") {
+              const filename = p.filename ?? p.name ?? "attached document";
+              return {
+                type: "text",
+                text: `[Attached file: "${filename}"]`,
+              };
+            }
+            return p;
+          });
+          return { ...m, parts: cleanParts };
+        });
 
         const gateway = createAiGatewayProvider(key);
         const result = streamText({
           model: gateway(getAiModelName()),
           system: systemPrompt,
-          messages: await convertToModelMessages(uiMessages),
+          messages: await convertToModelMessages(sanitizedUiMessages),
           tools,
           stopWhen: stepCountIs(50),
         });
 
-        return result.toUIMessageStreamResponse({
+        const streamResponse = result.toUIMessageStreamResponse({
           originalMessages: uiMessages,
           onFinish: async ({ responseMessage }) => {
             const { error } = await supabase.from("chat_messages").insert({
@@ -924,62 +1243,14 @@ Title: "${curPage.title}"
               .from("chat_threads")
               .update({ updated_at: new Date().toISOString() })
               .eq("id", threadId);
-
-            // --- Persist chat attachments as study_resources (best-effort) ---
-            const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
-            for (const att of rawAttachments) {
-              try {
-                if (typeof att.dataUrl !== "string" || typeof att.filename !== "string") continue;
-
-                // Decode base64 data URL → Buffer
-                const match = att.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-                if (!match || !match[2]) continue;
-                const buffer = Buffer.from(match[2], "base64");
-                const mime =
-                  typeof att.mimeType === "string" && att.mimeType
-                    ? att.mimeType
-                    : (match[1] ?? "application/octet-stream");
-
-                // Determine kind from mime type
-                let kind: string;
-                if (mime.startsWith("image/")) kind = "image";
-                else if (mime === "application/pdf") kind = "pdf";
-                else kind = "note";
-
-                // Upload to storage
-                const safeName = att.filename.replace(/[^\w.-]+/g, "_");
-                const storagePath = `${userId}/${Date.now()}-${safeName}`;
-                const { error: uploadErr } = await supabase.storage
-                  .from("materials")
-                  .upload(storagePath, buffer, {
-                    contentType: mime,
-                    upsert: true,
-                  });
-                if (uploadErr) {
-                  console.error("Failed to upload chat attachment", uploadErr.message);
-                  continue;
-                }
-
-                // Insert study_resources row
-                const title = att.filename.replace(/\.[^.]+$/, "");
-                const { error: insertErr } = await supabase.from("study_resources").insert({
-                  user_id: userId,
-                  title,
-                  kind,
-                  storage_path: storagePath,
-                  mime_type: mime,
-                  roadmap_id: null,
-                  status: "ready",
-                });
-                if (insertErr) {
-                  console.error("Failed to save chat attachment resource", insertErr.message);
-                }
-              } catch (attErr) {
-                console.error("Error persisting chat attachment", attErr);
-              }
-            }
           },
         });
+
+        streamResponse.headers.set("X-Accel-Buffering", "no");
+        streamResponse.headers.set("Cache-Control", "no-cache");
+        streamResponse.headers.set("Connection", "keep-alive");
+
+        return streamResponse;
       },
     },
   },

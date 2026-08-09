@@ -2,11 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
-import {
-  createAiGatewayProvider,
-  getAiApiKey,
-  getAiModelName,
-} from "@/lib/ai-gateway.server";
+import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const TUTOR_PROMPT = `You are Remi, a patient tutor answering a learner's question about THEIR OWN study material.
@@ -44,11 +40,7 @@ function splitIntoSentences(text: string): string[] {
     .filter((s) => s.length > 10);
 }
 
-function selectRelevantPassages(
-  fullText: string,
-  question: string,
-  topK = 20,
-): string[] {
+function selectRelevantPassages(fullText: string, question: string, topK = 20): string[] {
   const sentences = splitIntoSentences(fullText);
   if (sentences.length <= topK) return sentences;
 
@@ -99,8 +91,7 @@ export const Route = createFileRoute("/api/material-chat")({
       POST: async ({ request }) => {
         const body = (await request.json()) as ChatBody;
         const messages = body.messages;
-        const resourceId =
-          typeof body.resourceId === "string" ? body.resourceId : null;
+        const resourceId = typeof body.resourceId === "string" ? body.resourceId : null;
 
         if (!Array.isArray(messages) || !resourceId) {
           return new Response("messages and resourceId are required", {
@@ -108,9 +99,7 @@ export const Route = createFileRoute("/api/material-chat")({
           });
         }
 
-        const token = request.headers
-          .get("authorization")
-          ?.replace(/^Bearer\s+/i, "");
+        const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
         if (!token) return new Response("Unauthorized", { status: 401 });
 
         const supabase = createClient<Database>(
@@ -122,58 +111,46 @@ export const Route = createFileRoute("/api/material-chat")({
           },
         );
 
-        const { data: userData, error: userError } =
-          await supabase.auth.getUser(token);
-        if (userError || !userData.user)
-          return new Response("Unauthorized", { status: 401 });
+        const { data: userData, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !userData.user) return new Response("Unauthorized", { status: 401 });
 
         const key = getAiApiKey();
-        if (!key)
-          return new Response("Missing AI API Key", { status: 500 });
+        if (!key) return new Response("Missing AI API Key", { status: 500 });
 
         // Fetch resource + highlights + notes in parallel
-        const [{ data: resource }, { data: highlights }, { data: notes }] =
-          await Promise.all([
-            supabase
-              .from("study_resources")
-              .select(
-                "title, kind, url, summary, extracted_text",
-              )
-              .eq("id", resourceId)
-              .maybeSingle(),
-            supabase
-              .from("resource_highlights")
-              .select("page, quote, note")
-              .eq("resource_id", resourceId)
-              .order("page")
-              .limit(40),
-            supabase
-              .from("video_notes")
-              .select("seconds, note")
-              .eq("resource_id", resourceId)
-              .order("seconds")
-              .limit(40),
-          ]);
+        const [{ data: resource }, { data: highlights }, { data: notes }] = await Promise.all([
+          supabase
+            .from("study_resources")
+            .select("title, kind, url, summary, extracted_text")
+            .eq("id", resourceId)
+            .maybeSingle(),
+          supabase
+            .from("resource_highlights")
+            .select("page, quote, note")
+            .eq("resource_id", resourceId)
+            .order("page")
+            .limit(40),
+          supabase
+            .from("video_notes")
+            .select("seconds, note")
+            .eq("resource_id", resourceId)
+            .order("seconds")
+            .limit(40),
+        ]);
 
-        if (!resource)
-          return new Response("Resource not found", { status: 404 });
+        if (!resource) return new Response("Resource not found", { status: 404 });
 
         // Build context
         const uiMessages = messages as UIMessage[];
-        const lastUserMsg = uiMessages
-          .filter((m) => m.role === "user")
-          .pop();
+        const lastUserMsg = uiMessages.filter((m) => m.role === "user").pop();
         const question =
           lastUserMsg?.parts
             ?.filter((p) => p.type === "text")
             .map((p) => p.text)
             .join(" ") ?? "";
 
-        const blocks: string[] = [
-          `# Material: ${resource.title} (${resource.kind})`,
-        ];
-        if (resource.summary)
-          blocks.push(`## Existing brief\n${resource.summary}`);
+        const blocks: string[] = [`# Material: ${resource.title} (${resource.kind})`];
+        if (resource.summary) blocks.push(`## Existing brief\n${resource.summary}`);
 
         const fullText = resource.extracted_text ?? "";
         if (fullText.trim()) {
@@ -182,24 +159,18 @@ export const Route = createFileRoute("/api/material-chat")({
             `## Most relevant passages\n${relevant.map((s, i) => `[${i + 1}] ${s}`).join("\n\n")}`,
           );
           const shortened = clip(fullText, 30000);
-          if (shortened.trim())
-            blocks.push(`## Full text (broader context)\n${shortened}`);
+          if (shortened.trim()) blocks.push(`## Full text (broader context)\n${shortened}`);
         }
 
         if (highlights && highlights.length > 0)
           blocks.push(
             `## Their highlights\n${highlights
-              .map(
-                (h) =>
-                  `- p.${h.page}: "${h.quote}"${h.note ? ` — note: ${h.note}` : ""}`,
-              )
+              .map((h) => `- p.${h.page}: "${h.quote}"${h.note ? ` — note: ${h.note}` : ""}`)
               .join("\n")}`,
           );
         if (notes && notes.length > 0)
           blocks.push(
-            `## Their video notes\n${notes
-              .map((n) => `- ${n.seconds}s: ${n.note}`)
-              .join("\n")}`,
+            `## Their video notes\n${notes.map((n) => `- ${n.seconds}s: ${n.note}`).join("\n")}`,
           );
 
         const systemPrompt = `${TUTOR_PROMPT}\n\n${blocks.join("\n\n")}`;

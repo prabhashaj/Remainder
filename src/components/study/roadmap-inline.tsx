@@ -1,25 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  BookOpen,
-  ChevronDown,
-  ChevronRight,
-  Clock,
-  Loader2,
-  Sparkle,
-} from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, Clock, Loader2, Sparkle } from "lucide-react";
 import { useState } from "react";
 
 import { MessageResponse } from "@/components/ai-elements/message";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import {
-  fetchRoadmapItems,
-  updateRoadmapItem,
-  type RoadmapItem,
-  type Roadmap,
-} from "@/lib/db";
+import { fetchRoadmapItems, updateRoadmapItem, type RoadmapItem, type Roadmap } from "@/lib/db";
 import { generateLesson } from "@/lib/lesson.functions";
 
 /**
@@ -27,23 +15,14 @@ import { generateLesson } from "@/lib/lesson.functions";
  * Shows phases → topics → subtopics with collapsible lesson content.
  * The user never needs to navigate away from the study page.
  */
-export function RoadmapInline({
-  roadmap,
-  items,
-}: {
-  roadmap: Roadmap;
-  items: RoadmapItem[];
-}) {
+export function RoadmapInline({ roadmap, items }: { roadmap: Roadmap; items: RoadmapItem[] }) {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
-  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
 
   const toggle = useMutation({
-    mutationFn: ({ id, done }: { id: string; done: boolean }) =>
-      updateRoadmapItem(id, { done }),
+    mutationFn: ({ id, done }: { id: string; done: boolean }) => updateRoadmapItem(id, { done }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["roadmap-items"] });
     },
@@ -51,8 +30,7 @@ export function RoadmapInline({
 
   const roadmapItems = items.filter((i) => i.roadmap_id === roadmap.id);
   const topics = roadmapItems.filter((i) => !i.parent_id);
-  const subsFor = (id: string) =>
-    roadmapItems.filter((i) => i.parent_id === id);
+  const subsFor = (id: string) => roadmapItems.filter((i) => i.parent_id === id);
 
   const done = roadmapItems.filter((i) => i.done && i.parent_id).length;
   const total = roadmapItems.filter((i) => i.parent_id).length;
@@ -114,9 +92,7 @@ export function RoadmapInline({
       {expanded && (
         <div className="border-t border-border px-5 pb-5 pt-3">
           {roadmap.summary && (
-            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-              {roadmap.summary}
-            </p>
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">{roadmap.summary}</p>
           )}
 
           <div className="space-y-6">
@@ -131,10 +107,7 @@ export function RoadmapInline({
                     const isTopicExpanded = expandedTopics.has(topic.id);
 
                     return (
-                      <div
-                        key={topic.id}
-                        className="rounded-2xl border border-border/60"
-                      >
+                      <div key={topic.id} className="rounded-2xl border border-border/60">
                         {/* Topic header */}
                         <button
                           type="button"
@@ -160,8 +133,7 @@ export function RoadmapInline({
                             </p>
                             {topic.estimated_minutes && (
                               <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="size-3" />~
-                                {topic.estimated_minutes} min
+                                <Clock className="size-3" />~{topic.estimated_minutes} min
                               </span>
                             )}
                           </div>
@@ -180,9 +152,7 @@ export function RoadmapInline({
                           <div className="border-t border-border/40 px-4 pb-3 pt-2">
                             <ul className="space-y-1">
                               {subs.map((sub) => {
-                                const isLessonExpanded = expandedLessons.has(
-                                  sub.id,
-                                );
+                                const isLessonExpanded = expandedLessons.has(sub.id);
                                 return (
                                   <li key={sub.id}>
                                     <div className="rounded-xl transition-colors hover:bg-muted/40">
@@ -257,8 +227,7 @@ function InlineLessonContent({ item }: { item: RoadmapItem }) {
   const runLesson = useServerFn(generateLesson);
 
   const generate = useMutation({
-    mutationFn: (force: boolean) =>
-      runLesson({ data: { itemId: item.id, force } }),
+    mutationFn: (force: boolean) => runLesson({ data: { itemId: item.id, force } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["roadmap-items"] });
     },
@@ -269,8 +238,7 @@ function InlineLessonContent({ item }: { item: RoadmapItem }) {
     return (
       <div className="rounded-xl bg-muted/40 px-4 py-6 text-center">
         <p className="text-sm text-muted-foreground">
-          {(generate.data as { error?: string } | undefined)?.error ??
-            "No lesson written yet."}
+          {(generate.data as { error?: string } | undefined)?.error ?? "No lesson written yet."}
         </p>
         <Button
           size="sm"
@@ -287,9 +255,7 @@ function InlineLessonContent({ item }: { item: RoadmapItem }) {
     return (
       <div className="rounded-xl bg-muted/40 px-4 py-8 text-center">
         <Loader2 className="mx-auto size-5 animate-spin text-primary" />
-        <p className="mt-3 text-sm text-muted-foreground">
-          Writing this lesson…
-        </p>
+        <p className="mt-3 text-sm text-muted-foreground">Writing this lesson…</p>
       </div>
     );
   }

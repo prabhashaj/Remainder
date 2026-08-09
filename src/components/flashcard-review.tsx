@@ -5,18 +5,19 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { MessageResponse } from "@/components/ai-elements/message";
-import {
-  fetchDueFlashcards,
-  fetchFlashcardsForItem,
-  reviewFlashcard,
-} from "@/lib/srs.functions";
+import { fetchDueFlashcards, fetchFlashcardsForItem, reviewFlashcard } from "@/lib/srs.functions";
 
 type Card = Awaited<ReturnType<typeof fetchDueFlashcards>>[number];
 
 const QUALITY_MAP = [
   { label: "Again", quality: 0, variant: "destructive" as const, description: "Forgot completely" },
   { label: "Hard", quality: 3, variant: "outline" as const, description: "Took effort" },
-  { label: "Good", quality: 4, variant: "secondary" as const, description: "Recalled after thought" },
+  {
+    label: "Good",
+    quality: 4,
+    variant: "secondary" as const,
+    description: "Recalled after thought",
+  },
   { label: "Easy", quality: 5, variant: "default" as const, description: "Knew it instantly" },
 ];
 
@@ -34,10 +35,7 @@ export function FlashcardReview({
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: itemId ? ["flashcards-item", itemId] : ["due-flashcards"],
-    queryFn: () =>
-      itemId
-        ? runFetchItemCards({ data: { itemId } })
-        : runFetchDue(),
+    queryFn: () => (itemId ? runFetchItemCards({ data: { itemId } }) : runFetchDue()),
   });
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -72,8 +70,7 @@ export function FlashcardReview({
   // Keyboard shortcuts
   useEffect(() => {
     function handler(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
-        return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.code === "Space") {
         e.preventDefault();
         flip();
@@ -116,10 +113,7 @@ export function FlashcardReview({
             : "No flashcards generated for this topic yet."}
         </p>
         {onComplete && (
-          <Button
-            className="press mt-4 rounded-2xl"
-            onClick={onComplete}
-          >
+          <Button className="press mt-4 rounded-2xl" onClick={onComplete}>
             Done
           </Button>
         )}
@@ -178,7 +172,8 @@ export function FlashcardReview({
 
       {flipped && (
         <p className="mt-2 text-center text-[11px] text-muted-foreground">
-          Press <kbd className="rounded bg-muted px-1 py-0.5">1</kbd>-<kbd className="rounded bg-muted px-1 py-0.5">4</kbd> to rate
+          Press <kbd className="rounded bg-muted px-1 py-0.5">1</kbd>-
+          <kbd className="rounded bg-muted px-1 py-0.5">4</kbd> to rate
         </p>
       )}
     </div>

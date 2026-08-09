@@ -24,10 +24,7 @@ export function ChatVideoEmbeds({ text }: { text: string }) {
   return (
     <div className="mt-3 space-y-3">
       {ids.map((id) => (
-        <div
-          key={id}
-          className="overflow-hidden rounded-2xl border border-border bg-muted/30"
-        >
+        <div key={id} className="overflow-hidden rounded-2xl border border-border bg-muted/30">
           <iframe
             src={`https://www.youtube.com/embed/${id}`}
             title="Recommended video"

@@ -1,4 +1,3 @@
-
 # Building Agents
 
 The ToolLoopAgent provides a structured way to encapsulate LLM configuration, tools, and behavior into reusable components. It handles the agent loop for you, allowing the LLM to call tools multiple times in sequence to accomplish complex tasks. Define agents once and use them across your application.
@@ -19,12 +18,12 @@ The ToolLoopAgent class provides a single place to define your agent's behavior.
 Define an agent by instantiating the ToolLoopAgent class with your desired configuration:
 
 ```ts
-import { ToolLoopAgent } from 'ai';
+import { ToolLoopAgent } from "ai";
 __PROVIDER_IMPORT__;
 
 const myAgent = new ToolLoopAgent({
   model: __MODEL__,
-  instructions: 'You are a helpful assistant.',
+  instructions: "You are a helpful assistant.",
   tools: {
     // Your tools here
   },
@@ -38,12 +37,12 @@ The ToolLoopAgent accepts all the same settings as `generateText` and `streamTex
 ### Model and System Instructions
 
 ```ts
-import { ToolLoopAgent } from 'ai';
+import { ToolLoopAgent } from "ai";
 __PROVIDER_IMPORT__;
 
 const agent = new ToolLoopAgent({
   model: __MODEL__,
-  instructions: 'You are an expert software engineer.',
+  instructions: "You are an expert software engineer.",
 });
 ```
 
@@ -52,21 +51,21 @@ const agent = new ToolLoopAgent({
 Provide tools that the agent can use to accomplish tasks:
 
 ```ts
-import { ToolLoopAgent, tool } from 'ai';
+import { ToolLoopAgent, tool } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 const codeAgent = new ToolLoopAgent({
   model: __MODEL__,
   tools: {
     runCode: tool({
-      description: 'Execute Python code',
+      description: "Execute Python code",
       inputSchema: z.object({
         code: z.string(),
       }),
       execute: async ({ code }) => {
         // Execute code and return result
-        return { output: 'Code executed successfully' };
+        return { output: "Code executed successfully" };
       },
     }),
   },
@@ -82,14 +81,14 @@ permissions, or default settings, pass them through `toolsContext` and declare
 them with the tool's `contextSchema`.
 
 ```ts highlight="12-15,20-27,31-40"
-import { ToolLoopAgent, tool } from 'ai';
-import { z } from 'zod';
+import { ToolLoopAgent, tool } from "ai";
+import { z } from "zod";
 
 const agent = new ToolLoopAgent({
   model: __MODEL__,
   tools: {
     searchTickets: tool({
-      description: 'Search support tickets',
+      description: "Search support tickets",
       inputSchema: z.object({
         query: z.string(),
       }),
@@ -111,15 +110,15 @@ const agent = new ToolLoopAgent({
 });
 
 const result = await agent.generate({
-  prompt: 'Find open billing tickets for this account.',
+  prompt: "Find open billing tickets for this account.",
   runtimeContext: {
-    requestId: 'req_abc',
+    requestId: "req_abc",
     escalated: false,
   },
   toolsContext: {
     searchTickets: {
       apiKey: process.env.SUPPORT_API_KEY!,
-      accountId: 'acct_123',
+      accountId: "acct_123",
     },
   },
 });
@@ -142,20 +141,17 @@ environment. The experimental sandbox is a per-call value, so provide it to `gen
 ```ts highlight="13,19-23,31"
 const agent = new ToolLoopAgent({
   model: __MODEL__,
-  instructions: 'You are a coding assistant. Use the shell tool when needed.',
+  instructions: "You are a coding assistant. Use the shell tool when needed.",
   tools: {
     shell: tool({
-      description: 'Execute shell commands in the experimental sandbox.',
+      description: "Execute shell commands in the experimental sandbox.",
       inputSchema: z.object({
         command: z.string(),
         workingDirectory: z.string().optional(),
       }),
-      execute: async (
-        { command, workingDirectory },
-        { abortSignal, experimental_sandbox },
-      ) => {
+      execute: async ({ command, workingDirectory }, { abortSignal, experimental_sandbox }) => {
         if (!experimental_sandbox) {
-          throw new Error('Experimental sandbox is not available');
+          throw new Error("Experimental sandbox is not available");
         }
 
         return experimental_sandbox.run({
@@ -189,7 +185,7 @@ const agent = new ToolLoopAgent({
   model: __MODEL__,
   tools: {
     runCode: tool({
-      description: 'Execute Python code',
+      description: "Execute Python code",
       inputSchema: z.object({
         code: z.string(),
       }),
@@ -197,7 +193,7 @@ const agent = new ToolLoopAgent({
     }),
   },
   toolApproval: {
-    runCode: 'user-approval',
+    runCode: "user-approval",
   },
 });
 ```
@@ -213,7 +209,7 @@ By default, agents run for 20 steps (`stopWhen: isStepCount(20)`). In each step,
 You can configure `stopWhen` differently to allow more steps. After each tool execution, the agent triggers a new generation where the model can call another tool or generate text:
 
 ```ts
-import { ToolLoopAgent, isStepCount } from 'ai';
+import { ToolLoopAgent, isStepCount } from "ai";
 __PROVIDER_IMPORT__;
 
 const agent = new ToolLoopAgent({
@@ -232,7 +228,7 @@ Each step represents one generation (which results in either text or a tool call
 You can combine multiple conditions:
 
 ```ts
-import { ToolLoopAgent, isStepCount } from 'ai';
+import { ToolLoopAgent, isStepCount } from "ai";
 __PROVIDER_IMPORT__;
 
 const agent = new ToolLoopAgent({
@@ -251,7 +247,7 @@ Learn more about [loop control and stop conditions](/docs/agents/loop-control).
 Control how the agent uses tools:
 
 ```ts
-import { ToolLoopAgent } from 'ai';
+import { ToolLoopAgent } from "ai";
 __PROVIDER_IMPORT__;
 
 const agent = new ToolLoopAgent({
@@ -259,7 +255,7 @@ const agent = new ToolLoopAgent({
   tools: {
     // your tools here
   },
-  toolChoice: 'required', // Force tool use
+  toolChoice: "required", // Force tool use
   // or toolChoice: 'none' to disable tools
   // or toolChoice: 'auto' (default) to let the model decide
 });
@@ -268,7 +264,7 @@ const agent = new ToolLoopAgent({
 You can also force the use of a specific tool:
 
 ```ts
-import { ToolLoopAgent } from 'ai';
+import { ToolLoopAgent } from "ai";
 __PROVIDER_IMPORT__;
 
 const agent = new ToolLoopAgent({
@@ -278,8 +274,8 @@ const agent = new ToolLoopAgent({
     cityAttractions: attractionsTool,
   },
   toolChoice: {
-    type: 'tool',
-    toolName: 'weather', // Force the weather tool to be used
+    type: "tool",
+    toolName: "weather", // Force the weather tool to be used
   },
 });
 ```
@@ -289,15 +285,15 @@ const agent = new ToolLoopAgent({
 Define structured output schemas:
 
 ```ts
-import { ToolLoopAgent, Output } from 'ai';
+import { ToolLoopAgent, Output } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 const analysisAgent = new ToolLoopAgent({
   model: __MODEL__,
   output: Output.object({
     schema: z.object({
-      sentiment: z.enum(['positive', 'neutral', 'negative']),
+      sentiment: z.enum(["positive", "neutral", "negative"]),
       summary: z.string(),
       keyPoints: z.array(z.string()),
     }),
@@ -305,7 +301,7 @@ const analysisAgent = new ToolLoopAgent({
 });
 
 const { output } = await analysisAgent.generate({
-  prompt: 'Analyze customer feedback from the last quarter',
+  prompt: "Analyze customer feedback from the last quarter",
 });
 ```
 
@@ -320,8 +316,7 @@ Set the agent's role and expertise:
 ```ts
 const agent = new ToolLoopAgent({
   model: __MODEL__,
-  instructions:
-    'You are an expert data analyst. You provide clear insights from complex data.',
+  instructions: "You are an expert data analyst. You provide clear insights from complex data.",
 });
 ```
 
@@ -419,7 +414,7 @@ Use `generate()` for one-time text generation:
 
 ```ts
 const result = await myAgent.generate({
-  prompt: 'What is the weather like?',
+  prompt: "What is the weather like?",
 });
 
 console.log(result.text);
@@ -431,7 +426,7 @@ Use `stream()` for streaming responses:
 
 ```ts
 const result = await myAgent.stream({
-  prompt: 'Tell me a story',
+  prompt: "Tell me a story",
 });
 
 for await (const chunk of result.textStream) {
@@ -445,7 +440,7 @@ Use `createAgentUIStreamResponse()` to create API responses for client applicati
 
 ```ts
 // In your API route (e.g., app/api/chat/route.ts)
-import { createAgentUIStreamResponse } from 'ai';
+import { createAgentUIStreamResponse } from "ai";
 
 export async function POST(request: Request) {
   const { messages } = await request.json();
@@ -464,10 +459,10 @@ These are useful for logging, observability, debugging, and custom telemetry.
 
 ```ts
 const result = await myAgent.generate({
-  prompt: 'Research and summarize the latest AI trends',
+  prompt: "Research and summarize the latest AI trends",
 
   onStart({ modelId }) {
-    console.log('Agent started', { modelId });
+    console.log("Agent started", { modelId });
   },
 
   onStepStart({ stepNumber, modelId }) {
@@ -479,12 +474,9 @@ const result = await myAgent.generate({
   },
 
   onToolExecutionEnd({ toolCall, toolExecutionMs, toolOutput }) {
-    console.log(
-      `Tool call finished: ${toolCall.toolName} (${toolExecutionMs}ms)`,
-      {
-        success: toolOutput.type === 'tool-result',
-      },
-    );
+    console.log(`Tool call finished: ${toolCall.toolName} (${toolExecutionMs}ms)`, {
+      success: toolOutput.type === "tool-result",
+    });
   },
 
   onStepEnd({ stepNumber, usage, performance, finishReason, toolCalls }) {
@@ -494,12 +486,12 @@ const result = await myAgent.generate({
       outputTokensPerSecond: performance.effectiveOutputTokensPerSecond,
       stepTimeMs: performance.stepTimeMs,
       finishReason,
-      toolsUsed: toolCalls?.map(tc => tc.toolName),
+      toolsUsed: toolCalls?.map((tc) => tc.toolName),
     });
   },
 
   onEnd({ usage, steps }) {
-    console.log('Agent finished:', {
+    console.log("Agent finished:", {
       totalSteps: steps.length,
       totalTokens: usage.totalTokens,
     });
@@ -533,7 +525,7 @@ const agent = new ToolLoopAgent({
 
 // Method-level callback runs after constructor callback
 const result = await agent.generate({
-  prompt: 'Hello',
+  prompt: "Hello",
   onStepEnd: async ({ stepNumber, usage }) => {
     // Per-call tracking (e.g., for billing)
     await trackUsage(stepNumber, usage);
@@ -546,7 +538,7 @@ const result = await agent.generate({
 You can infer types for your agent's `UIMessage`s:
 
 ```ts
-import { ToolLoopAgent, InferAgentUIMessage } from 'ai';
+import { ToolLoopAgent, InferAgentUIMessage } from "ai";
 
 const myAgent = new ToolLoopAgent({
   // ... configuration
@@ -559,10 +551,10 @@ export type MyAgentUIMessage = InferAgentUIMessage<typeof myAgent>;
 Use this type in your client components with `useChat`:
 
 ```tsx filename="components/chat.tsx"
-'use client';
+"use client";
 
-import { useChat } from '@ai-sdk/react';
-import type { MyAgentUIMessage } from '@/agent/my-agent';
+import { useChat } from "@ai-sdk/react";
+import type { MyAgentUIMessage } from "@/agent/my-agent";
 
 export function Chat() {
   const { messages } = useChat<MyAgentUIMessage>();
@@ -578,7 +570,6 @@ Now that you understand building agents, you can:
 - Learn about [loop control](/docs/agents/loop-control) for advanced execution control
 - See [manual loop examples](/cookbook/node/manual-agent-loop) for custom workflow implementations
 
-
 ## Navigation
 
 - [Overview](/docs/agents/overview)
@@ -592,6 +583,5 @@ Now that you understand building agents, you can:
 - [Tool Approvals](/docs/agents/tool-approvals)
 - [WorkflowAgent](/docs/agents/workflow-agent)
 - [Terminal UI](/docs/agents/terminal-ui)
-
 
 [Full Sitemap](/sitemap.md)

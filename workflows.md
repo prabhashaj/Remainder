@@ -1,4 +1,3 @@
-
 # Workflow Patterns
 
 Combine the building blocks from the [overview](/docs/agents/overview) with these patterns to add structure and reliability to your agents:
@@ -36,9 +35,9 @@ These patterns, adapted from [Anthropic's guide on building effective agents](ht
 The simplest workflow pattern executes steps in a predefined order. Each step's output becomes input for the next step, creating a clear chain of operations. Use this pattern for tasks with well-defined sequences, like content generation pipelines or data transformation processes.
 
 ```ts
-import { generateText, Output } from 'ai';
+import { generateText, Output } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 async function generateMarketingCopy(input: string) {
   const model = __MODEL__;
@@ -76,9 +75,9 @@ async function generateMarketingCopy(input: string) {
     const { text: improvedCopy } = await generateText({
       model,
       prompt: `Rewrite this marketing copy with:
-      ${!qualityMetrics.hasCallToAction ? '- A clear call to action' : ''}
-      ${qualityMetrics.emotionalAppeal < 7 ? '- Stronger emotional appeal' : ''}
-      ${qualityMetrics.clarity < 7 ? '- Improved clarity and directness' : ''}
+      ${!qualityMetrics.hasCallToAction ? "- A clear call to action" : ""}
+      ${qualityMetrics.emotionalAppeal < 7 ? "- Stronger emotional appeal" : ""}
+      ${qualityMetrics.clarity < 7 ? "- Improved clarity and directness" : ""}
 
       Original copy: ${copy}`,
     });
@@ -94,9 +93,9 @@ async function generateMarketingCopy(input: string) {
 This pattern lets the model decide which path to take through a workflow based on context and intermediate results. The model acts as an intelligent router, directing the flow of execution between different branches of your workflow. Use this when handling varied inputs that require different processing approaches. In the example below, the first LLM call's results determine the second call's model size and system prompt.
 
 ```ts
-import { generateText, Output } from 'ai';
+import { generateText, Output } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 async function handleCustomerQuery(query: string) {
   const model = __MODEL__;
@@ -107,8 +106,8 @@ async function handleCustomerQuery(query: string) {
     output: Output.object({
       schema: z.object({
         reasoning: z.string(),
-        type: z.enum(['general', 'refund', 'technical']),
-        complexity: z.enum(['simple', 'complex']),
+        type: z.enum(["general", "refund", "technical"]),
+        complexity: z.enum(["simple", "complex"]),
       }),
     }),
     prompt: `Classify this customer query:
@@ -123,17 +122,13 @@ async function handleCustomerQuery(query: string) {
   // Route based on classification
   // Set model and system prompt based on query type and complexity
   const { text: response } = await generateText({
-    model:
-      classification.complexity === 'simple'
-        ? 'openai/gpt-4o-mini'
-        : 'openai/o4-mini',
+    model: classification.complexity === "simple" ? "openai/gpt-4o-mini" : "openai/o4-mini",
     instructions: {
-      general:
-        'You are an expert customer service agent handling general inquiries.',
+      general: "You are an expert customer service agent handling general inquiries.",
       refund:
-        'You are a customer service agent specializing in refund requests. Follow company policy and collect necessary information.',
+        "You are a customer service agent specializing in refund requests. Follow company policy and collect necessary information.",
       technical:
-        'You are a technical support specialist with deep product knowledge. Focus on clear step-by-step troubleshooting.',
+        "You are a technical support specialist with deep product knowledge. Focus on clear step-by-step troubleshooting.",
     }[classification.type],
     prompt: query,
   });
@@ -147,73 +142,72 @@ async function handleCustomerQuery(query: string) {
 Break down tasks into independent subtasks that execute simultaneously. This pattern uses parallel execution to improve efficiency while maintaining the benefits of structured workflows. For example, analyze multiple documents or process different aspects of a single input concurrently (like code review).
 
 ```ts
-import { generateText, Output } from 'ai';
+import { generateText, Output } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 // Example: Parallel code review with multiple specialized reviewers
 async function parallelCodeReview(code: string) {
   const model = __MODEL__;
 
   // Run parallel reviews
-  const [securityReview, performanceReview, maintainabilityReview] =
-    await Promise.all([
-      generateText({
-        model,
-        instructions:
-          'You are an expert in code security. Focus on identifying security vulnerabilities, injection risks, and authentication issues.',
-        output: Output.object({
-          schema: z.object({
-            vulnerabilities: z.array(z.string()),
-            riskLevel: z.enum(['low', 'medium', 'high']),
-            suggestions: z.array(z.string()),
-          }),
+  const [securityReview, performanceReview, maintainabilityReview] = await Promise.all([
+    generateText({
+      model,
+      instructions:
+        "You are an expert in code security. Focus on identifying security vulnerabilities, injection risks, and authentication issues.",
+      output: Output.object({
+        schema: z.object({
+          vulnerabilities: z.array(z.string()),
+          riskLevel: z.enum(["low", "medium", "high"]),
+          suggestions: z.array(z.string()),
         }),
-        prompt: `Review this code:
-      ${code}`,
       }),
+      prompt: `Review this code:
+      ${code}`,
+    }),
 
-      generateText({
-        model,
-        instructions:
-          'You are an expert in code performance. Focus on identifying performance bottlenecks, memory leaks, and optimization opportunities.',
-        output: Output.object({
-          schema: z.object({
-            issues: z.array(z.string()),
-            impact: z.enum(['low', 'medium', 'high']),
-            optimizations: z.array(z.string()),
-          }),
+    generateText({
+      model,
+      instructions:
+        "You are an expert in code performance. Focus on identifying performance bottlenecks, memory leaks, and optimization opportunities.",
+      output: Output.object({
+        schema: z.object({
+          issues: z.array(z.string()),
+          impact: z.enum(["low", "medium", "high"]),
+          optimizations: z.array(z.string()),
         }),
-        prompt: `Review this code:
-      ${code}`,
       }),
+      prompt: `Review this code:
+      ${code}`,
+    }),
 
-      generateText({
-        model,
-        instructions:
-          'You are an expert in code quality. Focus on code structure, readability, and adherence to best practices.',
-        output: Output.object({
-          schema: z.object({
-            concerns: z.array(z.string()),
-            qualityScore: z.number().min(1).max(10),
-            recommendations: z.array(z.string()),
-          }),
+    generateText({
+      model,
+      instructions:
+        "You are an expert in code quality. Focus on code structure, readability, and adherence to best practices.",
+      output: Output.object({
+        schema: z.object({
+          concerns: z.array(z.string()),
+          qualityScore: z.number().min(1).max(10),
+          recommendations: z.array(z.string()),
         }),
-        prompt: `Review this code:
-      ${code}`,
       }),
-    ]);
+      prompt: `Review this code:
+      ${code}`,
+    }),
+  ]);
 
   const reviews = [
-    { ...securityReview.output, type: 'security' },
-    { ...performanceReview.output, type: 'performance' },
-    { ...maintainabilityReview.output, type: 'maintainability' },
+    { ...securityReview.output, type: "security" },
+    { ...performanceReview.output, type: "performance" },
+    { ...maintainabilityReview.output, type: "maintainability" },
   ];
 
   // Aggregate results using another model instance
   const { text: summary } = await generateText({
     model,
-    instructions: 'You are a technical lead summarizing multiple code reviews.',
+    instructions: "You are a technical lead summarizing multiple code reviews.",
     prompt: `Synthesize these code review results into a concise summary with key actions:
     ${JSON.stringify(reviews, null, 2)}`,
   });
@@ -227,9 +221,9 @@ async function parallelCodeReview(code: string) {
 A primary model (orchestrator) coordinates the execution of specialized workers. Each worker optimizes for a specific subtask, while the orchestrator maintains overall context and ensures coherent results. This pattern excels at complex tasks requiring different types of expertise or processing.
 
 ```ts
-import { generateText, Output } from 'ai';
+import { generateText, Output } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 async function implementFeature(featureRequest: string) {
   // Orchestrator: Plan the implementation
@@ -241,29 +235,27 @@ async function implementFeature(featureRequest: string) {
           z.object({
             purpose: z.string(),
             filePath: z.string(),
-            changeType: z.enum(['create', 'modify', 'delete']),
+            changeType: z.enum(["create", "modify", "delete"]),
           }),
         ),
-        estimatedComplexity: z.enum(['low', 'medium', 'high']),
+        estimatedComplexity: z.enum(["low", "medium", "high"]),
       }),
     }),
-    instructions:
-      'You are a senior software architect planning feature implementations.',
+    instructions: "You are a senior software architect planning feature implementations.",
     prompt: `Analyze this feature request and create an implementation plan:
     ${featureRequest}`,
   });
 
   // Workers: Execute the planned changes
   const fileChanges = await Promise.all(
-    implementationPlan.files.map(async file => {
+    implementationPlan.files.map(async (file) => {
       // Each worker is specialized for the type of change
       const workerSystemPrompt = {
         create:
-          'You are an expert at implementing new files following best practices and project patterns.',
+          "You are an expert at implementing new files following best practices and project patterns.",
         modify:
-          'You are an expert at modifying existing code while maintaining consistency and avoiding regressions.',
-        delete:
-          'You are an expert at safely removing code while ensuring no breaking changes.',
+          "You are an expert at modifying existing code while maintaining consistency and avoiding regressions.",
+        delete: "You are an expert at safely removing code while ensuring no breaking changes.",
       }[file.changeType];
 
       const { output: change } = await generateText({
@@ -301,19 +293,19 @@ async function implementFeature(featureRequest: string) {
 Add quality control to workflows with dedicated evaluation steps that assess intermediate results. Based on the evaluation, the workflow proceeds, retries with adjusted parameters, or takes corrective action. This creates robust workflows capable of self-improvement and error recovery.
 
 ```ts
-import { generateText, Output } from 'ai';
+import { generateText, Output } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 async function translateWithFeedback(text: string, targetLanguage: string) {
-  let currentTranslation = '';
+  let currentTranslation = "";
   let iterations = 0;
   const MAX_ITERATIONS = 3;
 
   // Initial translation
   const { text: translation } = await generateText({
     model: __MODEL__,
-    instructions: 'You are an expert literary translator.',
+    instructions: "You are an expert literary translator.",
     prompt: `Translate this text to ${targetLanguage}, preserving tone and cultural nuances:
     ${text}`,
   });
@@ -335,7 +327,7 @@ async function translateWithFeedback(text: string, targetLanguage: string) {
           improvementSuggestions: z.array(z.string()),
         }),
       }),
-      instructions: 'You are an expert in evaluating literary translations.',
+      instructions: "You are an expert in evaluating literary translations.",
       prompt: `Evaluate this translation:
 
       Original: ${text}
@@ -361,10 +353,10 @@ async function translateWithFeedback(text: string, targetLanguage: string) {
     // Generate improved translation based on feedback
     const { text: improvedTranslation } = await generateText({
       model: __MODEL__,
-      instructions: 'You are an expert literary translator.',
+      instructions: "You are an expert literary translator.",
       prompt: `Improve this translation based on the following feedback:
-      ${evaluation.specificIssues.join('\n')}
-      ${evaluation.improvementSuggestions.join('\n')}
+      ${evaluation.specificIssues.join("\n")}
+      ${evaluation.improvementSuggestions.join("\n")}
 
       Original: ${text}
       Current Translation: ${currentTranslation}`,
@@ -381,7 +373,6 @@ async function translateWithFeedback(text: string, targetLanguage: string) {
 }
 ```
 
-
 ## Navigation
 
 - [Overview](/docs/agents/overview)
@@ -395,6 +386,5 @@ async function translateWithFeedback(text: string, targetLanguage: string) {
 - [Tool Approvals](/docs/agents/tool-approvals)
 - [WorkflowAgent](/docs/agents/workflow-agent)
 - [Terminal UI](/docs/agents/terminal-ui)
-
 
 [Full Sitemap](/sitemap.md)

@@ -46,32 +46,22 @@ export const generateNudge = createServerFn({ method: "GET" })
         .order("due_date", { nullsFirst: false })
         .limit(5),
       supabase.from("habits").select("id,title,icon").eq("archived", false).limit(6),
-      supabase
-        .from("habit_logs")
-        .select("habit_id,day")
-        .gte("day", fmtDate(thirtyDaysAgo)),
+      supabase.from("habit_logs").select("habit_id,day").gte("day", fmtDate(thirtyDaysAgo)),
       supabase.from("goals").select("title,progress").eq("status", "active").limit(4),
       supabase
         .from("journal_entries")
         .select("mood,day")
         .order("day", { ascending: false })
         .limit(7),
-      supabase
-        .from("focus_sessions")
-        .select("minutes")
-        .gte("created_at", weekAgo.toISOString()),
+      supabase.from("focus_sessions").select("minutes").gte("created_at", weekAgo.toISOString()),
     ]);
 
     const openTasks = (tasks ?? []).map(
       (t) => `"${t.title}"${t.due_date ? ` (due ${t.due_date})` : ""}`,
     );
     const habitsList = (habits ?? []).map((h) => {
-      const doneToday = (habitLogs ?? []).some(
-        (l) => l.habit_id === h.id && l.day === todayStr,
-      );
-      const days = new Set(
-        (habitLogs ?? []).filter((l) => l.habit_id === h.id).map((l) => l.day),
-      );
+      const doneToday = (habitLogs ?? []).some((l) => l.habit_id === h.id && l.day === todayStr);
+      const days = new Set((habitLogs ?? []).filter((l) => l.habit_id === h.id).map((l) => l.day));
       let streak = 0;
       for (let i = 0; i < 365; i++) {
         const d = new Date(now);
@@ -83,24 +73,16 @@ export const generateNudge = createServerFn({ method: "GET" })
     });
     const goalsList = (goals ?? []).map((g) => `${g.title} (${g.progress}%)`);
     const moodStr = (moods ?? []).map((m) => m.mood ?? "—").join(" ");
-    const focusMin = (focusSessions ?? []).reduce(
-      (sum, s) => sum + (s.minutes ?? 0),
-      0,
-    );
+    const focusMin = (focusSessions ?? []).reduce((sum, s) => sum + (s.minutes ?? 0), 0);
 
     let stateSummary = "";
     if (openTasks.length)
       stateSummary += `Open tasks (${openTasks.length}): ${openTasks.join(", ")}.\n`;
-    if (habitsList.length)
-      stateSummary += `Habits: ${habitsList.join("; ")}.\n`;
-    if (goalsList.length)
-      stateSummary += `Active goals: ${goalsList.join(", ")}.\n`;
-    if (moodStr.trim())
-      stateSummary += `Recent moods (last 7 days): ${moodStr}.\n`;
+    if (habitsList.length) stateSummary += `Habits: ${habitsList.join("; ")}.\n`;
+    if (goalsList.length) stateSummary += `Active goals: ${goalsList.join(", ")}.\n`;
+    if (moodStr.trim()) stateSummary += `Recent moods (last 7 days): ${moodStr}.\n`;
     stateSummary += `Focus minutes this week: ${focusMin}.\n`;
-    if (!stateSummary.trim())
-      stateSummary =
-        "The user has no tasks, habits, or goals set up yet.";
+    if (!stateSummary.trim()) stateSummary = "The user has no tasks, habits, or goals set up yet.";
 
     const gateway = createAiGatewayProvider(key);
     const result = streamText({

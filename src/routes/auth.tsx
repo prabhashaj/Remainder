@@ -18,9 +18,15 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in — Remainder" },
-      { name: "description", content: "Sign in to your Remainder workspace and continue learning." },
+      {
+        name: "description",
+        content: "Sign in to your Remainder workspace and continue learning.",
+      },
       { property: "og:title", content: "Sign in — Remainder" },
-      { property: "og:description", content: "Sign in to your calm workspace and AI learning coach." },
+      {
+        property: "og:description",
+        content: "Sign in to your calm workspace and AI learning coach.",
+      },
     ],
   }),
   component: AuthPage,

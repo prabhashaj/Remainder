@@ -1,4 +1,3 @@
-
 # Tool Calling
 
 As covered under Foundations, [tools](/docs/foundations/tools) are objects that can be called by the model to perform a specific task.
@@ -17,17 +16,17 @@ Function tools and dynamic tools contain several core elements:
 The `tools` parameter of `generateText` and `streamText` is an object that has the tool names as keys and the tools as values:
 
 ```ts highlight="7-18"
-import { z } from 'zod';
-import { generateText, tool, isStepCount } from 'ai';
+import { z } from "zod";
+import { generateText, tool, isStepCount } from "ai";
 __PROVIDER_IMPORT__;
 
 const result = await generateText({
   model: __MODEL__,
   tools: {
     weather: tool({
-      description: 'Get the weather in a location',
+      description: "Get the weather in a location",
       inputSchema: z.object({
-        location: z.string().describe('The location to get the weather for'),
+        location: z.string().describe("The location to get the weather for"),
       }),
       execute: async ({ location }) => ({
         location,
@@ -36,7 +35,7 @@ const result = await generateText({
     }),
   },
   stopWhen: isStepCount(5),
-  prompt: 'What is the weather in San Francisco?',
+  prompt: "What is the weather in San Francisco?",
 });
 ```
 
@@ -60,8 +59,8 @@ model for each generation step. It receives the matching tool `context` from
 updates `toolsContext` or `experimental_sandbox`, the next step uses those updated values.
 
 ```ts highlight="5-16,32-35"
-import { generateText, tool } from 'ai';
-import { z } from 'zod';
+import { generateText, tool } from "ai";
+import { z } from "zod";
 
 const shell = tool({
   contextSchema: z.object({
@@ -70,18 +69,16 @@ const shell = tool({
   description: ({ context, experimental_sandbox }) =>
     [
       `Run shell commands for the ${context.projectName} project.`,
-      experimental_sandbox != null
-        ? `Sandbox: ${experimental_sandbox.description}`
-        : undefined,
+      experimental_sandbox != null ? `Sandbox: ${experimental_sandbox.description}` : undefined,
     ]
       .filter(Boolean)
-      .join('\n'),
+      .join("\n"),
   inputSchema: z.object({
     command: z.string(),
   }),
   execute: async ({ command }, { experimental_sandbox }) => {
     if (!experimental_sandbox) {
-      throw new Error('Experimental sandbox is not available');
+      throw new Error("Experimental sandbox is not available");
     }
 
     return experimental_sandbox.run({ command });
@@ -92,10 +89,10 @@ const result = await generateText({
   model: __MODEL__,
   tools: { shell },
   toolsContext: {
-    shell: { projectName: 'web-app' },
+    shell: { projectName: "web-app" },
   },
   experimental_sandbox,
-  prompt: 'List the project files.',
+  prompt: "List the project files.",
 });
 ```
 
@@ -109,7 +106,7 @@ By default, strict mode is disabled. You can enable it per-tool by setting `stri
 
 ```ts
 tool({
-  description: 'Get the weather in a location',
+  description: "Get the weather in a location",
   inputSchema: z.object({
     location: z.string(),
   }),
@@ -133,14 +130,11 @@ usage or when there are optional values.
 
 ```ts
 tool({
-  description: 'Get the weather in a location',
+  description: "Get the weather in a location",
   inputSchema: z.object({
-    location: z.string().describe('The location to get the weather for'),
+    location: z.string().describe("The location to get the weather for"),
   }),
-  inputExamples: [
-    { input: { location: 'San Francisco' } },
-    { input: { location: 'London' } },
-  ],
+  inputExamples: [{ input: { location: "San Francisco" } }, { input: { location: "London" } }],
   execute: async ({ location }) => {
     // ...
   },
@@ -170,9 +164,9 @@ const result = await generateText({
   model: __MODEL__,
   tools: { runCommand },
   toolApproval: {
-    runCommand: 'user-approval',
+    runCommand: "user-approval",
   },
-  prompt: 'Remove the most recent file in the downloads folder',
+  prompt: "Remove the most recent file in the downloads folder",
 });
 ```
 
@@ -208,20 +202,14 @@ type parameter; it defaults to `Context`). It may return `undefined` for the sam
 const result = await generateText({
   model: __MODEL__,
   tools: { runCommand },
-  toolApproval: ({
-    toolCall,
-    tools,
-    toolsContext,
-    messages,
-    runtimeContext,
-  }) => {
-    if (toolCall.toolName === 'runCommand' && !toolCall.dynamic) {
+  toolApproval: ({ toolCall, tools, toolsContext, messages, runtimeContext }) => {
+    if (toolCall.toolName === "runCommand" && !toolCall.dynamic) {
       // Inspect toolCall.input, cross-tool state, messages, or runtimeContext for policy.
-      return 'user-approval';
+      return "user-approval";
     }
     return undefined; // or 'not-applicable'
   },
-  prompt: 'Remove the most recent file in the downloads folder',
+  prompt: "Remove the most recent file in the downloads folder",
 });
 ```
 
@@ -264,11 +252,9 @@ Here's the manual approval flow:
 After calling `generateText` or `streamText`, check `result.content` for `tool-approval-request` parts:
 
 ```ts
-import { type ModelMessage, generateText } from 'ai';
+import { type ModelMessage, generateText } from "ai";
 
-const messages: ModelMessage[] = [
-  { role: 'user', content: 'Remove the most recent file' },
-];
+const messages: ModelMessage[] = [{ role: "user", content: "Remove the most recent file" }];
 const result = await generateText({
   model: __MODEL__,
   tools: { runCommand },
@@ -278,7 +264,7 @@ const result = await generateText({
 messages.push(...result.responseMessages);
 
 for (const part of result.content) {
-  if (part.type === 'tool-approval-request' && !part.isAutomatic) {
+  if (part.type === "tool-approval-request" && !part.isAutomatic) {
     console.log(part.approvalId); // Unique ID for this approval request
     console.log(part.toolCall); // Contains toolName, input, etc.
   }
@@ -288,24 +274,24 @@ for (const part of result.content) {
 To respond, create a `tool-approval-response` and add it to your messages:
 
 ```ts
-import { type ToolApprovalResponse } from 'ai';
+import { type ToolApprovalResponse } from "ai";
 
 const approvals: ToolApprovalResponse[] = [];
 
 for (const part of result.content) {
-  if (part.type === 'tool-approval-request' && !part.isAutomatic) {
+  if (part.type === "tool-approval-request" && !part.isAutomatic) {
     const response: ToolApprovalResponse = {
-      type: 'tool-approval-response',
+      type: "tool-approval-response",
       approvalId: part.approvalId,
       approved: true, // or false to deny
-      reason: 'User confirmed the command', // Optional context for the model
+      reason: "User confirmed the command", // Optional context for the model
     };
     approvals.push(response);
   }
 }
 
 // add approvals to messages
-messages.push({ role: 'tool', content: approvals });
+messages.push({ role: "tool", content: approvals });
 ```
 
 Then call `generateText` or `streamText` again with the updated messages. If approved, the tool executes. If denied, the model receives the denial and can respond accordingly.
@@ -336,7 +322,7 @@ function in a per-tool `toolApproval` object:
 
 ```ts
 const paymentTool = tool({
-  description: 'Process a payment',
+  description: "Process a payment",
   inputSchema: z.object({
     amount: z.number(),
     recipient: z.string(),
@@ -352,10 +338,9 @@ const result = await generateText({
     processPayment: paymentTool,
   },
   toolApproval: {
-    processPayment: async ({ amount }) =>
-      amount > 1000 ? 'user-approval' : undefined,
+    processPayment: async ({ amount }) => (amount > 1000 ? "user-approval" : undefined),
   },
-  prompt: 'Send $1500 to the contractor',
+  prompt: "Send $1500 to the contractor",
 });
 ```
 
@@ -410,17 +395,17 @@ In the following example, there are two steps:
    1. The model generates a response considering the tool result.
 
 ```ts highlight="19-20"
-import { z } from 'zod';
-import { generateText, tool, isStepCount } from 'ai';
+import { z } from "zod";
+import { generateText, tool, isStepCount } from "ai";
 __PROVIDER_IMPORT__;
 
 const { text, steps } = await generateText({
   model: __MODEL__,
   tools: {
     weather: tool({
-      description: 'Get the weather in a location',
+      description: "Get the weather in a location",
       inputSchema: z.object({
-        location: z.string().describe('The location to get the weather for'),
+        location: z.string().describe("The location to get the weather for"),
       }),
       execute: async ({ location }) => ({
         location,
@@ -429,7 +414,7 @@ const { text, steps } = await generateText({
     }),
   },
   stopWhen: isStepCount(5), // stop after a maximum of 5 steps if tools were called
-  prompt: 'What is the weather in San Francisco?',
+  prompt: "What is the weather in San Francisco?",
 });
 ```
 
@@ -444,7 +429,7 @@ It contains all the text, tool calls, tool results, per-step `performance`, and 
 #### Example: Extract tool results from all steps
 
 ```ts highlight="4,10-11"
-import { generateText } from 'ai';
+import { generateText } from "ai";
 __PROVIDER_IMPORT__;
 
 const { steps } = await generateText({
@@ -454,7 +439,7 @@ const { steps } = await generateText({
 });
 
 // extract all tool calls from the steps:
-const allToolCalls = steps.flatMap(step => step.toolCalls);
+const allToolCalls = steps.flatMap((step) => step.toolCalls);
 ```
 
 ### `onStepEnd` callback
@@ -467,19 +452,11 @@ When you have multiple steps, the callback is triggered for each step.
 The callback receives a `stepNumber` (zero-based) to identify which step just completed:
 
 ```tsx highlight="5-8"
-import { generateText } from 'ai';
+import { generateText } from "ai";
 
 const result = await generateText({
   // ...
-  onStepEnd({
-    stepNumber,
-    text,
-    toolCalls,
-    toolResults,
-    finishReason,
-    usage,
-    performance,
-  }) {
+  onStepEnd({ stepNumber, text, toolCalls, toolResults, finishReason, usage, performance }) {
     console.log(`Step ${stepNumber} finished (${finishReason})`, {
       usage,
       performance,
@@ -496,7 +473,7 @@ These callbacks are called right before and after each tool's `execute` function
 visibility into tool execution timing, inputs, outputs, and errors:
 
 ```tsx highlight="5-14"
-import { generateText } from 'ai';
+import { generateText } from "ai";
 
 const result = await generateText({
   // ... model, tools, prompt
@@ -507,18 +484,15 @@ const result = await generateText({
     });
   },
   onToolExecutionEnd({ toolCall, toolExecutionMs, toolOutput }) {
-    if (toolOutput.type === 'tool-error') {
+    if (toolOutput.type === "tool-error") {
       console.error(
         `Tool ${toolCall.toolName} failed after ${toolExecutionMs}ms:`,
         toolOutput.error,
       );
     } else {
-      console.log(
-        `Tool ${toolCall.toolName} completed in ${toolExecutionMs}ms`,
-        {
-          output: toolOutput.output,
-        },
-      );
+      console.log(`Tool ${toolCall.toolName} completed in ${toolExecutionMs}ms`, {
+        output: toolOutput.output,
+      });
     }
   },
 });
@@ -548,7 +522,7 @@ It is called with the following parameters:
 You can use it to provide different settings for a step, including modifying the input messages.
 
 ```tsx highlight="5-7"
-import { generateText } from 'ai';
+import { generateText } from "ai";
 
 const result = await generateText({
   // ...
@@ -558,9 +532,9 @@ const result = await generateText({
         // use a different model for this step:
         model: modelForThisParticularStep,
         // force a tool choice for this step:
-        toolChoice: { type: 'tool', toolName: 'tool1' },
+        toolChoice: { type: "tool", toolName: "tool1" },
         // limit the tools that are available for this step:
-        activeTools: ['tool1'],
+        activeTools: ["tool1"],
       };
     }
 
@@ -582,7 +556,7 @@ Use `initialMessages` when you need the original input messages and `responseMes
 The `pruneMessages` helper provides a built-in way to remove selected messages or message parts. You can use it inside `prepareStep` when you want a simple compaction strategy.
 
 ```tsx
-import { generateText, pruneMessages, type ModelMessage } from 'ai';
+import { generateText, pruneMessages, type ModelMessage } from "ai";
 
 const COMPACTION_THRESHOLD = 100_000;
 
@@ -597,9 +571,9 @@ const result = await generateText({
       return {
         messages: pruneMessages({
           messages,
-          reasoning: 'all',
-          toolCalls: 'before-last-3-messages',
-          emptyMessages: 'remove',
+          reasoning: "all",
+          toolCalls: "before-last-3-messages",
+          emptyMessages: "remove",
         }),
       };
     }
@@ -644,7 +618,7 @@ It is also available in the `onEnd` callback of `streamText`.
 The `responseMessages` property contains the accumulated response messages from the call as an array of `ModelMessage` objects that you can add to your conversation history:
 
 ```ts
-import { generateText, ModelMessage } from 'ai';
+import { generateText, ModelMessage } from "ai";
 
 const messages: ModelMessage[] = [
   // ...
@@ -672,13 +646,13 @@ AI SDK Core supports dynamic tools for scenarios where tool schemas are not know
 The `dynamicTool` helper creates tools with unknown input/output types:
 
 ```ts
-import { dynamicTool } from 'ai';
-import { z } from 'zod';
+import { dynamicTool } from "ai";
+import { z } from "zod";
 
 const customTool = dynamicTool({
-  description: 'Execute a custom function',
+  description: "Execute a custom function",
   inputSchema: z.object({}),
-  execute: async input => {
+  execute: async (input) => {
     // input is typed as 'unknown'
     // You need to validate/cast it at runtime
     const { action, parameters } = input as any;
@@ -700,22 +674,20 @@ const result = await generateText({
     // Static tool with known types
     weather: weatherTool,
     // Dynamic tool
-    custom: dynamicTool({
-      /* ... */
-    }),
+    custom: dynamicTool({/* ... */}),
   },
   onStepEnd: ({ toolCalls, toolResults }) => {
     // Type-safe iteration
     for (const toolCall of toolCalls) {
       if (toolCall.dynamic) {
         // Dynamic tool: input is 'unknown'
-        console.log('Dynamic:', toolCall.toolName, toolCall.input);
+        console.log("Dynamic:", toolCall.toolName, toolCall.input);
         continue;
       }
 
       // Static tool: full type inference
       switch (toolCall.toolName) {
-        case 'weather':
+        case "weather":
           console.log(toolCall.input.location); // typed as string
           break;
       }
@@ -734,23 +706,23 @@ during the tool execution:
 
 ```ts
 tool({
-  description: 'Get the current weather.',
+  description: "Get the current weather.",
   inputSchema: z.object({
     location: z.string(),
   }),
   async *execute({ location }) {
     yield {
-      status: 'loading' as const,
+      status: "loading" as const,
       text: `Getting weather for ${location}`,
       weather: undefined,
     };
 
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const temperature = 72 + Math.floor(Math.random() * 21) - 10;
 
     yield {
-      status: 'success' as const,
+      status: "success" as const,
       text: `The weather in ${location} is ${temperature}°F`,
       temperature,
     };
@@ -769,17 +741,17 @@ It supports the following settings:
 - `{ type: 'tool', toolName: string (typed) }`: the model must call the specified tool
 
 ```ts highlight="19"
-import { z } from 'zod';
-import { generateText, tool } from 'ai';
+import { z } from "zod";
+import { generateText, tool } from "ai";
 __PROVIDER_IMPORT__;
 
 const result = await generateText({
   model: __MODEL__,
   tools: {
     weather: tool({
-      description: 'Get the weather in a location',
+      description: "Get the weather in a location",
       inputSchema: z.object({
-        location: z.string().describe('The location to get the weather for'),
+        location: z.string().describe("The location to get the weather for"),
       }),
       execute: async ({ location }) => ({
         location,
@@ -787,8 +759,8 @@ const result = await generateText({
       }),
     }),
   },
-  toolChoice: 'required', // force the model to call a tool
-  prompt: 'What is the weather in San Francisco?',
+  toolChoice: "required", // force the model to call a tool
+  prompt: "What is the weather in San Francisco?",
 });
 ```
 
@@ -808,7 +780,7 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   toUIMessageStream,
-} from 'ai';
+} from "ai";
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
@@ -824,11 +796,11 @@ export async function POST(req: Request) {
             execute: async (args, { toolCallId }) => {
               // return e.g. custom status for tool call
               writer.write({
-                type: 'data-tool-status',
+                type: "data-tool-status",
                 id: toolCallId,
                 data: {
-                  name: 'myTool',
-                  status: 'in-progress',
+                  name: "myTool",
+                  status: "in-progress",
                 },
               });
               // ...
@@ -874,8 +846,8 @@ The abort signals from `generateText` and `streamText` are forwarded to the tool
 You can access them in the second parameter of the `execute` function and e.g. abort long-running computations or forward them to fetch calls inside tools.
 
 ```ts highlight="7,12,15"
-import { z } from 'zod';
-import { generateText, tool } from 'ai';
+import { z } from "zod";
+import { generateText, tool } from "ai";
 __PROVIDER_IMPORT__;
 
 const result = await generateText({
@@ -883,7 +855,7 @@ const result = await generateText({
   abortSignal: myAbortSignal, // signal that will be forwarded to tools
   tools: {
     weather: tool({
-      description: 'Get the weather in a location',
+      description: "Get the weather in a location",
       inputSchema: z.object({ location: z.string() }),
       execute: async ({ location }, { abortSignal }) => {
         return fetch(
@@ -893,7 +865,7 @@ const result = await generateText({
       },
     }),
   },
-  prompt: 'What is the weather in San Francisco?',
+  prompt: "What is the weather in San Francisco?",
 });
 ```
 
@@ -912,8 +884,8 @@ the experimental sandbox, such as `experimental_sandbox.run(...)`,
 run in the experimental sandbox environment.
 
 ```ts highlight="7-15,21"
-import { generateText, tool } from 'ai';
-import { z } from 'zod';
+import { generateText, tool } from "ai";
+import { z } from "zod";
 
 const result = await generateText({
   model: __MODEL__,
@@ -923,12 +895,9 @@ const result = await generateText({
         command: z.string(),
         workingDirectory: z.string().optional(),
       }),
-      execute: async (
-        { command, workingDirectory },
-        { abortSignal, experimental_sandbox },
-      ) => {
+      execute: async ({ command, workingDirectory }, { abortSignal, experimental_sandbox }) => {
         if (!experimental_sandbox) {
-          throw new Error('Experimental sandbox is not available');
+          throw new Error("Experimental sandbox is not available");
         }
 
         return experimental_sandbox.run({
@@ -940,7 +909,7 @@ const result = await generateText({
     }),
   },
   experimental_sandbox,
-  prompt: 'List the files in the project.',
+  prompt: "List the files in the project.",
 });
 ```
 
@@ -983,13 +952,13 @@ Use `telemetry.includeToolsContext` to include selected top-level context proper
 
 ```ts highlight="24-30"
 const weatherTool = tool({
-  description: 'Get the weather in a location',
+  description: "Get the weather in a location",
   inputSchema: z.object({
     location: z.string(),
   }),
   contextSchema: z.object({
     weatherApiKey: z.string(),
-    defaultUnit: z.enum(['celsius', 'fahrenheit']),
+    defaultUnit: z.enum(["celsius", "fahrenheit"]),
   }),
   execute: async ({ location }, { context }) => {
     return fetchWeather({
@@ -1006,10 +975,10 @@ const result = await generateText({
   toolsContext: {
     weather: {
       weatherApiKey: process.env.WEATHER_API_KEY,
-      defaultUnit: 'fahrenheit',
+      defaultUnit: "fahrenheit",
     },
   },
-  prompt: 'What is the weather in San Francisco?',
+  prompt: "What is the weather in San Francisco?",
   telemetry: {
     includeToolsContext: {
       weather: {
@@ -1044,33 +1013,33 @@ The following tool input lifecycle hooks are available:
 ### Example
 
 ```ts highlight="16-24"
-import { streamText, tool } from 'ai';
+import { streamText, tool } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 const result = streamText({
   model: __MODEL__,
   tools: {
     getWeather: tool({
-      description: 'Get the weather in a location',
+      description: "Get the weather in a location",
       inputSchema: z.object({
-        location: z.string().describe('The location to get the weather for'),
+        location: z.string().describe("The location to get the weather for"),
       }),
       execute: async ({ location }) => ({
         temperature: 72 + Math.floor(Math.random() * 21) - 10,
       }),
       onInputStart: () => {
-        console.log('Tool call starting');
+        console.log("Tool call starting");
       },
       onInputDelta: ({ inputTextDelta }) => {
-        console.log('Received input chunk:', inputTextDelta);
+        console.log("Received input chunk:", inputTextDelta);
       },
       onInputAvailable: ({ input }) => {
-        console.log('Complete input:', input);
+        console.log("Complete input:", input);
       },
     }),
   },
-  prompt: 'What is the weather in San Francisco?',
+  prompt: "What is the weather in San Francisco?",
 });
 ```
 
@@ -1092,18 +1061,18 @@ and `TypedToolResult<TOOLS extends ToolSet>` can be used to
 extract the tool call and tool result types from the tools.
 
 ```ts highlight="18-19,23-24"
-import { TypedToolCall, TypedToolResult, generateText, tool } from 'ai';
+import { TypedToolCall, TypedToolResult, generateText, tool } from "ai";
 __PROVIDER_IMPORT__;
-import { z } from 'zod';
+import { z } from "zod";
 
 const myToolSet = {
   firstTool: tool({
-    description: 'Greets the user',
+    description: "Greets the user",
     inputSchema: z.object({ name: z.string() }),
     execute: async ({ name }) => `Hello, ${name}!`,
   }),
   secondTool: tool({
-    description: 'Tells the user their age',
+    description: "Tells the user their age",
     inputSchema: z.object({ age: z.number() }),
     execute: async ({ age }) => `You are ${age} years old!`,
   }),
@@ -1163,14 +1132,14 @@ const { steps } = await generateText({
 });
 
 // check for tool errors in the steps
-const toolErrors = steps.flatMap(step =>
-  step.content.filter(part => part.type === 'tool-error'),
+const toolErrors = steps.flatMap((step) =>
+  step.content.filter((part) => part.type === "tool-error"),
 );
 
-toolErrors.forEach(toolError => {
-  console.log('Tool error:', toolError.error);
-  console.log('Tool name:', toolError.toolName);
-  console.log('Tool input:', toolError.input);
+toolErrors.forEach((toolError) => {
+  console.log("Tool error:", toolError.error);
+  console.log("Tool name:", toolError.toolName);
+  console.log("Tool input:", toolError.input);
 });
 ```
 
@@ -1188,13 +1157,13 @@ const result = streamText({
 return createUIMessageStreamResponse({
   stream: toUIMessageStream({
     stream: result.stream,
-    onError: error => {
+    onError: (error) => {
       if (NoSuchToolError.isInstance(error)) {
-        return 'The model tried to call a unknown tool.';
+        return "The model tried to call a unknown tool.";
       } else if (InvalidToolInputError.isInstance(error)) {
-        return 'The model called a tool with invalid inputs.';
+        return "The model called a tool with invalid inputs.";
       } else {
-        return 'An unknown error occurred.';
+        return "An unknown error occurred.";
       }
     },
   }),
@@ -1223,8 +1192,8 @@ You can use different strategies to repair the tool call:
 ### Example: Use a model with structured outputs for repair
 
 ```ts
-import { openai } from '@ai-sdk/openai';
-import { generateText, NoSuchToolError, Output, tool } from 'ai';
+import { openai } from "@ai-sdk/openai";
+import { generateText, NoSuchToolError, Output, tool } from "ai";
 
 const result = await generateText({
   model,
@@ -1242,13 +1211,12 @@ const result = await generateText({
       model: __MODEL__,
       output: Output.object({ schema: tool.inputSchema }),
       prompt: [
-        `The model tried to call the tool "${toolCall.toolName}"` +
-          ` with the following inputs:`,
+        `The model tried to call the tool "${toolCall.toolName}"` + ` with the following inputs:`,
         JSON.stringify(toolCall.input),
         `The tool accepts the following schema:`,
         JSON.stringify(await inputSchema({ toolName: toolCall.toolName })),
-        'Please fix the inputs.',
-      ].join('\n'),
+        "Please fix the inputs.",
+      ].join("\n"),
     });
 
     return { ...toolCall, input: JSON.stringify(repairedArgs) };
@@ -1259,31 +1227,25 @@ const result = await generateText({
 ### Example: Use the re-ask strategy for repair
 
 ```ts
-import { openai } from '@ai-sdk/openai';
-import { generateText, NoSuchToolError, tool } from 'ai';
+import { openai } from "@ai-sdk/openai";
+import { generateText, NoSuchToolError, tool } from "ai";
 
 const result = await generateText({
   model,
   tools,
   prompt,
 
-  repairToolCall: async ({
-    toolCall,
-    tools,
-    error,
-    messages,
-    instructions,
-  }) => {
+  repairToolCall: async ({ toolCall, tools, error, messages, instructions }) => {
     const result = await generateText({
       model,
       instructions,
       messages: [
         ...messages,
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
             {
-              type: 'tool-call',
+              type: "tool-call",
               toolCallId: toolCall.toolCallId,
               toolName: toolCall.toolName,
               input: toolCall.input,
@@ -1291,10 +1253,10 @@ const result = await generateText({
           ],
         },
         {
-          role: 'tool' as const,
+          role: "tool" as const,
           content: [
             {
-              type: 'tool-result',
+              type: "tool-result",
               toolCallId: toolCall.toolCallId,
               toolName: toolCall.toolName,
               output: error.message,
@@ -1306,12 +1268,12 @@ const result = await generateText({
     });
 
     const newToolCall = result.toolCalls.find(
-      newToolCall => newToolCall.toolName === toolCall.toolName,
+      (newToolCall) => newToolCall.toolName === toolCall.toolName,
     );
 
     return newToolCall != null
       ? {
-          type: 'tool-call' as const,
+          type: "tool-call" as const,
           toolCallId: toolCall.toolCallId,
           toolName: toolCall.toolName,
           input: JSON.stringify(newToolCall.input),
@@ -1331,14 +1293,14 @@ It is an array of tool names that are currently active.
 By default, the value is `undefined` and all tools are active.
 
 ```ts highlight="8"
-import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
 __PROVIDER_IMPORT__;
 
 const { text } = await generateText({
   model: __MODEL__,
   tools: myToolSet,
-  activeTools: ['firstTool'],
+  activeTools: ["firstTool"],
 });
 ```
 
@@ -1354,14 +1316,14 @@ in that order, and any remaining tools are sent afterwards in alphabetical
 order. Tool names are typed from your `tools` object.
 
 ```ts highlight="7"
-import { generateText } from 'ai';
+import { generateText } from "ai";
 __PROVIDER_IMPORT__;
 
 const { text } = await generateText({
   model: __MODEL__,
   tools: myToolSet,
-  toolOrder: ['search', 'readFile'],
-  prompt: 'Summarize the latest project notes.',
+  toolOrder: ["search", "readFile"],
+  prompt: "Summarize the latest project notes.",
 });
 ```
 
@@ -1401,13 +1363,11 @@ const result = await generateText({
       // ...
       async execute({ action, coordinate, text }) {
         switch (action) {
-          case 'screenshot': {
+          case "screenshot": {
             return {
-              type: 'file',
-              mediaType: 'image',
-              data: fs
-                .readFileSync('./data/screenshot-editor.png')
-                .toString('base64'),
+              type: "file",
+              mediaType: "image",
+              data: fs.readFileSync("./data/screenshot-editor.png").toString("base64"),
             };
           }
           default: {
@@ -1419,15 +1379,15 @@ const result = await generateText({
       // map to tool result content for LLM consumption:
       toModelOutput({ output }) {
         return {
-          type: 'content',
+          type: "content",
           value:
-            typeof output === 'string'
-              ? [{ type: 'text', text: output }]
+            typeof output === "string"
+              ? [{ type: "text", text: output }]
               : [
                   {
-                    type: 'file',
-                    mediaType: 'image/png',
-                    data: { type: 'data', data: output.data },
+                    type: "file",
+                    mediaType: "image/png",
+                    data: { type: "data", data: output.data },
                   },
                 ],
         };
@@ -1446,14 +1406,14 @@ The `tool` helper function is crucial for this, because it ensures correct type 
 Here is an example of an extracted tool:
 
 ```ts filename="tools/weather-tool.ts" highlight="1,4-5"
-import { tool } from 'ai';
-import { z } from 'zod';
+import { tool } from "ai";
+import { z } from "zod";
 
 // the `tool` helper function ensures correct type inference:
 export const weatherTool = tool({
-  description: 'Get the weather in a location',
+  description: "Get the weather in a location",
   inputSchema: z.object({
-    location: z.string().describe('The location to get the weather for'),
+    location: z.string().describe("The location to get the weather for"),
   }),
   execute: async ({ location }) => ({
     location,
@@ -1488,22 +1448,21 @@ In most cases, you should define your own AI SDK tools for production applicatio
 You can see tools in action using various frameworks in the following examples:
 
 <ExampleLinks
-  examples={[
-    {
-      title: 'Learn to use tools in Node.js',
-      link: '/cookbook/node/call-tools',
-    },
-    {
-      title: 'Learn to use tools in Next.js with Route Handlers',
-      link: '/cookbook/next/call-tools',
-    },
-    {
-      title: 'Learn to use MCP tools in Node.js',
-      link: '/cookbook/node/mcp-tools',
-    },
-  ]}
+examples={[
+{
+title: 'Learn to use tools in Node.js',
+link: '/cookbook/node/call-tools',
+},
+{
+title: 'Learn to use tools in Next.js with Route Handlers',
+link: '/cookbook/next/call-tools',
+},
+{
+title: 'Learn to use MCP tools in Node.js',
+link: '/cookbook/node/mcp-tools',
+},
+]}
 />
-
 
 ## Navigation
 
@@ -1535,6 +1494,5 @@ You can see tools in action using various frameworks in the following examples:
 - [Telemetry](/docs/ai-sdk-core/telemetry)
 - [DevTools](/docs/ai-sdk-core/devtools)
 - [Lifecycle Callbacks](/docs/ai-sdk-core/lifecycle-callbacks)
-
 
 [Full Sitemap](/sitemap.md)

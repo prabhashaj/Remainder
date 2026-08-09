@@ -31,10 +31,7 @@ import {
   updateStudyResource,
   youtubeId,
 } from "@/lib/study";
-import {
-  summarizeMaterial,
-  generateNotebookFromTranscript,
-} from "@/lib/study.functions";
+import { summarizeMaterial, generateNotebookFromTranscript, saveExtractedTextFn } from "@/lib/study.functions";
 
 const PdfReader = lazy(() => import("@/components/study/pdf-reader"));
 
@@ -44,8 +41,7 @@ export const Route = createFileRoute("/_authenticated/material/$resourceId")({
       { title: "Material — Remainder" },
       {
         name: "description",
-        content:
-          "Read, highlight and question your own study material without leaving Remainder.",
+        content: "Read, highlight and question your own study material without leaving Remainder.",
       },
       { property: "og:title", content: "Material — Remainder" },
       {
@@ -63,6 +59,7 @@ function MaterialPage() {
   const { start: startTimer } = useFocusTimer();
   const runSummary = useServerFn(summarizeMaterial);
   const runNotebook = useServerFn(generateNotebookFromTranscript);
+  const runSaveText = useServerFn(saveExtractedTextFn);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
   const { data: resource, isLoading } = useQuery({
@@ -97,28 +94,20 @@ function MaterialPage() {
   const addHighlight = useMutation({
     mutationFn: ({ page, quote }: { page: number; quote: string }) =>
       createHighlight({ resource_id: resourceId, page, quote }),
-    onSuccess: () =>
-      void qc.invalidateQueries({ queryKey: ["highlights", resourceId] }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["highlights", resourceId] }),
   });
   const removeHighlight = useMutation({
     mutationFn: deleteHighlight,
-    onSuccess: () =>
-      void qc.invalidateQueries({ queryKey: ["highlights", resourceId] }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["highlights", resourceId] }),
   });
   const saveText = useMutation({
     mutationFn: ({ text, pages }: { text: string; pages: number }) =>
-      updateStudyResource(resourceId, {
-        extracted_text: text,
-        page_count: pages,
-      }),
-    onSuccess: () =>
-      void qc.invalidateQueries({ queryKey: ["study-resource", resourceId] }),
+      runSaveText({ data: { resourceId, text, pages } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["study-resource", resourceId] }),
   });
   const summarize = useMutation({
-    mutationFn: (force: boolean) =>
-      runSummary({ data: { resourceId, force } }),
-    onSuccess: () =>
-      void qc.invalidateQueries({ queryKey: ["study-resource", resourceId] }),
+    mutationFn: (force: boolean) => runSummary({ data: { resourceId, force } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["study-resource", resourceId] }),
   });
 
   const notebook = useMutation({
@@ -161,9 +150,7 @@ function MaterialPage() {
   if (!resource) {
     return (
       <div className="mx-auto max-w-3xl px-5 py-12">
-        <p className="text-sm text-muted-foreground">
-          This material no longer exists.
-        </p>
+        <p className="text-sm text-muted-foreground">This material no longer exists.</p>
         <Button asChild className="press mt-4 rounded-2xl">
           <Link to="/study">Back to Study Place</Link>
         </Button>
@@ -173,8 +160,7 @@ function MaterialPage() {
 
   const videoId = resource.url ? youtubeId(resource.url) : null;
   const isPdf = Boolean(resource.storage_path);
-  const summaryError =
-    summarize.data && !summarize.data.success ? summarize.data.error : null;
+  const summaryError = summarize.data && !summarize.data.success ? summarize.data.error : null;
 
   return (
     <div className="mx-auto max-w-4xl px-5 pb-32 pt-8 sm:px-8">
@@ -239,17 +225,14 @@ function MaterialPage() {
               onClick={() => summarize.mutate(Boolean(resource.summary))}
               disabled={summarize.isPending}
             >
-              <RefreshCw
-                className={`size-4 ${summarize.isPending ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`size-4 ${summarize.isPending ? "animate-spin" : ""}`} />
               {resource.summary ? "Refresh brief" : "Summarize"}
             </Button>
           </div>
         </div>
         {summarize.isPending ? (
           <p className="mt-4 flex items-center gap-2 text-base text-muted-foreground">
-            <Sparkle className="size-5 animate-pulse text-primary" /> Reading it
-            for you…
+            <Sparkle className="size-5 animate-pulse text-primary" /> Reading it for you…
           </p>
         ) : resource.summary ? (
           <div className="mt-4 text-base leading-relaxed">
@@ -265,19 +248,13 @@ function MaterialPage() {
 
       {videoId ? (
         <section className="mt-8">
-          <VideoNotes
-            resourceId={resource.id}
-            videoId={videoId}
-            title={resource.title}
-          />
+          <VideoNotes resourceId={resource.id} videoId={videoId} title={resource.title} />
         </section>
       ) : isPdf ? (
         <section className="mt-8">
           <ClientOnly
             fallback={
-              <p className="py-12 text-center text-base text-muted-foreground">
-                Preparing reader…
-              </p>
+              <p className="py-12 text-center text-base text-muted-foreground">Preparing reader…</p>
             }
           >
             <Suspense
@@ -291,12 +268,9 @@ function MaterialPage() {
                 <PdfReader
                   fileUrl={signedUrl}
                   highlights={highlights}
-                  onHighlight={(page, quote) =>
-                    addHighlight.mutate({ page, quote })
-                  }
+                  onHighlight={(page, quote) => addHighlight.mutate({ page, quote })}
                   onText={(text, pages) => {
-                    if (!resource.extracted_text)
-                      saveText.mutate({ text, pages });
+                    if (!resource.extracted_text) saveText.mutate({ text, pages });
                   }}
                 />
               ) : urlError ? (
@@ -327,7 +301,12 @@ function MaterialPage() {
               <span className="truncate text-sm font-medium text-muted-foreground">
                 {resource.url}
               </span>
-              <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 rounded-xl text-xs">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 rounded-xl text-xs"
+              >
                 <a href={resource.url} target="_blank" rel="noreferrer">
                   <ExternalLink className="size-3.5" /> Open in new tab
                 </a>
@@ -373,8 +352,8 @@ function MaterialPage() {
             ))}
             {highlights.length === 0 && (
               <li className="rounded-2xl bg-muted/50 px-4 py-6 text-center text-base text-muted-foreground">
-                Select any text in the document to turn it into a searchable
-                light-yellow highlight note.
+                Select any text in the document to turn it into a searchable light-yellow highlight
+                note.
               </li>
             )}
           </ul>

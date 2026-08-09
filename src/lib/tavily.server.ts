@@ -46,9 +46,7 @@ export async function tavilySearch(
         include_answer: true,
         include_images: opts.includeImages ?? false,
         include_image_descriptions: opts.includeImages ?? false,
-        ...(opts.includeDomains?.length
-          ? { include_domains: opts.includeDomains }
-          : {}),
+        ...(opts.includeDomains?.length ? { include_domains: opts.includeDomains } : {}),
       }),
     });
     if (!res.ok) return { ...empty, error: `Search failed (${res.status})` };
@@ -78,10 +76,7 @@ export async function tavilySearch(
 }
 
 export function youtubeIdFromUrl(url: string): string | null {
-  const match =
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/.exec(
-      url,
-    );
+  const match = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/.exec(url);
   return match?.[1] ?? null;
 }
 
@@ -90,16 +85,13 @@ export function youtubeIdFromUrl(url: string): string | null {
  * Combines Wikimedia Commons search API, Tavily image search, and dynamic Pollinations AI fallback.
  * Guarantees topic-matched visual diagrams and images without returning generic stock photos.
  */
-export async function searchTopicPhotos(
-  query: string,
-): Promise<ImageResult[]> {
+export async function searchTopicPhotos(query: string): Promise<ImageResult[]> {
   const photos: ImageResult[] = [];
   const cleanQuery = query.trim();
 
   // 1. Tavily Image Search (Web Search API with includeImages)
   try {
-    const searchQuery = `${cleanQuery} diagram architecture workflow`;
-    const tavRes = await tavilySearch(searchQuery, {
+    const tavRes = await tavilySearch(cleanQuery, {
       maxResults: 6,
       includeImages: true,
       depth: "advanced",
@@ -113,7 +105,7 @@ export async function searchTopicPhotos(
       ) {
         photos.push({
           url: img.url,
-          description: img.description || `${cleanQuery} diagram`,
+          description: img.description || cleanQuery,
         });
       }
     }
@@ -167,21 +159,17 @@ export async function searchTopicPhotos(
     }
   }
 
-  // 3. Topic-Matched Dynamic Pollinations AI Diagram Fallback
+  // 3. Topic-Matched Dynamic Pollinations AI Fallback
   if (photos.length < 2) {
-    const slug1 = encodeURIComponent(
-      `${cleanQuery} workflow architecture diagram technical infographic high quality`,
-    );
-    const slug2 = encodeURIComponent(
-      `${cleanQuery} concept breakdown step by step flow illustration`,
-    );
+    const slug1 = encodeURIComponent(`${cleanQuery} high quality photograph`);
+    const slug2 = encodeURIComponent(`${cleanQuery} creative illustration`);
     photos.push({
       url: `https://image.pollinations.ai/prompt/${slug1}?width=800&height=500&nologo=true&seed=101`,
-      description: `${cleanQuery} Workflow Architecture Diagram`,
+      description: `${cleanQuery}`,
     });
     photos.push({
       url: `https://image.pollinations.ai/prompt/${slug2}?width=800&height=500&nologo=true&seed=202`,
-      description: `${cleanQuery} Process Flow Diagram`,
+      description: `${cleanQuery}`,
     });
   }
 

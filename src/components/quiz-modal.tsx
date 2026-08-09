@@ -6,17 +6,9 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MessageResponse } from "@/components/ai-elements/message";
-import {
-  generateQuizForItem,
-  submitQuizAttempt,
-} from "@/lib/quiz.functions";
+import { generateQuizForItem, submitQuizAttempt } from "@/lib/quiz.functions";
 import type { QuizQuestion } from "@/lib/agents/quiz-generator.server";
 
 type QuestionState = {
@@ -118,9 +110,7 @@ export function QuizModal({
   };
 
   const handleAttemptSubmit = () => {
-    const unansweredCount = questions.filter(
-      (_, idx) => !(answers[idx] ?? "").trim(),
-    ).length;
+    const unansweredCount = questions.filter((_, idx) => !(answers[idx] ?? "").trim()).length;
 
     if (unansweredCount > 0) {
       toast.warning(`Please answer all ${questions.length} questions before submitting.`);
@@ -134,9 +124,7 @@ export function QuizModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto rounded-3xl sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl font-bold">
-            Quiz: {itemTitle}
-          </DialogTitle>
+          <DialogTitle className="font-display text-xl font-bold">Quiz: {itemTitle}</DialogTitle>
         </DialogHeader>
 
         {generate.isPending ? (
@@ -148,13 +136,8 @@ export function QuizModal({
           </div>
         ) : questions.length === 0 ? (
           <div className="py-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              Ready to test your understanding?
-            </p>
-            <Button
-              className="press mt-4 rounded-2xl"
-              onClick={() => generate.mutate()}
-            >
+            <p className="text-sm text-muted-foreground">Ready to test your understanding?</p>
+            <Button className="press mt-4 rounded-2xl" onClick={() => generate.mutate()}>
               Generate Quiz
             </Button>
           </div>
@@ -168,9 +151,7 @@ export function QuizModal({
                     : "bg-muted text-foreground border border-border"
                 }`}
               >
-                <h4 className="font-display text-lg font-bold">
-                  Score: {resultScore}%
-                </h4>
+                <h4 className="font-display text-lg font-bold">Score: {resultScore}%</h4>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {resultScore >= 70
                     ? "Great understanding! Keep up the good work."
@@ -235,9 +216,7 @@ export function QuizModal({
                             key={optIdx}
                             type="button"
                             disabled={submitted}
-                            onClick={() =>
-                              setAnswers((prev) => ({ ...prev, [idx]: opt }))
-                            }
+                            onClick={() => setAnswers((prev) => ({ ...prev, [idx]: opt }))}
                             className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm transition-all ${optionStyle}`}
                           >
                             <span className="leading-snug">{opt}</span>
@@ -261,9 +240,7 @@ export function QuizModal({
                       <Input
                         value={userAns}
                         disabled={submitted}
-                        onChange={(e) =>
-                          setAnswers((prev) => ({ ...prev, [idx]: e.target.value }))
-                        }
+                        onChange={(e) => setAnswers((prev) => ({ ...prev, [idx]: e.target.value }))}
                         placeholder="Write your answer..."
                         className="rounded-xl"
                       />
@@ -275,9 +252,7 @@ export function QuizModal({
                       <p className="font-semibold text-muted-foreground">
                         Correct Answer: {question.correct_answer}
                       </p>
-                      <p className="text-muted-foreground">
-                        {question.explanation}
-                      </p>
+                      <p className="text-muted-foreground">{question.explanation}</p>
                     </div>
                   )}
                 </div>
@@ -305,10 +280,7 @@ export function QuizModal({
                   {submit.isPending ? "Submitting…" : "Submit Quiz"}
                 </Button>
               ) : (
-                <Button
-                  className="press rounded-2xl"
-                  onClick={() => onOpenChange(false)}
-                >
+                <Button className="press rounded-2xl" onClick={() => onOpenChange(false)}>
                   Close
                 </Button>
               )}

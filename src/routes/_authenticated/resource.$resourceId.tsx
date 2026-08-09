@@ -48,9 +48,7 @@ function ResourceViewer() {
   if (!resource) {
     return (
       <div className="mx-auto max-w-2xl px-5 py-16 text-center">
-        <p className="text-muted-foreground">
-          This resource could not be found.
-        </p>
+        <p className="text-muted-foreground">This resource could not be found.</p>
         <Button asChild className="press mt-4 rounded-2xl">
           <Link to="/roadmaps">Back to roadmaps</Link>
         </Button>
@@ -62,12 +60,7 @@ function ResourceViewer() {
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
-      <Button
-        asChild
-        variant="ghost"
-        size="sm"
-        className="rounded-xl text-muted-foreground"
-      >
+      <Button asChild variant="ghost" size="sm" className="rounded-xl text-muted-foreground">
         <Link to="/roadmaps">
           <ArrowLeft className="size-4" /> Back to roadmaps
         </Link>
@@ -81,11 +74,7 @@ function ResourceViewer() {
           </span>
         </div>
         <a href={resource.url} target="_blank" rel="noreferrer">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-xl text-muted-foreground"
-          >
+          <Button variant="ghost" size="sm" className="rounded-xl text-muted-foreground">
             <ExternalLink className="size-4" /> Open
           </Button>
         </a>

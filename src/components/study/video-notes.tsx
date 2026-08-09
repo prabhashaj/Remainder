@@ -1,26 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  BookOpen,
-  Clock,
-  Loader2,
-  Pen,
-  Plus,
-  Sparkle,
-  Trash2,
-  Wand2,
-} from "lucide-react";
+import { BookOpen, Clock, Loader2, Pen, Plus, Sparkle, Trash2, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  createVideoNote,
-  deleteVideoNote,
-  fetchVideoNotes,
-  formatClock,
-} from "@/lib/study";
+import { createVideoNote, deleteVideoNote, fetchVideoNotes, formatClock } from "@/lib/study";
 import { autoNoteFromTranscript } from "@/lib/study.functions";
 
 interface YTPlayer {
@@ -108,8 +94,7 @@ export function VideoNotes({
     queryFn: () => fetchVideoNotes(resourceId),
   });
 
-  const refresh = () =>
-    void qc.invalidateQueries({ queryKey: ["video-notes", resourceId] });
+  const refresh = () => void qc.invalidateQueries({ queryKey: ["video-notes", resourceId] });
 
   // Initialize YouTube Player
   useEffect(() => {
@@ -219,9 +204,7 @@ export function VideoNotes({
       {playerReady && (
         <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
           <Clock className="size-4 text-primary" />
-          <span>
-            Video ready — notes will auto-capture the current playback time
-          </span>
+          <span>Video ready — notes will auto-capture the current playback time</span>
         </div>
       )}
 
@@ -252,10 +235,7 @@ export function VideoNotes({
       </div>
 
       {/* Note Form */}
-      <form
-        className="card-soft flex flex-col gap-3 p-5"
-        onSubmit={handleSubmit}
-      >
+      <form className="card-soft flex flex-col gap-3 p-5" onSubmit={handleSubmit}>
         {mode === "auto" && (
           <Button
             type="button"
@@ -269,9 +249,7 @@ export function VideoNotes({
             ) : (
               <Sparkle className="size-4" />
             )}
-            {autoLoading
-              ? "Fetching transcript…"
-              : "Generate note at current time"}
+            {autoLoading ? "Fetching transcript…" : "Generate note at current time"}
           </Button>
         )}
         <div className="flex flex-wrap items-center gap-3">
@@ -325,8 +303,7 @@ export function VideoNotes({
         {notes.length === 0 && (
           <li className="rounded-2xl bg-muted/50 px-5 py-8 text-center text-base text-muted-foreground">
             <BookOpen className="mx-auto mb-2 size-6 text-primary" />
-            Pin your first note — it captures the exact video timestamp so you
-            can jump back later.
+            Pin your first note — it captures the exact video timestamp so you can jump back later.
           </li>
         )}
       </ul>

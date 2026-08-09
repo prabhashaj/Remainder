@@ -18,6 +18,14 @@ export const FlashcardSetSchema = z.object({
 
 export type FlashcardSet = z.infer<typeof FlashcardSetSchema>;
 
+function flashcardFromUnknown(value: unknown) {
+  const card = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return {
+    front: String(card["front"] || card["question"] || ""),
+    back: String(card["back"] || card["answer"] || ""),
+  };
+}
+
 const FLASHCARD_PROMPT = `You generate spaced-repetition flashcards from a lesson written by Remainder, a calm learning workspace.
 
 Rules:
@@ -55,21 +63,14 @@ export async function writeFlashcards(params: {
 
   if (itemErr) return { success: false, error: itemErr.message };
   if (!item) return { success: false, error: "Sub-topic not found" };
-  if (!item.content) return { success: false, error: "No lesson content yet — generate the lesson first." };
+  if (!item.content)
+    return { success: false, error: "No lesson content yet — generate the lesson first." };
 
   // Fetch context
   const [{ data: roadmap }, { data: parent }] = await Promise.all([
-    supabase
-      .from("roadmaps")
-      .select("topic")
-      .eq("id", item.roadmap_id)
-      .maybeSingle(),
+    supabase.from("roadmaps").select("topic").eq("id", item.roadmap_id).maybeSingle(),
     item.parent_id
-      ? supabase
-          .from("roadmap_items")
-          .select("title")
-          .eq("id", item.parent_id)
-          .maybeSingle()
+      ? supabase.from("roadmap_items").select("title").eq("id", item.parent_id).maybeSingle()
       : Promise.resolve({ data: null as { title: string } | null }),
   ]);
 
@@ -101,20 +102,25 @@ Generate 5 to 8 flashcards now as JSON {"cards": [{"front": "...", "back": "..."
     try {
       const res = await generateText({
         model,
-        system: FLASHCARD_PROMPT + "\nRespond ONLY with JSON code block: ```json {\"cards\": [...]} ```",
+        system:
+          FLASHCARD_PROMPT + '\nRespond ONLY with JSON code block: ```json {"cards": [...]} ```',
         prompt,
       });
 
       const jsonMatch = res.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, res.text];
       const rawJson = (jsonMatch[1] || res.text).trim();
-      const parsed = JSON.parse(rawJson);
+      const parsed: unknown = JSON.parse(rawJson);
 
       if (Array.isArray(parsed)) {
-        cards = parsed.map((c: any) => ({ front: String(c.front || c.question || ""), back: String(c.back || c.answer || "") }));
-      } else if (parsed && Array.isArray(parsed.cards)) {
-        cards = parsed.cards.map((c: any) => ({ front: String(c.front || c.question || ""), back: String(c.back || c.answer || "") }));
-      } else if (parsed && Array.isArray(parsed.flashcards)) {
-        cards = parsed.flashcards.map((c: any) => ({ front: String(c.front || c.question || ""), back: String(c.back || c.answer || "") }));
+        cards = parsed.map(flashcardFromUnknown);
+      } else if (parsed && typeof parsed === "object") {
+        const record = parsed as Record<string, unknown>;
+        const source = Array.isArray(record["cards"])
+          ? record["cards"]
+          : Array.isArray(record["flashcards"])
+            ? record["flashcards"]
+            : [];
+        cards = source.map(flashcardFromUnknown);
       }
     } catch (err2) {
       return {
@@ -134,11 +140,7 @@ Generate 5 to 8 flashcards now as JSON {"cards": [{"front": "...", "back": "..."
 
   // Try saving to flashcards table first, fallback to agent_memories
   try {
-    await supabase
-      .from("flashcards")
-      .delete()
-      .eq("roadmap_item_id", itemId)
-      .eq("user_id", userId);
+    await supabase.from("flashcards").delete().eq("roadmap_item_id", itemId).eq("user_id", userId);
 
     const { error: insertErr } = await supabase.from("flashcards").insert(
       cards.map((card) => ({

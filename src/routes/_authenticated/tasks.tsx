@@ -16,14 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  createTask,
-  deleteTask,
-  fetchTasks,
-  today,
-  updateTask,
-  type Task,
-} from "@/lib/db";
+import { createTask, deleteTask, fetchTasks, today, updateTask, type Task } from "@/lib/db";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
   head: () => ({
@@ -65,16 +58,14 @@ function TasksPage() {
   const refresh = () => void qc.invalidateQueries({ queryKey: ["tasks"] });
 
   const add = useMutation({
-    mutationFn: () =>
-      createTask({ title: title.trim(), due_date: due || null, priority }),
+    mutationFn: () => createTask({ title: title.trim(), due_date: due || null, priority }),
     onSuccess: () => {
       setTitle("");
       refresh();
     },
   });
   const patch = useMutation({
-    mutationFn: ({ id, ...rest }: { id: string } & Partial<Task>) =>
-      updateTask(id, rest),
+    mutationFn: ({ id, ...rest }: { id: string } & Partial<Task>) => updateTask(id, rest),
     onSuccess: refresh,
   });
   const remove = useMutation({ mutationFn: deleteTask, onSuccess: refresh });
@@ -98,24 +89,16 @@ function TasksPage() {
       });
   }, [tasks, filter, day]);
 
-  const openToday = tasks.filter(
-    (t) => !t.done && (!t.due_date || t.due_date <= day),
-  ).length;
+  const openToday = tasks.filter((t) => !t.done && (!t.due_date || t.due_date <= day)).length;
   const doneToday = tasks.filter((t) => t.done && t.due_date === day).length;
-  const overdue = tasks.filter(
-    (t) => !t.done && t.due_date && t.due_date < day,
-  ).length;
+  const overdue = tasks.filter((t) => !t.done && t.due_date && t.due_date < day).length;
   const totalToday = openToday + doneToday;
-  const pct = totalToday
-    ? Math.round((doneToday / totalToday) * 100)
-    : 0;
+  const pct = totalToday ? Math.round((doneToday / totalToday) * 100) : 0;
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
       <h1 className="font-display text-3xl font-bold">Tasks</h1>
-      <p className="mt-2 text-muted-foreground">
-        Small steps, kept somewhere safe.
-      </p>
+      <p className="mt-2 text-muted-foreground">Small steps, kept somewhere safe.</p>
 
       <div className="card-soft mt-6 px-5 py-4">
         <div className="flex items-center justify-between text-sm">
@@ -164,11 +147,7 @@ function TasksPage() {
         </Button>
       </form>
 
-      <Tabs
-        value={filter}
-        onValueChange={(v) => setFilter(v as Filter)}
-        className="mt-6"
-      >
+      <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)} className="mt-6">
         <TabsList className="rounded-2xl">
           <TabsTrigger value="today" className="rounded-xl">
             Today
@@ -187,13 +166,9 @@ function TasksPage() {
 
       <ul className="mt-5 space-y-2">
         {visible.map((task) => {
-          const isOverdue =
-            !task.done && task.due_date && task.due_date < day;
+          const isOverdue = !task.done && task.due_date && task.due_date < day;
           return (
-            <li
-              key={task.id}
-              className="card-soft group flex items-start gap-3 px-4 py-3.5"
-            >
+            <li key={task.id} className="card-soft group flex items-start gap-3 px-4 py-3.5">
               <Checkbox
                 checked={task.done}
                 onCheckedChange={(v) =>
@@ -206,11 +181,7 @@ function TasksPage() {
                 className="mt-0.5 rounded-md"
               />
               <div className="min-w-0 flex-1">
-                <p
-                  className={`text-sm ${
-                    task.done ? "text-muted-foreground line-through" : ""
-                  }`}
-                >
+                <p className={`text-sm ${task.done ? "text-muted-foreground line-through" : ""}`}>
                   {task.title}
                 </p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

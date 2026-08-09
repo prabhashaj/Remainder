@@ -79,15 +79,14 @@ export function MaterialTutor({ resourceId }: { resourceId: string }) {
 
         {status === "submitted" && (
           <p className="flex items-center gap-2 text-base text-muted-foreground">
-            <Sparkle className="size-5 animate-pulse text-primary" /> Reading
-            your material…
+            <Sparkle className="size-5 animate-pulse text-primary" /> Reading your material…
           </p>
         )}
 
         {messages.length === 0 && !busy && (
           <p className="text-base leading-relaxed text-muted-foreground">
-            Ask anything about this resource — Remi answers from its contents and
-            your highlights, with responses streaming in real-time.
+            Ask anything about this resource — Remi answers from its contents and your highlights,
+            with responses streaming in real-time.
           </p>
         )}
       </div>
@@ -125,11 +124,7 @@ export function MaterialTutor({ resourceId }: { resourceId: string }) {
               disabled={busy}
               aria-label="Ask question"
             >
-              {busy ? (
-                <Sparkle className="size-4 animate-spin" />
-              ) : (
-                <Send className="size-4" />
-              )}
+              {busy ? <Sparkle className="size-4 animate-spin" /> : <Send className="size-4" />}
             </Button>
           </div>
         </form>

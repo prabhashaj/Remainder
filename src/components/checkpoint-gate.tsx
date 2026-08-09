@@ -79,11 +79,7 @@ export function CheckpointGate({
   return (
     <div className="space-y-3">
       <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
-        <Checkbox
-          checked={isDone}
-          onCheckedChange={handleCheckboxClick}
-          className="rounded-md"
-        />
+        <Checkbox checked={isDone} onCheckedChange={handleCheckboxClick} className="rounded-md" />
         <span>Mark as learned</span>
       </label>
 
@@ -110,9 +106,7 @@ export function CheckpointGate({
                         <button
                           key={oIdx}
                           type="button"
-                          onClick={() =>
-                            setAnswers((prev) => ({ ...prev, [idx]: opt }))
-                          }
+                          onClick={() => setAnswers((prev) => ({ ...prev, [idx]: opt }))}
                           className={`rounded-xl px-3 py-2 text-left text-xs transition-colors ${
                             selected
                               ? "bg-primary text-primary-foreground font-medium"

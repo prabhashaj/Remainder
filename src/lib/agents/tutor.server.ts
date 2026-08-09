@@ -2,10 +2,8 @@ import { generateText } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
-import {
-  fetchYoutubeTranscript,
-  summarizeTranscript,
-} from "@/lib/transcript.server";
+import { saveDocumentTextAndEmbed } from "../document-processor.server";
+import { fetchYoutubeTranscript, summarizeTranscript } from "@/lib/transcript.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type Supabase = SupabaseClient<Database>;
@@ -71,11 +69,7 @@ function splitIntoSentences(text: string): string[] {
  * Scores sentences against a question using keyword overlap + position weighting.
  * Returns the top-K most relevant sentences with their original positions.
  */
-function selectRelevantPassages(
-  fullText: string,
-  question: string,
-  topK = 20,
-): string[] {
+function selectRelevantPassages(fullText: string, question: string, topK = 20): string[] {
   const sentences = splitIntoSentences(fullText);
   if (sentences.length <= topK) return sentences;
 
@@ -150,8 +144,7 @@ export async function summarizeResource(params: {
     .maybeSingle();
   if (error) return { success: false, error: error.message };
   if (!resource) return { success: false, error: "Resource not found" };
-  if (resource.summary && !params.force)
-    return { success: true, summary: resource.summary };
+  if (resource.summary && !params.force) return { success: true, summary: resource.summary };
 
   // For videos: try to use transcript
   if (resource.kind === "video" && !resource.extracted_text) {
@@ -169,41 +162,26 @@ export async function summarizeResource(params: {
     }
     const videoId = ytMatch[1];
 
-    await supabase
-      .from("study_resources")
-      .update({ status: "summarizing" })
-      .eq("id", resourceId);
+    await supabase.from("study_resources").update({ status: "summarizing" }).eq("id", resourceId);
 
     // Fetch transcript
     let transcript = resource.extracted_text;
     if (!transcript) {
       const result = await fetchYoutubeTranscript(videoId);
       if (result.error || !result.fullText) {
-        await supabase
-          .from("study_resources")
-          .update({ status: "error" })
-          .eq("id", resourceId);
+        await supabase.from("study_resources").update({ status: "error" }).eq("id", resourceId);
         return {
           success: false,
-          error:
-            result.error ??
-            "No transcript available. The video may not have captions.",
+          error: result.error ?? "No transcript available. The video may not have captions.",
         };
       }
       transcript = result.fullText;
-      // Cache the transcript in extracted_text
-      await supabase
-        .from("study_resources")
-        .update({ extracted_text: transcript })
-        .eq("id", resourceId);
+      // Cache the transcript in extracted_text and generate embeddings
+      await saveDocumentTextAndEmbed(supabase as any, resourceId, transcript);
     }
 
     try {
-      const summary = await summarizeTranscript(
-        transcript,
-        resource.title,
-        params.apiKey,
-      );
+      const summary = await summarizeTranscript(transcript, resource.title, params.apiKey);
 
       const keyPoints = summary
         .split("\n")
@@ -218,14 +196,10 @@ export async function summarizeResource(params: {
 
       return { success: true, summary };
     } catch (err) {
-      await supabase
-        .from("study_resources")
-        .update({ status: "error" })
-        .eq("id", resourceId);
+      await supabase.from("study_resources").update({ status: "error" }).eq("id", resourceId);
       return {
         success: false,
-        error:
-          err instanceof Error ? err.message : "Transcript summarization failed",
+        error: err instanceof Error ? err.message : "Transcript summarization failed",
       };
     }
   }
@@ -235,14 +209,10 @@ export async function summarizeResource(params: {
   if (!body.trim())
     return {
       success: false,
-      error:
-        "No readable text yet. Open the document once so its text can be extracted.",
+      error: "No readable text yet. Open the document once so its text can be extracted.",
     };
 
-  await supabase
-    .from("study_resources")
-    .update({ status: "summarizing" })
-    .eq("id", resourceId);
+  await supabase.from("study_resources").update({ status: "summarizing" }).eq("id", resourceId);
 
   const gateway = createAiGatewayProvider(params.apiKey);
   let summary: string;
@@ -260,10 +230,7 @@ Write the brief now.`,
     });
     summary = result.text.trim();
   } catch (err) {
-    await supabase
-      .from("study_resources")
-      .update({ status: "error" })
-      .eq("id", resourceId);
+    await supabase.from("study_resources").update({ status: "error" }).eq("id", resourceId);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Summarization failed",
@@ -297,43 +264,36 @@ export async function askMaterial(params: {
 }): Promise<{ success: boolean; error?: string; answer?: string }> {
   const { supabase, resourceId } = params;
 
-  const [{ data: resource }, { data: highlights }, { data: notes }] =
-    await Promise.all([
-      supabase
-        .from("study_resources")
-        .select("title, kind, url, summary, extracted_text")
-        .eq("id", resourceId)
-        .maybeSingle(),
-      supabase
-        .from("resource_highlights")
-        .select("page, quote, note")
-        .eq("resource_id", resourceId)
-        .order("page")
-        .limit(40),
-      supabase
-        .from("video_notes")
-        .select("seconds, note")
-        .eq("resource_id", resourceId)
-        .order("seconds")
-        .limit(40),
-    ]);
+  const [{ data: resource }, { data: highlights }, { data: notes }] = await Promise.all([
+    supabase
+      .from("study_resources")
+      .select("title, kind, url, summary, extracted_text")
+      .eq("id", resourceId)
+      .maybeSingle(),
+    supabase
+      .from("resource_highlights")
+      .select("page, quote, note")
+      .eq("resource_id", resourceId)
+      .order("page")
+      .limit(40),
+    supabase
+      .from("video_notes")
+      .select("seconds, note")
+      .eq("resource_id", resourceId)
+      .order("seconds")
+      .limit(40),
+  ]);
 
   if (!resource) return { success: false, error: "Resource not found" };
 
-  const blocks: string[] = [
-    `# Material: ${resource.title} (${resource.kind})`,
-  ];
+  const blocks: string[] = [`# Material: ${resource.title} (${resource.kind})`];
 
   if (resource.summary) blocks.push(`## Existing brief\n${resource.summary}`);
 
   // Use sentence-level relevance scoring for better RAG
   const fullText = resource.extracted_text ?? "";
   if (fullText.trim()) {
-    const relevantPassages = selectRelevantPassages(
-      fullText,
-      params.question,
-      20,
-    );
+    const relevantPassages = selectRelevantPassages(fullText, params.question, 20);
 
     blocks.push(
       `## Most relevant passages from the material\n${relevantPassages.map((s, i) => `[${i + 1}] ${s}`).join("\n\n")}`,
@@ -349,10 +309,7 @@ export async function askMaterial(params: {
   if (highlights && highlights.length > 0)
     blocks.push(
       `## Their highlights\n${highlights
-        .map(
-          (h) =>
-            `- p.${h.page}: "${h.quote}"${h.note ? ` — their note: ${h.note}` : ""}`,
-        )
+        .map((h) => `- p.${h.page}: "${h.quote}"${h.note ? ` — their note: ${h.note}` : ""}`)
         .join("\n")}`,
     );
   if (notes && notes.length > 0)

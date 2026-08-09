@@ -4,12 +4,7 @@ import { ChevronRight, Compass, Layers, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  deleteRoadmap,
-  fetchRoadmapItems,
-  fetchRoadmaps,
-  type Roadmap,
-} from "@/lib/db";
+import { deleteRoadmap, fetchRoadmapItems, fetchRoadmaps, type Roadmap } from "@/lib/db";
 
 export const Route = createFileRoute("/_authenticated/roadmaps")({
   head: () => ({
@@ -71,13 +66,7 @@ function RoadmapsPage() {
   );
 }
 
-function RoadmapCard({
-  roadmap,
-  onDelete,
-}: {
-  roadmap: Roadmap;
-  onDelete: () => void;
-}) {
+function RoadmapCard({ roadmap, onDelete }: { roadmap: Roadmap; onDelete: () => void }) {
   const { data: items = [] } = useQuery({
     queryKey: ["roadmap-items", roadmap.id],
     queryFn: () => fetchRoadmapItems(roadmap.id),
@@ -95,9 +84,7 @@ function RoadmapCard({
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-lg font-semibold">{roadmap.topic}</h2>
           {roadmap.summary && (
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              {roadmap.summary}
-            </p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{roadmap.summary}</p>
           )}
           <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Layers className="size-3.5" />

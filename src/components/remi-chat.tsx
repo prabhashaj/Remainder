@@ -1,3 +1,4 @@
+import React from "react";
 import { useChat } from "@ai-sdk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
@@ -10,12 +11,14 @@ import {
   Compass,
   FileText,
   Loader2,
+  Mic,
+  MicOff,
   Paperclip,
   Sparkles,
   Wrench,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import remiLogo from "@/assets/remi.png";
@@ -165,9 +168,129 @@ function AttachButton() {
       tooltip="Attach documents or images"
       variant="ghost"
       size="icon-sm"
-      className="rounded-xl text-muted-foreground hover:text-foreground"
+      className="rounded-xl p-2 text-muted-foreground hover:text-foreground"
     >
-      <Paperclip className="size-4" />
+      <Paperclip className="size-5" />
+    </PromptInputButton>
+  );
+}
+
+// Minimal shape of the SpeechRecognition API needed — avoids depending on
+// the `lib: dom` SpeechRecognition global which is missing from this tsconfig.
+interface SpeechRecognitionInstance {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  continuous: boolean;
+  start(): void;
+  stop(): void;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
+  onresult: ((e: { resultIndex: number; results: { isFinal?: boolean; 0: { transcript: string } }[] }) => void) | null;
+}
+
+/** Voice input button using Web Speech API (Chrome / Edge / Safari). */
+function VoiceInputButton({
+  textareaRef,
+}: {
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+}) {
+  const [listening, setListening] = useState(false);
+  const [supported, setSupported] = useState(true);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+
+  useEffect(() => {
+    const ctor =
+      (window as unknown as Record<string, unknown>)["SpeechRecognition"] ??
+      (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"];
+    if (!ctor) setSupported(false);
+  }, []);
+
+  const toggle = useCallback(() => {
+    const Ctor = (
+      (window as unknown as Record<string, unknown>)["SpeechRecognition"] ??
+      (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"]
+    ) as (new () => SpeechRecognitionInstance) | undefined;
+
+    if (!Ctor) {
+      toast.error("Voice input is not supported in this browser.");
+      return;
+    }
+
+    // If already listening, stop manually
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const recognition = new Ctor();
+    recognition.lang = "en-US";
+    recognition.interimResults = false; // only fire for final segments
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false; // stops naturally after a pause
+
+    recognition.onstart = () => setListening(true);
+
+    // Accumulate final segments as they are committed by the browser.
+    // Do NOT call stop() here — let recognition run until natural end.
+    let accumulated = "";
+    recognition.onresult = (e: { resultIndex: number; results: { isFinal?: boolean; 0: { transcript: string } }[] }) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const result = e.results[i];
+        if (result && result.isFinal !== false) {
+          accumulated += (accumulated ? " " : "") + (result[0]?.transcript ?? "");
+        }
+      }
+    };
+
+    // onend fires when recognition ends naturally (pause detected) or manually stopped.
+    // Inject the accumulated transcript exactly once here.
+    recognition.onend = () => {
+      setListening(false);
+      const transcript = accumulated.trim();
+      if (!transcript) return;
+      const el = textareaRef.current;
+      if (!el) return;
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value",
+      )?.set;
+      const current = el.value;
+      nativeSetter?.call(el, current ? `${current} ${transcript}` : transcript);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.focus();
+    };
+
+    recognition.onerror = (e: { error: string }) => {
+      setListening(false);
+      if (e.error !== "aborted" && e.error !== "no-speech") {
+        toast.error(`Microphone error: ${e.error}`);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [listening, textareaRef]);
+
+  if (!supported) return null;
+
+  return (
+    <PromptInputButton
+      type="button"
+      onClick={toggle}
+      tooltip={listening ? "Stop listening" : "Speak your message"}
+      variant="ghost"
+      size="icon-sm"
+      className={[
+        "rounded-xl p-2 transition-colors",
+        listening
+          ? "text-red-500 hover:text-red-600 animate-pulse"
+          : "text-muted-foreground hover:text-foreground",
+      ].join(" ")}
+      aria-label={listening ? "Stop voice input" : "Start voice input"}
+    >
+      {listening ? <MicOff className="size-5" /> : <Mic className="size-5" />}
     </PromptInputButton>
   );
 }
@@ -415,11 +538,14 @@ export function RemiChat({
             placeholder={
               topic ? `Ask a doubt about ${topic.label}…` : "What do you want to create or ask?"
             }
-            className="min-h-[64px]"
+            className="min-h-[80px] text-base"
           />
 
           <PromptInputFooter className="justify-between">
-            <AttachButton />
+            <div className="flex items-center gap-1">
+              <AttachButton />
+              <VoiceInputButton textareaRef={textareaRef} />
+            </div>
             <PromptInputSubmit status={status} disabled={busy} />
           </PromptInputFooter>
         </PromptInput>

@@ -47,7 +47,11 @@ export async function requireUserId(): Promise<string> {
 
 export async function fetchProfile(): Promise<Profile | null> {
   const userId = await requireUserId();
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -62,9 +66,7 @@ export async function updateProfile(patch: Tables["profiles"]["Update"]) {
 /* ---------- pages & blocks ---------- */
 
 export async function fetchPages(): Promise<Page[]> {
-  return unwrap(
-    await supabase.from("pages").select("*").order("position").order("created_at"),
-  );
+  return unwrap(await supabase.from("pages").select("*").order("position").order("created_at"));
 }
 
 export async function fetchPage(id: string): Promise<Page | null> {
@@ -73,7 +75,11 @@ export async function fetchPage(id: string): Promise<Page | null> {
   return data;
 }
 
-export async function createPage(input: { title?: string; parent_id?: string | null; icon?: string }) {
+export async function createPage(input: {
+  title?: string;
+  parent_id?: string | null;
+  icon?: string;
+}) {
   const user_id = await requireUserId();
   return unwrap(
     await supabase
@@ -99,9 +105,7 @@ export async function deletePage(id: string) {
 }
 
 export async function fetchBlocks(pageId: string): Promise<Block[]> {
-  return unwrap(
-    await supabase.from("blocks").select("*").eq("page_id", pageId).order("position"),
-  );
+  return unwrap(await supabase.from("blocks").select("*").eq("page_id", pageId).order("position"));
 }
 
 export async function createBlock(input: {
@@ -139,13 +143,24 @@ export async function deleteBlock(id: string) {
 
 export async function fetchTasks(): Promise<Task[]> {
   return unwrap(
-    await supabase.from("tasks").select("*").order("done").order("due_date", { nullsFirst: false }).order("position"),
+    await supabase
+      .from("tasks")
+      .select("*")
+      .order("done")
+      .order("due_date", { nullsFirst: false })
+      .order("position"),
   );
 }
 
 export async function createTask(input: Partial<Tables["tasks"]["Insert"]> & { title: string }) {
   const user_id = await requireUserId();
-  return unwrap(await supabase.from("tasks").insert({ ...input, user_id }).select("*").single());
+  return unwrap(
+    await supabase
+      .from("tasks")
+      .insert({ ...input, user_id })
+      .select("*")
+      .single(),
+  );
 }
 
 export async function updateTask(id: string, patch: Tables["tasks"]["Update"]) {
@@ -176,7 +191,13 @@ export async function createHabit(input: {
   target_per_week?: number;
 }) {
   const user_id = await requireUserId();
-  return unwrap(await supabase.from("habits").insert({ ...input, user_id }).select("*").single());
+  return unwrap(
+    await supabase
+      .from("habits")
+      .insert({ ...input, user_id })
+      .select("*")
+      .single(),
+  );
 }
 
 export async function toggleHabit(habitId: string, day: string, on: boolean) {
@@ -186,7 +207,11 @@ export async function toggleHabit(habitId: string, day: string, on: boolean) {
     if (error && !error.message.includes("duplicate")) throw new Error(error.message);
     return;
   }
-  const { error } = await supabase.from("habit_logs").delete().eq("habit_id", habitId).eq("day", day);
+  const { error } = await supabase
+    .from("habit_logs")
+    .delete()
+    .eq("habit_id", habitId)
+    .eq("day", day);
   if (error) throw new Error(error.message);
 }
 
@@ -211,7 +236,13 @@ export async function createGoal(input: {
   target_date?: string | null;
 }) {
   const user_id = await requireUserId();
-  return unwrap(await supabase.from("goals").insert({ ...input, user_id }).select("*").single());
+  return unwrap(
+    await supabase
+      .from("goals")
+      .insert({ ...input, user_id })
+      .select("*")
+      .single(),
+  );
 }
 
 export async function updateGoal(id: string, patch: Tables["goals"]["Update"]) {
@@ -223,9 +254,19 @@ export async function deleteGoal(id: string) {
   if (error) throw new Error(error.message);
 }
 
-export async function createMilestone(input: { goal_id: string; title: string; position?: number }) {
+export async function createMilestone(input: {
+  goal_id: string;
+  title: string;
+  position?: number;
+}) {
   const user_id = await requireUserId();
-  return unwrap(await supabase.from("milestones").insert({ ...input, user_id }).select("*").single());
+  return unwrap(
+    await supabase
+      .from("milestones")
+      .insert({ ...input, user_id })
+      .select("*")
+      .single(),
+  );
 }
 
 export async function updateMilestone(id: string, patch: Tables["milestones"]["Update"]) {
@@ -246,13 +287,8 @@ export async function fetchRoadmapItems(roadmapId?: string): Promise<RoadmapItem
   return unwrap(await q);
 }
 
-
 export async function fetchRoadmap(id: string): Promise<Roadmap | null> {
-  const { data, error } = await supabase
-    .from("roadmaps")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await supabase.from("roadmaps").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -290,7 +326,10 @@ export async function fetchJournal(day: string): Promise<JournalEntry | null> {
   return data;
 }
 
-export async function saveJournal(day: string, patch: { mood?: string | null; note?: string | null }) {
+export async function saveJournal(
+  day: string,
+  patch: { mood?: string | null; note?: string | null },
+) {
   const user_id = await requireUserId();
   return unwrap(
     await supabase
@@ -321,7 +360,11 @@ export async function createFocusSession(input: {
 }) {
   const user_id = await requireUserId();
   return unwrap(
-    await supabase.from("focus_sessions").insert({ ...input, user_id }).select("*").single(),
+    await supabase
+      .from("focus_sessions")
+      .insert({ ...input, user_id })
+      .select("*")
+      .single(),
   );
 }
 
@@ -356,7 +399,9 @@ export async function fetchThreads(): Promise<ChatThread[]> {
 
 export async function createThread(title = "New conversation"): Promise<ChatThread> {
   const user_id = await requireUserId();
-  return unwrap(await supabase.from("chat_threads").insert({ user_id, title }).select("*").single());
+  return unwrap(
+    await supabase.from("chat_threads").insert({ user_id, title }).select("*").single(),
+  );
 }
 
 export async function renameThread(id: string, title: string) {
@@ -371,11 +416,7 @@ export async function deleteThread(id: string) {
 
 export async function fetchThreadMessages(threadId: string) {
   return unwrap(
-    await supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("thread_id", threadId)
-      .order("created_at"),
+    await supabase.from("chat_messages").select("*").eq("thread_id", threadId).order("created_at"),
   );
 }
 
@@ -393,18 +434,13 @@ export async function fetchMemories(): Promise<AgentMemory[]> {
 
 export async function clearMemories(): Promise<void> {
   const userId = await requireUserId();
-  const { error } = await supabase
-    .from("agent_memories")
-    .delete()
-    .eq("user_id", userId);
+  const { error } = await supabase.from("agent_memories").delete().eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
 
 /* ---------- roadmap resources ---------- */
 
-export async function fetchRoadmapResources(
-  roadmapId: string,
-): Promise<RoadmapResource[]> {
+export async function fetchRoadmapResources(roadmapId: string): Promise<RoadmapResource[]> {
   return unwrap(
     await supabase
       .from("roadmap_resources")
@@ -414,9 +450,7 @@ export async function fetchRoadmapResources(
   );
 }
 
-export async function fetchRoadmapResource(
-  id: string,
-): Promise<RoadmapResource | null> {
+export async function fetchRoadmapResource(id: string): Promise<RoadmapResource | null> {
   const { data, error } = await supabase
     .from("roadmap_resources")
     .select("*")

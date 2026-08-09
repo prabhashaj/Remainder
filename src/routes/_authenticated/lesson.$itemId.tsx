@@ -9,12 +9,7 @@ import { MessageResponse } from "@/components/ai-elements/message";
 import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { Button } from "@/components/ui/button";
 import { ExpandableImage } from "@/components/ui/expandable-image";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchRoadmapItem, updateRoadmapItem } from "@/lib/db";
 import { generateLesson } from "@/lib/lesson.functions";
 import { generateFlashcardsForItem, fetchFlashcardCountForItem } from "@/lib/srs.functions";
@@ -147,9 +142,7 @@ function LessonPage() {
         {item.phase}
       </p>
       <h1 className="mt-1.5 font-display text-3xl font-bold">{item.title}</h1>
-      {item.detail && (
-        <p className="mt-2 leading-relaxed text-muted-foreground">{item.detail}</p>
-      )}
+      {item.detail && <p className="mt-2 leading-relaxed text-muted-foreground">{item.detail}</p>}
 
       <div className="mt-4 flex flex-wrap items-center gap-4">
         <CheckpointGate
@@ -168,9 +161,7 @@ function LessonPage() {
           variant="outline"
           size="sm"
           className="press rounded-2xl"
-          onClick={() =>
-            startTimer(item.estimated_minutes || 25, item.title, item.id)
-          }
+          onClick={() => startTimer(item.estimated_minutes || 25, item.title, item.id)}
         >
           Focus on this
         </Button>
@@ -224,10 +215,7 @@ function LessonPage() {
               Flashcards: {item.title}
             </DialogTitle>
           </DialogHeader>
-          <FlashcardReview
-            itemId={item.id}
-            onComplete={() => setFlashcardsOpen(false)}
-          />
+          <FlashcardReview itemId={item.id} onComplete={() => setFlashcardsOpen(false)} />
         </DialogContent>
       </Dialog>
 
@@ -250,10 +238,7 @@ function LessonPage() {
               ? generate.data.error
               : "No lesson written yet."}
           </p>
-          <Button
-            className="press mt-4 rounded-2xl"
-            onClick={() => generate.mutate(true)}
-          >
+          <Button className="press mt-4 rounded-2xl" onClick={() => generate.mutate(true)}>
             Write this lesson
           </Button>
         </div>

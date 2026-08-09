@@ -22,7 +22,11 @@ export const QuizQuestionSchema = z.object({
     .nullable()
     .transform((val) => val ?? []),
   correct_answer: z.string(),
-  explanation: z.string().optional().nullable().transform((val) => val ?? ""),
+  explanation: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => val ?? ""),
 });
 
 export const QuizSchema = z.object({
@@ -40,6 +44,29 @@ export type QuizQuestion = {
 export type Quiz = {
   questions: QuizQuestion[];
 };
+
+function questionFromUnknown(value: unknown, checkpoint = false): QuizQuestion {
+  const question = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const rawOpts = question["options"];
+  const options = Array.isArray(rawOpts) ? rawOpts.map(String) : [];
+  const qType = String(question["type"] || "");
+  const qQuestion = String(question["question"] || "");
+  const qCorrect = String(question["correct_answer"] || question["answer"] || "");
+  const qExp = String(question["explanation"] || "");
+
+  return {
+    type:
+      checkpoint ||
+      qType.toLowerCase().includes("mcq") ||
+      options.length > 0
+        ? "mcq"
+        : "short_answer",
+    question: qQuestion,
+    options,
+    correct_answer: qCorrect,
+    explanation: qExp,
+  };
+}
 
 const QUIZ_PROMPT = `You generate a quiz from a lesson written by Remainder, a calm learning workspace.
 
@@ -80,17 +107,9 @@ export async function generateQuiz(params: {
     return { success: false, error: "No lesson content yet — generate the lesson first." };
 
   const [{ data: roadmap }, { data: parent }] = await Promise.all([
-    supabase
-      .from("roadmaps")
-      .select("topic")
-      .eq("id", item.roadmap_id)
-      .maybeSingle(),
+    supabase.from("roadmaps").select("topic").eq("id", item.roadmap_id).maybeSingle(),
     item.parent_id
-      ? supabase
-          .from("roadmap_items")
-          .select("title")
-          .eq("id", item.parent_id)
-          .maybeSingle()
+      ? supabase.from("roadmap_items").select("title").eq("id", item.parent_id).maybeSingle()
       : Promise.resolve({ data: null as { title: string } | null }),
   ]);
 
@@ -132,29 +151,25 @@ Generate the 5-question quiz now in JSON {"questions": [...]}.`;
       try {
         const res = await generateText({
           model,
-          system: QUIZ_PROMPT + "\nRespond ONLY with JSON code block: ```json {\"questions\": [...]} ```",
+          system:
+            QUIZ_PROMPT + '\nRespond ONLY with JSON code block: ```json {"questions": [...]} ```',
           prompt,
         });
 
         const jsonMatch = res.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, res.text];
         const rawJson = (jsonMatch[1] || res.text).trim();
-        const parsed = JSON.parse(rawJson);
+        const parsed: unknown = JSON.parse(rawJson);
 
-        const list = Array.isArray(parsed)
+        const rec = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+        const list: unknown[] = Array.isArray(parsed)
           ? parsed
-          : Array.isArray(parsed?.questions)
-            ? parsed.questions
-            : Array.isArray(parsed?.quiz)
-              ? parsed.quiz
+          : Array.isArray(rec?.["questions"])
+            ? (rec!["questions"] as unknown[])
+            : Array.isArray(rec?.["quiz"])
+              ? (rec!["quiz"] as unknown[])
               : [];
 
-        questions = list.map((q: any) => ({
-          type: (String(q.type || "").toLowerCase().includes("mcq") || (q.options && q.options.length > 0)) ? "mcq" : "short_answer",
-          question: String(q.question || ""),
-          options: Array.isArray(q.options) ? q.options.map(String) : [],
-          correct_answer: String(q.correct_answer || q.answer || ""),
-          explanation: String(q.explanation || ""),
-        }));
+        questions = list.map((item) => questionFromUnknown(item));
       } catch (err3) {
         return {
           success: false,
@@ -227,27 +242,22 @@ Generate 2-3 checkpoint questions now in JSON.`;
     try {
       const res = await generateText({
         model,
-        system: system + "\nRespond ONLY with JSON block: ```json {\"questions\": [...]} ```",
+        system: system + '\nRespond ONLY with JSON block: ```json {"questions": [...]} ```',
         prompt,
       });
 
       const jsonMatch = res.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, res.text];
       const rawJson = (jsonMatch[1] || res.text).trim();
-      const parsed = JSON.parse(rawJson);
+      const parsed: unknown = JSON.parse(rawJson);
 
+      const rec = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
       const list = Array.isArray(parsed)
         ? parsed
-        : Array.isArray(parsed?.questions)
-          ? parsed.questions
+        : Array.isArray(rec?.["questions"])
+          ? (rec!["questions"] as unknown[])
           : [];
 
-      questions = list.map((q: any) => ({
-        type: "mcq",
-        question: String(q.question || ""),
-        options: Array.isArray(q.options) ? q.options.map(String) : [],
-        correct_answer: String(q.correct_answer || q.answer || ""),
-        explanation: String(q.explanation || ""),
-      }));
+      questions = list.map((question) => questionFromUnknown(question, true));
     } catch (err2) {
       return {
         success: false,

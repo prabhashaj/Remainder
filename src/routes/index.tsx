@@ -68,11 +68,19 @@ function Landing() {
     <main className="min-h-screen bg-background">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2.5">
-          <img src={remiLogo} alt="Remi, the Remainder coach" width={40} height={40} className="size-10" />
+          <img
+            src={remiLogo}
+            alt="Remi, the Remainder coach"
+            width={40}
+            height={40}
+            className="size-10"
+          />
           <span className="font-display text-xl font-bold">Remainder</span>
         </div>
         <Button asChild variant="ghost" className="rounded-2xl">
-          <Link to="/auth" search={{ mode: "signin" }}>Sign in</Link>
+          <Link to="/auth" search={{ mode: "signin" }}>
+            Sign in
+          </Link>
         </Button>
       </header>
 
@@ -90,7 +98,9 @@ function Landing() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="rounded-2xl px-7 shadow-soft press">
-              <Link to="/auth" search={{ mode: "signup" }}>Start your notebook</Link>
+              <Link to="/auth" search={{ mode: "signup" }}>
+                Start your notebook
+              </Link>
             </Button>
             <Button asChild size="lg" variant="secondary" className="rounded-2xl px-7 press">
               <Link to="/auth" search={{ mode: "signin" }}>

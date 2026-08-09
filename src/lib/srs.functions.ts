@@ -5,12 +5,11 @@ import { writeFlashcards } from "@/lib/agents/flashcard-generator.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAiApiKey } from "@/lib/ai-gateway.server";
 
-function sm2(params: {
-  quality: number;
+function sm2(params: { quality: number; ease: number; interval: number; repetitions: number }): {
   ease: number;
   interval: number;
   repetitions: number;
-}): { ease: number; interval: number; repetitions: number } {
+} {
   const { quality } = params;
   let { ease, interval, repetitions } = params;
 
@@ -28,10 +27,7 @@ function sm2(params: {
     repetitions += 1;
   }
 
-  ease = Math.max(
-    1.3,
-    ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02),
-  );
+  ease = Math.max(1.3, ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
 
   return { ease, interval, repetitions };
 }
@@ -64,9 +60,7 @@ export type FlashcardRecord = {
 /** Generate flashcards for a roadmap item using AI. */
 export const generateFlashcardsForItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ itemId: z.string() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
   .handler(async ({ data, context }) => {
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
@@ -92,7 +86,7 @@ export const fetchDueFlashcards = createServerFn({ method: "GET" })
         .lte("due_date", today)
         .order("due_date")
         .limit(50);
-      if (!error && data) return (data as FlashcardRecord[]);
+      if (!error && data) return data as FlashcardRecord[];
     } catch {
       /* Fallback to agent_memories below */
     }
@@ -136,9 +130,7 @@ export const fetchDueFlashcards = createServerFn({ method: "GET" })
 /** Fetch all flashcards for a specific roadmap item. */
 export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ itemId: z.string() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
   .handler(async ({ data, context }) => {
     const today = todayStr();
 
@@ -149,7 +141,7 @@ export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
         .select("*")
         .eq("roadmap_item_id", data.itemId)
         .order("created_at");
-      if (!error && cards) return (cards as FlashcardRecord[]);
+      if (!error && cards) return cards as FlashcardRecord[];
     } catch {
       /* Fallback to agent_memories below */
     }
@@ -232,9 +224,7 @@ export const fetchDueFlashcardCount = createServerFn({ method: "GET" })
 /** Fetch flashcard count for a specific roadmap item. */
 export const fetchFlashcardCountForItem = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ itemId: z.string() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
   .handler(async ({ data, context }) => {
     // 1. Try flashcards table
     try {

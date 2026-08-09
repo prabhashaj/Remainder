@@ -10,13 +10,12 @@ import {
   getTranscriptAtTimestamp,
   generateNotebook,
 } from "@/lib/transcript.server";
+import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 
 export const summarizeMaterial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z
-      .object({ resourceId: z.string(), force: z.boolean().optional() })
-      .parse(data),
+    z.object({ resourceId: z.string(), force: z.boolean().optional() }).parse(data),
   )
   .handler(async ({ data, context }) => {
     const key = getAiApiKey();
@@ -32,9 +31,7 @@ export const summarizeMaterial = createServerFn({ method: "POST" })
 export const askAboutMaterial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z
-      .object({ resourceId: z.string(), question: z.string().min(1) })
-      .parse(data),
+    z.object({ resourceId: z.string(), question: z.string().min(1) }).parse(data),
   )
   .handler(async ({ data, context }) => {
     const key = getAiApiKey();
@@ -70,11 +67,8 @@ export const fetchTranscript = createServerFn({ method: "POST" })
       return { success: false, error: result.error ?? "No transcript available" };
     }
 
-    // Cache the transcript
-    await context.supabase
-      .from("study_resources")
-      .update({ extracted_text: result.fullText })
-      .eq("id", data.resourceId);
+    // Cache the transcript and embed it
+    await saveDocumentTextAndEmbed(context.supabase, data.resourceId, result.fullText);
 
     return { success: true, transcript: result.fullText };
   });
@@ -82,9 +76,7 @@ export const fetchTranscript = createServerFn({ method: "POST" })
 /** Fetch transcript directly from any YouTube link or video ID. */
 export const getTranscriptFromUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ urlOrId: z.string().min(1) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ urlOrId: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
     const raw = data.urlOrId.trim();
     const match = raw.match(
@@ -151,12 +143,9 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
       }
       segments = result.segments;
 
-      // Cache transcript
+      // Cache transcript and embed it
       if (result.fullText) {
-        await context.supabase
-          .from("study_resources")
-          .update({ extracted_text: result.fullText })
-          .eq("id", data.resourceId);
+        await saveDocumentTextAndEmbed(context.supabase, data.resourceId, result.fullText);
       }
     }
 
@@ -172,9 +161,7 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
 export const generateNotebookFromTranscript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z
-      .object({ videoId: z.string(), resourceId: z.string(), title: z.string() })
-      .parse(data),
+    z.object({ videoId: z.string(), resourceId: z.string(), title: z.string() }).parse(data),
   )
   .handler(async ({ data, context }) => {
     const key = getAiApiKey();
@@ -194,11 +181,8 @@ export const generateNotebookFromTranscript = createServerFn({ method: "POST" })
         return { success: false, error: result.error ?? "No transcript" };
       }
       transcript = result.fullText;
-      // Cache it
-      await context.supabase
-        .from("study_resources")
-        .update({ extracted_text: transcript })
-        .eq("id", data.resourceId);
+      // Cache it and embed it
+      await saveDocumentTextAndEmbed(context.supabase, data.resourceId, transcript);
     }
 
     // Create a page in the workspace
@@ -232,14 +216,26 @@ export const generateNotebookFromTranscript = createServerFn({ method: "POST" })
       user_id: userId,
       title: `${data.title} — Notebook`,
       kind: "note",
-      roadmap_id: (
-        await context.supabase
-          .from("study_resources")
-          .select("roadmap_id")
-          .eq("id", data.resourceId)
-          .maybeSingle()
-      ).data?.roadmap_id ?? null,
+      roadmap_id:
+        (
+          await context.supabase
+            .from("study_resources")
+            .select("roadmap_id")
+            .eq("id", data.resourceId)
+            .maybeSingle()
+        ).data?.roadmap_id ?? null,
     });
 
     return { success: true, pageId: page.id };
+  });
+
+/** Client-callable mutation to save text and trigger embedding generation. */
+export const saveExtractedTextFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ resourceId: z.string(), text: z.string(), pages: z.number().optional() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await saveDocumentTextAndEmbed(context.supabase, data.resourceId, data.text, data.pages);
+    return { success: true };
   });

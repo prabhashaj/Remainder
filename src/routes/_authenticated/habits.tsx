@@ -26,8 +26,7 @@ export const Route = createFileRoute("/_authenticated/habits")({
       { title: "Habits — Remainder" },
       {
         name: "description",
-        content:
-          "Weekly rhythms, streaks and consistency for the habits you're building.",
+        content: "Weekly rhythms, streaks and consistency for the habits you're building.",
       },
       { property: "og:title", content: "Habits — Remainder" },
       {
@@ -91,10 +90,7 @@ function HabitsPage() {
   ).length;
   const weekLogs = logs.filter((l) => DAYS.includes(l.day)).length;
   const weekTarget = habits.reduce((sum, h) => sum + h.target_per_week, 0);
-  const bestStreak = habits.reduce(
-    (best, h) => Math.max(best, streakFor(h.id, logs)),
-    0,
-  );
+  const bestStreak = habits.reduce((best, h) => Math.max(best, streakFor(h.id, logs)), 0);
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
@@ -104,10 +100,7 @@ function HabitsPage() {
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Done today"
-          value={`${doneToday}/${habits.length || 0}`}
-        />
+        <StatCard label="Done today" value={`${doneToday}/${habits.length || 0}`} />
         <StatCard
           label="This week"
           value={weekTarget ? `${weekLogs}/${weekTarget}` : String(weekLogs)}
@@ -157,9 +150,7 @@ function HabitsPage() {
               min={1}
               max={7}
               value={target}
-              onChange={(e) =>
-                setTarget(Math.min(7, Math.max(1, Number(e.target.value) || 1)))
-              }
+              onChange={(e) => setTarget(Math.min(7, Math.max(1, Number(e.target.value) || 1)))}
               className="w-20 rounded-2xl"
             />
           </label>
@@ -192,12 +183,8 @@ function HabitsPage() {
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="card-soft px-5 py-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 font-display text-2xl font-bold tabular-nums">
-        {value}
-      </p>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-2xl font-bold tabular-nums">{value}</p>
     </div>
   );
 }
@@ -218,10 +205,7 @@ function HabitCard({
   const thisWeek = DAYS.filter((day) =>
     logs.some((l) => l.habit_id === habit.id && l.day === day),
   ).length;
-  const pct = Math.min(
-    100,
-    Math.round((thisWeek / Math.max(1, habit.target_per_week)) * 100),
-  );
+  const pct = Math.min(100, Math.round((thisWeek / Math.max(1, habit.target_per_week)) * 100));
 
   return (
     <article className="card-soft p-5">
@@ -230,9 +214,7 @@ function HabitCard({
           <Icon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate font-display text-base font-semibold">
-            {habit.title}
-          </h2>
+          <h2 className="truncate font-display text-base font-semibold">{habit.title}</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {thisWeek} of {habit.target_per_week} days this week
           </p>
@@ -261,9 +243,7 @@ function HabitCard({
 
       <div className="mt-4 flex gap-1.5">
         {DAYS.map((day) => {
-          const on = logs.some(
-            (l) => l.habit_id === habit.id && l.day === day,
-          );
+          const on = logs.some((l) => l.habit_id === habit.id && l.day === day);
           return (
             <button
               key={day}

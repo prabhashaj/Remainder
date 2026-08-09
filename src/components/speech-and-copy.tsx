@@ -57,8 +57,10 @@ export function getSortedVoices(): SpeechSynthesisVoice[] {
     if (aIsIndian && !bIsIndian) return -1;
     if (!aIsIndian && bIsIndian) return 1;
 
-    const aIsNatural = aName.includes("natural") || aName.includes("google") || aName.includes("microsoft");
-    const bIsNatural = bName.includes("natural") || bName.includes("google") || bName.includes("microsoft");
+    const aIsNatural =
+      aName.includes("natural") || aName.includes("google") || aName.includes("microsoft");
+    const bIsNatural =
+      bName.includes("natural") || bName.includes("google") || bName.includes("microsoft");
 
     if (aIsNatural && !bIsNatural) return -1;
     if (!aIsNatural && bIsNatural) return 1;
@@ -196,7 +198,8 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
 
     const utterance = new SpeechSynthesisUtterance(clean);
     const available = getSortedVoices();
-    const chosenVoice = available.find((v) => v.name === selectedVoiceName) || getDefaultIndianVoice();
+    const chosenVoice =
+      available.find((v) => v.name === selectedVoiceName) || getDefaultIndianVoice();
 
     if (chosenVoice) {
       utterance.voice = chosenVoice;
@@ -267,7 +270,13 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p>{isPlaying ? (isPaused ? "Resume reading" : "Pause reading") : "Listen in clear Indian voice (en-IN)"}</p>
+            <p>
+              {isPlaying
+                ? isPaused
+                  ? "Resume reading"
+                  : "Pause reading"
+                : "Listen in clear Indian voice (en-IN)"}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -339,12 +348,18 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
 
           <div className="max-h-48 overflow-y-auto space-y-0.5 pr-1">
             {voices.length === 0 ? (
-              <div className="px-2 py-2 text-xs text-muted-foreground">Default Indian English (en-IN)</div>
+              <div className="px-2 py-2 text-xs text-muted-foreground">
+                Default Indian English (en-IN)
+              </div>
             ) : (
               voices.slice(0, 10).map((v) => {
                 const isSelected = v.name === selectedVoiceName;
-                const isIndian = v.lang.toLowerCase().includes("in") || v.name.toLowerCase().includes("india");
-                const isNatural = v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("neerja") || v.name.toLowerCase().includes("prabhat");
+                const isIndian =
+                  v.lang.toLowerCase().includes("in") || v.name.toLowerCase().includes("india");
+                const isNatural =
+                  v.name.toLowerCase().includes("natural") ||
+                  v.name.toLowerCase().includes("neerja") ||
+                  v.name.toLowerCase().includes("prabhat");
 
                 return (
                   <DropdownMenuItem
@@ -424,13 +439,7 @@ export function CopyButton({ text, className }: { text: string; className?: stri
   );
 }
 
-export function SpeechAndCopyToolbar({
-  text,
-  className,
-}: {
-  text: string;
-  className?: string;
-}) {
+export function SpeechAndCopyToolbar({ text, className }: { text: string; className?: string }) {
   if (!text || !text.trim()) return null;
 
   return (

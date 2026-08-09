@@ -8,9 +8,7 @@ import { getAiApiKey } from "@/lib/ai-gateway.server";
 /** Generate a quiz for a roadmap item. Returns questions without persisting. */
 export const generateQuizForItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ itemId: z.string() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
   .handler(async ({ data, context }) => {
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
@@ -85,9 +83,7 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
 /** Generate confidence checkpoint questions for a roadmap item. */
 export const generateCheckpointForItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ itemId: z.string() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ itemId: z.string() }).parse(data))
   .handler(async ({ data, context }) => {
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };

@@ -23,7 +23,10 @@ export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
     meta: [
       { title: "Goals — Remainder" },
-      { name: "description", content: "Bigger intentions, broken into milestones you can actually see." },
+      {
+        name: "description",
+        content: "Bigger intentions, broken into milestones you can actually see.",
+      },
       { property: "og:title", content: "Goals — Remainder" },
       { property: "og:description", content: "Track goals and milestones in Remainder." },
     ],
@@ -33,15 +36,12 @@ export const Route = createFileRoute("/_authenticated/goals")({
 
 /** Turns a target date into a friendly "3 days left" style countdown. */
 function countdownLabel(date: string): string {
-  const days = Math.ceil(
-    (new Date(`${date}T00:00:00`).getTime() - Date.now()) / 86400000,
-  );
+  const days = Math.ceil((new Date(`${date}T00:00:00`).getTime() - Date.now()) / 86400000);
   if (days > 1) return `${days} days left`;
   if (days === 1) return "1 day left";
   if (days === 0) return "due today";
   return `${Math.abs(days)} days overdue`;
 }
-
 
 function GoalsPage() {
   const qc = useQueryClient();
@@ -102,13 +102,10 @@ function GoalsPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {stat.label}
             </p>
-            <p className="mt-1 font-display text-2xl font-bold tabular-nums">
-              {stat.value}
-            </p>
+            <p className="mt-1 font-display text-2xl font-bold tabular-nums">{stat.value}</p>
           </div>
         ))}
       </div>
-
 
       <form
         className="card-soft mt-6 space-y-3 p-5"
@@ -168,7 +165,13 @@ function GoalCard({
   onDelete,
   onRefresh,
 }: {
-  goal: { id: string; title: string; description: string | null; progress: number; target_date: string | null };
+  goal: {
+    id: string;
+    title: string;
+    description: string | null;
+    progress: number;
+    target_date: string | null;
+  };
   milestones: Milestone[];
   onDelete: () => void;
   onRefresh: () => void;
@@ -208,7 +211,6 @@ function GoalCard({
             <p className="mt-1 text-xs text-muted-foreground">
               By {goal.target_date} · {countdownLabel(goal.target_date)}
             </p>
-
           )}
         </div>
         <Button
@@ -229,7 +231,10 @@ function GoalCard({
 
       <ul className="mt-4 space-y-1.5">
         {milestones.map((m) => (
-          <li key={m.id} className="flex items-center gap-3 rounded-2xl px-2 py-1.5 hover:bg-muted/50">
+          <li
+            key={m.id}
+            className="flex items-center gap-3 rounded-2xl px-2 py-1.5 hover:bg-muted/50"
+          >
             <Checkbox
               checked={m.done}
               onCheckedChange={(v) => toggleStep.mutate({ id: m.id, done: Boolean(v) })}

@@ -9,30 +9,20 @@ export type VideoNote = Tables["video_notes"]["Row"];
 
 export const MATERIALS_BUCKET = "materials";
 
-function unwrap<T>(res: {
-  data: T;
-  error: { message: string } | null;
-}): NonNullable<T> {
+function unwrap<T>(res: { data: T; error: { message: string } | null }): NonNullable<T> {
   if (res.error) throw new Error(res.error.message);
   return res.data as NonNullable<T>;
 }
 
 /* ---------- resources ---------- */
 
-export async function fetchStudyResources(
-  roadmapId?: string | null,
-): Promise<StudyResource[]> {
-  let q = supabase
-    .from("study_resources")
-    .select("*")
-    .order("created_at", { ascending: false });
+export async function fetchStudyResources(roadmapId?: string | null): Promise<StudyResource[]> {
+  let q = supabase.from("study_resources").select("*").order("created_at", { ascending: false });
   if (roadmapId) q = q.eq("roadmap_id", roadmapId);
   return unwrap(await q);
 }
 
-export async function fetchStudyResource(
-  id: string,
-): Promise<StudyResource | null> {
+export async function fetchStudyResource(id: string): Promise<StudyResource | null> {
   const { data, error } = await supabase
     .from("study_resources")
     .select("*")
@@ -62,44 +52,36 @@ export async function createStudyResource(input: {
   );
 }
 
-export async function updateStudyResource(
-  id: string,
-  patch: Tables["study_resources"]["Update"],
-) {
+export async function updateStudyResource(id: string, patch: Tables["study_resources"]["Update"]) {
   return unwrap(
-    await supabase
-      .from("study_resources")
-      .update(patch)
-      .eq("id", id)
-      .select("*")
-      .single(),
+    await supabase.from("study_resources").update(patch).eq("id", id).select("*").single(),
   );
 }
 
 export async function deleteStudyResource(resource: StudyResource) {
   if (resource.storage_path) {
-    await supabase.storage
-      .from(MATERIALS_BUCKET)
-      .remove([resource.storage_path]);
+    await supabase.storage.from(MATERIALS_BUCKET).remove([resource.storage_path]);
   }
-  const { error } = await supabase
-    .from("study_resources")
-    .delete()
-    .eq("id", resource.id);
+  const { error } = await supabase.from("study_resources").delete().eq("id", resource.id);
   if (error) throw new Error(error.message);
 }
 
 /** Uploads a document to the private materials bucket under the user's folder. */
 export async function uploadMaterial(file: File): Promise<string> {
   const userId = await requireUserId();
-  const safe = file.name.replace(/[^\w.\-]+/g, "_");
+  const safe = file.name.replace(/[^\w.-]+/g, "_");
   const path = `${userId}/${Date.now()}-${safe}`;
-  
-  let { error } = await supabase.storage
+
+  const { error } = await supabase.storage
     .from(MATERIALS_BUCKET)
     .upload(path, file, { contentType: file.type || "application/pdf", upsert: true });
 
-  if (error && (error.message.includes("not found") || error.message.includes("Bucket") || error.message.includes("does not exist"))) {
+  if (
+    error &&
+    (error.message.includes("not found") ||
+      error.message.includes("Bucket") ||
+      error.message.includes("does not exist"))
+  ) {
     // Attempt auto-creation if bucket doesn't exist
     await supabase.storage.createBucket(MATERIALS_BUCKET, { public: true });
     const retry = await supabase.storage
@@ -121,17 +103,13 @@ export async function signedMaterialUrl(path: string): Promise<string> {
   } catch {
     /* fallback below */
   }
-  const { data } = supabase.storage
-    .from(MATERIALS_BUCKET)
-    .getPublicUrl(path);
+  const { data } = supabase.storage.from(MATERIALS_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
 
 /* ---------- highlights ---------- */
 
-export async function fetchHighlights(
-  resourceId: string,
-): Promise<ResourceHighlight[]> {
+export async function fetchHighlights(resourceId: string): Promise<ResourceHighlight[]> {
   return unwrap(
     await supabase
       .from("resource_highlights")
@@ -168,39 +146,22 @@ export async function createHighlight(input: {
   );
 }
 
-export async function updateHighlight(
-  id: string,
-  patch: Tables["resource_highlights"]["Update"],
-) {
+export async function updateHighlight(id: string, patch: Tables["resource_highlights"]["Update"]) {
   return unwrap(
-    await supabase
-      .from("resource_highlights")
-      .update(patch)
-      .eq("id", id)
-      .select("*")
-      .single(),
+    await supabase.from("resource_highlights").update(patch).eq("id", id).select("*").single(),
   );
 }
 
 export async function deleteHighlight(id: string) {
-  const { error } = await supabase
-    .from("resource_highlights")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("resource_highlights").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
 
 /* ---------- video notes ---------- */
 
-export async function fetchVideoNotes(
-  resourceId: string,
-): Promise<VideoNote[]> {
+export async function fetchVideoNotes(resourceId: string): Promise<VideoNote[]> {
   return unwrap(
-    await supabase
-      .from("video_notes")
-      .select("*")
-      .eq("resource_id", resourceId)
-      .order("seconds"),
+    await supabase.from("video_notes").select("*").eq("resource_id", resourceId).order("seconds"),
   );
 }
 

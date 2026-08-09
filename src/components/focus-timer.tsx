@@ -14,17 +14,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { createFocusSession, finishFocusSession } from "@/lib/db";
 
 const STORAGE_KEY = "remainder.focus.timer";
@@ -54,11 +45,7 @@ type StartOptions = {
 
 type Ctx = {
   state: TimerState | null;
-  start: (
-    optsOrMinutes: number | StartOptions,
-    title?: string,
-    itemId?: string | null,
-  ) => void;
+  start: (optsOrMinutes: number | StartOptions, title?: string, itemId?: string | null) => void;
   toggle: () => void;
   reset: () => void;
   remove: () => void;
@@ -115,8 +102,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [state?.running]);
 
   // Restore timer
@@ -130,9 +116,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
         savedAt?: number;
       };
       const elapsed =
-        saved.running && saved.savedAt
-          ? Math.floor((Date.now() - saved.savedAt) / 1000)
-          : 0;
+        saved.running && saved.savedAt ? Math.floor((Date.now() - saved.savedAt) / 1000) : 0;
       const secondsLeft = Math.max(0, saved.secondsLeft - elapsed);
       setState({
         ...saved,
@@ -150,10 +134,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...state, savedAt: Date.now() }),
-    );
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, savedAt: Date.now() }));
   }, [state]);
 
   // Tick
@@ -229,11 +210,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
   }, [done, state]);
 
   const start = useCallback(
-    (
-      optsOrMinutes: number | StartOptions,
-      titleParam?: string,
-      itemIdParam?: string | null,
-    ) => {
+    (optsOrMinutes: number | StartOptions, titleParam?: string, itemIdParam?: string | null) => {
       let minutes: number;
       let label: string;
       let intention: string | undefined;
@@ -292,9 +269,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback(
     () =>
       setState((prev) =>
-        prev && prev.secondsLeft > 0
-          ? { ...prev, running: !prev.running }
-          : prev,
+        prev && prev.secondsLeft > 0 ? { ...prev, running: !prev.running } : prev,
       ),
     [],
   );
@@ -302,9 +277,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
   const reset = useCallback(
     () =>
       setState((prev) =>
-        prev
-          ? { ...prev, secondsLeft: prev.minutes * 60, running: false }
-          : prev,
+        prev ? { ...prev, secondsLeft: prev.minutes * 60, running: false } : prev,
       ),
     [],
   );
@@ -312,10 +285,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
   const remove = useCallback(() => {
     setState((prev) => {
       if (prev?.sessionId) {
-        const spent = Math.max(
-          0,
-          Math.round((prev.minutes * 60 - prev.secondsLeft) / 60),
-        );
+        const spent = Math.max(0, Math.round((prev.minutes * 60 - prev.secondsLeft) / 60));
         void finishFocusSession(prev.sessionId, {
           minutes: spent,
           tab_away_count: prev.tabAwayCount,
@@ -335,9 +305,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
         tab_away_count: completedSessionInfo.tabAwayCount,
       }).then(() => void qc.invalidateQueries({ queryKey: ["focus"] }));
     }
-    toast.success(
-      `Saved! Great ${completedSessionInfo?.minutes} minute session.`,
-    );
+    toast.success(`Saved! Great ${completedSessionInfo?.minutes} minute session.`);
     setReflectionOpen(false);
     setState(null);
   };
@@ -361,20 +329,14 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
               You completed{" "}
-              <strong className="text-foreground">
-                {completedSessionInfo?.minutes} minutes
-              </strong>{" "}
+              <strong className="text-foreground">{completedSessionInfo?.minutes} minutes</strong>{" "}
               on &quot;{completedSessionInfo?.title}&quot;.
             </p>
 
             {completedSessionInfo?.intention && (
               <div className="rounded-xl bg-muted/60 p-3 text-xs">
-                <span className="font-semibold text-muted-foreground">
-                  Your intention was:
-                </span>
-                <p className="mt-0.5 text-foreground">
-                  {completedSessionInfo.intention}
-                </p>
+                <span className="font-semibold text-muted-foreground">Your intention was:</span>
+                <p className="mt-0.5 text-foreground">{completedSessionInfo.intention}</p>
               </div>
             )}
 
@@ -413,10 +375,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
               />
             </div>
 
-            <Button
-              className="press w-full rounded-2xl mt-2"
-              onClick={handleSaveReflection}
-            >
+            <Button className="press w-full rounded-2xl mt-2" onClick={handleSaveReflection}>
               Complete Session
             </Button>
           </div>
@@ -453,9 +412,7 @@ export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string 
             <Timer className="size-4" />
           )}
           <span className="text-sm tabular-nums">
-            {state
-              ? `${state.isBreak ? "Break " : ""}${clock(state.secondsLeft)}`
-              : "Focus"}
+            {state ? `${state.isBreak ? "Break " : ""}${clock(state.secondsLeft)}` : "Focus"}
           </span>
         </Button>
       </PopoverTrigger>
@@ -480,9 +437,7 @@ export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string 
 
             <p className="truncate text-sm font-semibold mt-1">{state.title}</p>
             {state.intention && (
-              <p className="text-xs text-muted-foreground truncate">
-                Target: {state.intention}
-              </p>
+              <p className="text-xs text-muted-foreground truncate">Target: {state.intention}</p>
             )}
 
             <p className="mt-2 font-display text-3xl font-bold tabular-nums">
@@ -630,20 +585,14 @@ export function FocusTimerChip() {
       <span className="max-w-[9rem] truncate text-xs text-muted-foreground">
         {state.isBreak ? "Break" : state.title}
       </span>
-      <span className="text-sm font-semibold tabular-nums">
-        {clock(state.secondsLeft)}
-      </span>
+      <span className="text-sm font-semibold tabular-nums">{clock(state.secondsLeft)}</span>
       <button
         type="button"
         onClick={toggle}
         aria-label={state.running ? "Pause timer" : "Resume timer"}
         className="rounded-full p-1 text-muted-foreground hover:bg-muted"
       >
-        {state.running ? (
-          <Pause className="size-3.5" />
-        ) : (
-          <Play className="size-3.5" />
-        )}
+        {state.running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
       </button>
       <button
         type="button"

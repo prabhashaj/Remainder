@@ -80,16 +80,14 @@ export default function PdfReader({
           extracted.current = true;
           try {
             const chunks: string[] = [];
-            const limit = Math.min(doc.numPages, 60);
+            const limit = Math.min(doc.numPages, 2000);
             for (let i = 1; i <= limit; i++) {
               const p = await doc.getPage(i);
               const content = await p.getTextContent();
               chunks.push(
                 `\n\n--- page ${i} ---\n` +
                   content.items
-                    .map((item) =>
-                      "str" in item ? (item as { str: string }).str : "",
-                    )
+                    .map((item) => ("str" in item ? (item as { str: string }).str : ""))
                     .join(" "),
               );
             }
@@ -101,9 +99,7 @@ export default function PdfReader({
       >
         <div
           className="flex justify-center"
-          onMouseUp={() =>
-            setSelection(window.getSelection()?.toString().trim() ?? "")
-          }
+          onMouseUp={() => setSelection(window.getSelection()?.toString().trim() ?? "")}
         >
           <Page
             pageNumber={page}
@@ -144,7 +140,8 @@ export default function PdfReader({
       {pageHighlights.length > 0 && (
         <div className="mt-3 flex items-center justify-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 py-1.5 px-3.5 rounded-full w-max mx-auto">
           <Highlighter className="size-4" />
-          {pageHighlights.length} highlight{pageHighlights.length !== 1 ? "s" : ""} saved on this page
+          {pageHighlights.length} highlight{pageHighlights.length !== 1 ? "s" : ""} saved on this
+          page
         </div>
       )}
 

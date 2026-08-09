@@ -76,7 +76,9 @@ function Onboarding() {
         {step === 0 && (
           <div>
             <img src={remiLogo} alt="Remi" width={64} height={64} className="mx-auto size-16" />
-            <h1 className="mt-5 text-center font-display text-2xl font-bold">Welcome to Remainder</h1>
+            <h1 className="mt-5 text-center font-display text-2xl font-bold">
+              Welcome to Remainder
+            </h1>
             <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-relaxed text-muted-foreground">
               I'm Remi, your learning coach. First — what should I call you?
             </p>
@@ -104,7 +106,8 @@ function Onboarding() {
           <div>
             <h1 className="text-center font-display text-2xl font-bold">Pick your vibe</h1>
             <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-relaxed text-muted-foreground">
-              Ten soft palettes. Hover to preview, click to keep. You can change this anytime in Settings.
+              Ten soft palettes. Hover to preview, click to keep. You can change this anytime in
+              Settings.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               {THEMES.map((t) => (
@@ -120,15 +123,25 @@ function Onboarding() {
                 >
                   <span className="flex gap-1.5">
                     {t.swatches.map((color) => (
-                      <span key={color} className="size-5 rounded-full" style={{ backgroundColor: color }} />
+                      <span
+                        key={color}
+                        className="size-5 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
                     ))}
                   </span>
                   <span className="mt-2 block text-sm font-medium">{t.name}</span>
-                  {theme === t.id && <Check className="absolute right-3 top-3 size-4 text-primary" aria-hidden />}
+                  {theme === t.id && (
+                    <Check className="absolute right-3 top-3 size-4 text-primary" aria-hidden />
+                  )}
                 </button>
               ))}
             </div>
-            <Button onClick={() => setStep(2)} className="press mt-6 w-full gap-1.5 rounded-2xl" size="lg">
+            <Button
+              onClick={() => setStep(2)}
+              className="press mt-6 w-full gap-1.5 rounded-2xl"
+              size="lg"
+            >
               Continue <ChevronRight className="size-4" />
             </Button>
           </div>
@@ -137,10 +150,12 @@ function Onboarding() {
         {step === 2 && (
           <div>
             <Sparkle className="mx-auto size-8 text-primary" />
-            <h1 className="mt-4 text-center font-display text-2xl font-bold">What are you learning?</h1>
+            <h1 className="mt-4 text-center font-display text-2xl font-bold">
+              What are you learning?
+            </h1>
             <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-relaxed text-muted-foreground">
-              Tell me something you'd like to learn or get better at, and I'll start you off with a plan.
-              Totally optional.
+              Tell me something you'd like to learn or get better at, and I'll start you off with a
+              plan. Totally optional.
             </p>
             <Textarea
               value={topic}

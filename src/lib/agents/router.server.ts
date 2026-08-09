@@ -4,15 +4,11 @@ import { z } from "zod";
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
 
 export const RoutingDecisionSchema = z.object({
-   search_required: z
-      .boolean()
-      .describe("Whether a web search is required to answer the query accurately"),
-   reasoning: z
-      .string()
-      .describe("1-2 sentence justification based on the routing dimensions"),
-   confidence: z
-      .enum(["high", "medium", "low"])
-      .describe("Confidence level in the decision"),
+  search_required: z
+    .boolean()
+    .describe("Whether a web search is required to answer the query accurately"),
+  reasoning: z.string().describe("1-2 sentence justification based on the routing dimensions"),
+  confidence: z.enum(["high", "medium", "low"]).describe("Confidence level in the decision"),
 });
 
 export type RoutingDecision = z.infer<typeof RoutingDecisionSchema>;
@@ -33,7 +29,8 @@ Before answering, evaluate:
 1. TEMPORAL DEPENDENCE
    Would the correct answer have been different a year ago, or might it differ a 
    month from now? If the answer is anchored to a specific moment in time (a status, 
-   a value, a position held, an ongoing situation), search is required.
+   a value, a position held, an ongoing situation, live sports scores, weather, 
+   stock prices, breaking news), search is ALWAYS required.
 
 2. VERIFIABILITY VS. RECALL
    Does correctness require verification against a real, current source (precise 
@@ -101,16 +98,20 @@ Before answering, evaluate:
    prior context either way), briefly acknowledge multiple senses or ask, rather 
    than silently picking one.
 
+8. PERSONAL WORKSPACE & ACCOUNT DATA
+   Does the query ask about the user's own data? Examples: "How many documents are there?", 
+   "What is my next task?", "Summarize my notes." 
+   If the query is asking about the user's personal workspace, notes, documents, habits, 
+   goals, or tasks, a web search is NEVER required because you already have this context.
+
 DECISION RULE:
+- If dimension 8 applies (user asking about their own workspace/documents), return search_required: false.
 - If dimension 4 resolves to (b), OR dimensions 1/3 clearly apply with less than 
   very high confidence, OR dimension 6 fires, OR dimension 7 identifies a 
   context-established sense that differs from your default association → SEARCH 
   before answering.
 - If stakes (5) are high, prefer search even under moderate uncertainty.
-- Only skip search if the query concerns broad, long-established knowledge where 
-  you're confident you're drawing on genuine, redundant, independent recall — not 
-  a single plausible construction — AND, if the term is polysemous, the sense is 
-  either unambiguous or clearly confirmed by conversation context.
+- Only skip search if the query concerns broad, long-established knowledge or personal workspace data.
 
 === STAGE 2: POST-GENERATION VERIFICATION (applies even if you skipped search) ===
 
@@ -156,26 +157,26 @@ in the response shown to the user.`;
  * Classify a user query to determine whether web search is required.
  */
 export async function classifyQueryRouting(params: {
-   query: string;
-   apiKey: string;
-   conversationContext?: string;
+  query: string;
+  apiKey: string;
+  conversationContext?: string;
 }): Promise<RoutingDecision> {
-   const { query, apiKey, conversationContext } = params;
+  const { query, apiKey, conversationContext } = params;
 
-   const gateway = createAiGatewayProvider(apiKey);
-   const model = gateway(getAiModelName());
+  const gateway = createAiGatewayProvider(apiKey);
+  const model = gateway(getAiModelName());
 
-   let prompt = `QUERY: "${query}"`;
-   if (conversationContext) {
-      prompt = `CONVERSATION CONTEXT (recent messages):\n${conversationContext}\n\nCURRENT QUERY: "${query}"`;
-   }
+  let prompt = `QUERY: "${query}"`;
+  if (conversationContext) {
+    prompt = `CONVERSATION CONTEXT (recent messages):\n${conversationContext}\n\nCURRENT QUERY: "${query}"`;
+  }
 
-   const { object } = await generateObject({
-      model,
-      system: SYSTEM_PROMPT,
-      prompt,
-      schema: RoutingDecisionSchema,
-   });
+  const { object } = await generateObject({
+    model,
+    system: SYSTEM_PROMPT,
+    prompt,
+    schema: RoutingDecisionSchema,
+  });
 
-   return object;
+  return object;
 }

@@ -2,7 +2,7 @@ import { generateText } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
-import { tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
+import { searchTopicPhotos, tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type Supabase = SupabaseClient<Database>;
@@ -73,18 +73,50 @@ export async function writeLesson(params: {
   ]);
 
   const subject = roadmap?.topic ?? "";
-  const context = [subject, parent?.title, item.title].filter(Boolean).join(" — ");
 
   await supabase.from("roadmap_items").update({ content_status: "generating" }).eq("id", itemId);
 
-  // Visuals and videos must be specifically targeted to this exact sub-topic title.
-  const cleanSubtopicTitle = item.title
-    .replace(/^(Phase|Part|Section|Chapter)\s*\d+:?\s*/i, "")
-    .trim();
+  // Build targeted search queries: keep them short and specific.
+  // Core = subtopic + roadmap domain (e.g. "Scaling Strategies context engineering AI").
+  // Only include phase/parent if they add meaningful disambiguating words not already present.
+  const cleanTitle = (t: string | null | undefined): string => {
+    if (!t) return "";
+    return t
+      .replace(/^(Phase|Part|Section|Chapter|\d+\.)\s*\d*:?\s*/i, "")
+      .trim();
+  };
 
-  const videoQuery = `${cleanSubtopicTitle} youtube tutorial video`;
-  const imageQuery = `${cleanSubtopicTitle} visual diagram illustration explained`;
-  const researchQuery = `${cleanSubtopicTitle} ${subject} explanation guide`;
+  const cleanRoadmap = cleanTitle(subject);
+  const cleanParent = cleanTitle(parent?.title);
+  const cleanSubtopic = cleanTitle(item.title);
+
+  // Check if a string adds unique words not already covered by the base
+  const addsUniqueWords = (candidate: string, base: string): boolean => {
+    const baseWords = new Set(base.toLowerCase().split(/\s+/).filter((w) => w.length > 2));
+    return candidate
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+      .some((w) => !baseWords.has(w));
+  };
+
+  // The primary query is always: "SubTopic RoadmapDomain"
+  const primaryQuery = [cleanSubtopic, cleanRoadmap].filter(Boolean).join(" ");
+
+  // Only add parent topic if it disambiguates (adds words not in primary query)
+  const disambiguator =
+    cleanParent && addsUniqueWords(cleanParent, primaryQuery) ? cleanParent : "";
+
+  const focusedQuery = [cleanSubtopic, disambiguator, cleanRoadmap].filter(Boolean).join(" ");
+
+  // Search queries — precise and human-search-like, not a sentence dump
+  const researchQuery = `${focusedQuery} explained guide`;
+  const imageQuery = `${focusedQuery} diagram illustration`;
+  // Best format for YouTube video retrieval: "{subtopic} in {roadmap domain}"
+  const videoQuery = `${cleanSubtopic} in ${cleanRoadmap} site:youtube.com`;
+
+  // Track the focused query for relevance ranking later
+  const fullContextQuery = focusedQuery;
 
   const [research, imageSearch, videoSearch] = await Promise.all([
     tavilySearch(researchQuery, {
@@ -97,7 +129,9 @@ export async function writeLesson(params: {
     }),
     tavilySearch(videoQuery, {
       maxResults: 10,
-      includeDomains: ["youtube.com", "youtu.be"],
+      // No includeDomains — restricting to youtube.com/youtu.be causes Tavily to return
+      // channel and playlist pages (no watch?v= IDs). The site: operator in the query
+      // is enough to surface watch-URL results.
     }),
   ]);
 
@@ -136,19 +170,30 @@ Write the lesson now.`,
     caption: img.description,
   }));
 
-  // Rank video results by relevance to key terms in the subtopic title
-  const titleKeywords = cleanSubtopicTitle
+  // Fallback to topic photo search if fewer than 2 web images were found
+  if (images.length < 2) {
+    const fallbackPhotos = await searchTopicPhotos(fullContextQuery);
+    for (const photo of fallbackPhotos) {
+      if (images.length >= 2) break;
+      if (!images.some((img) => img.url === photo.url)) {
+        images.push({ url: photo.url, caption: photo.description });
+      }
+    }
+  }
+
+  // Rank video results by relevance to key terms across the full contextual query
+  const contextKeywords = fullContextQuery
     .toLowerCase()
     .split(/\s+/)
     .filter(
       (w) =>
         w.length > 2 &&
-        !["with", "from", "into", "that", "this", "your", "for", "and", "the"].includes(w),
+        !["with", "from", "into", "that", "this", "your", "for", "and", "the", "phase", "part", "section", "chapter", "topic"].includes(w),
     );
 
   const sortedVideoResults = [...videoSearch.results].sort((a, b) => {
-    const scoreA = titleKeywords.filter((k) => a.title.toLowerCase().includes(k)).length;
-    const scoreB = titleKeywords.filter((k) => b.title.toLowerCase().includes(k)).length;
+    const scoreA = contextKeywords.filter((k) => a.title.toLowerCase().includes(k)).length;
+    const scoreB = contextKeywords.filter((k) => b.title.toLowerCase().includes(k)).length;
     return scoreB - scoreA;
   });
 
@@ -162,6 +207,28 @@ Write the lesson now.`,
     seen.add(id);
     videos.push({ title: r.title, url: r.url, youtube_id: id });
     if (videos.length >= 2) break;
+  }
+
+  // Fallback: if no valid YouTube watch URLs came back from the first search,
+  // retry with a broader query (no site: operator).
+  if (videos.length === 0) {
+    const fallbackVideoSearch = await tavilySearch(
+      `${cleanSubtopic} in ${cleanRoadmap} youtube`,
+      { maxResults: 10 },
+    );
+    const fallbackSorted = [...fallbackVideoSearch.results].sort((a, b) => {
+      const scoreA = contextKeywords.filter((k) => a.title.toLowerCase().includes(k)).length;
+      const scoreB = contextKeywords.filter((k) => b.title.toLowerCase().includes(k)).length;
+      return scoreB - scoreA;
+    });
+    for (const r of fallbackSorted) {
+      const id = youtubeIdFromUrl(r.url);
+      if (!id) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      videos.push({ title: r.title, url: r.url, youtube_id: id });
+      if (videos.length >= 2) break;
+    }
   }
 
   const { error: updateErr } = await supabase

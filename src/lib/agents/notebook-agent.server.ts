@@ -90,7 +90,8 @@ Formatting Rules:
   try {
     const result = await generateText({
       model,
-      system: "You are a JSON notebook agent. Return strictly a valid JSON object matching the requested schema.",
+      system:
+        "You are a JSON notebook agent. Return strictly a valid JSON object matching the requested schema.",
       prompt,
     });
 
@@ -193,7 +194,10 @@ async function fallbackDefaultBlocks(
   const fallbackBlocks: NotebookBlockInput[] = [
     { type: "heading", content: "Overview" },
     { type: "text", content: `Study notebook generated for **${topicTitle}**.` },
-    { type: "quote", content: "Key takeaways and concepts extracted from web research and materials." },
+    {
+      type: "quote",
+      content: "Key takeaways and concepts extracted from web research and materials.",
+    },
     { type: "divider", content: "" },
     { type: "heading", content: "Highlights" },
     { type: "text", content: material.slice(0, 800) },

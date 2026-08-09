@@ -48,17 +48,9 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
         .eq("done", true)
         .gte("updated_at", weekAgo.toISOString())
         .limit(30),
-      supabase
-        .from("habits")
-        .select("id,title")
-        .eq("archived", false)
-        .limit(10),
+      supabase.from("habits").select("id,title").eq("archived", false).limit(10),
       supabase.from("habit_logs").select("habit_id,day").gte("day", weekAgoStr),
-      supabase
-        .from("goals")
-        .select("title,progress")
-        .eq("status", "active")
-        .limit(5),
+      supabase.from("goals").select("title,progress").eq("status", "active").limit(5),
       supabase
         .from("journal_entries")
         .select("mood,note,day")
@@ -78,10 +70,7 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
         .from("quiz_attempts")
         .select("score,total,created_at")
         .gte("created_at", weekAgo.toISOString()),
-      supabase
-        .from("flashcards")
-        .select("id,updated_at")
-        .gte("updated_at", weekAgo.toISOString()),
+      supabase.from("flashcards").select("id,updated_at").gte("updated_at", weekAgo.toISOString()),
     ]);
 
     const doneTitles = (tasksDone ?? []).map((t) => t.title);
@@ -89,22 +78,14 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
       const days = (habitLogs ?? []).filter((l) => l.habit_id === h.id).length;
       return `${h.title}: ${days}/7 days`;
     });
-    const focusMin = (focusSessions ?? []).reduce(
-      (sum, s) => sum + (s.minutes ?? 0),
-      0,
-    );
-    const focusDays = new Set(
-      (focusSessions ?? []).map((s) => (s.created_at ?? "").slice(0, 10)),
-    ).size;
-    const moodLine = (moods ?? [])
-      .map((m) => `${m.day}: ${m.mood ?? "—"}`)
-      .join(", ");
+    const focusMin = (focusSessions ?? []).reduce((sum, s) => sum + (s.minutes ?? 0), 0);
+    const focusDays = new Set((focusSessions ?? []).map((s) => (s.created_at ?? "").slice(0, 10)))
+      .size;
+    const moodLine = (moods ?? []).map((m) => `${m.day}: ${m.mood ?? "—"}`).join(", ");
 
     const avgQuizScore =
       quizzes && quizzes.length > 0
-        ? Math.round(
-            quizzes.reduce((sum, q) => sum + q.score, 0) / quizzes.length,
-          )
+        ? Math.round(quizzes.reduce((sum, q) => sum + q.score, 0) / quizzes.length)
         : null;
 
     const totalTabAways = (focusSessions ?? []).reduce(

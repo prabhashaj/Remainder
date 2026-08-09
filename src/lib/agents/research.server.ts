@@ -30,6 +30,18 @@ export async function runResearch(params: {
   const gateway = createAiGatewayProvider(params.apiKey);
   const tavilyKey = process.env["TAVILY_API_KEY"];
 
+  let fullTopic = params.topic;
+  if (params.roadmapId) {
+    const { data: roadmap } = await params.supabase
+      .from("roadmaps")
+      .select("topic")
+      .eq("id", params.roadmapId)
+      .maybeSingle();
+    if (roadmap?.topic && !fullTopic.toLowerCase().includes(roadmap.topic.toLowerCase())) {
+      fullTopic = `${roadmap.topic} — ${params.topic}`;
+    }
+  }
+
   const tools = {
     webSearch: tool({
       description: "Search the web for learning resources, tutorials, and videos.",
@@ -94,10 +106,7 @@ export async function runResearch(params: {
           .nullable()
           .describe("ID of the roadmap step this resource belongs to, or null"),
         thumbnail: z.string().nullable().describe("Thumbnail URL, or null"),
-        duration_text: z
-          .string()
-          .nullable()
-          .describe("Duration text like '12 min', or null"),
+        duration_text: z.string().nullable().describe("Duration text like '12 min', or null"),
       }),
       execute: async ({
         title,
@@ -138,7 +147,7 @@ export async function runResearch(params: {
     const result = await generateText({
       model: gateway(getAiModelName()),
       system: RESEARCH_PROMPT,
-      prompt: `Find 2-4 quality learning resources (tutorials, videos, courses) for: ${params.topic}. Save each one using saveResourceToRoadmap.`,
+      prompt: `Find 2-4 quality learning resources (tutorials, videos, courses) for: ${fullTopic}. Save each one using saveResourceToRoadmap.`,
       tools,
       stopWhen: stepCountIs(10),
     });

@@ -3,17 +3,11 @@
 import * as React from "react";
 import { ExternalLink, ImageIcon, Maximize2 } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export interface ExpandableImageProps
-  extends React.ImgHTMLAttributes<HTMLImageElement> {
+export interface ExpandableImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
   alt?: string | undefined;
   caption?: string | null | undefined;
@@ -47,7 +41,7 @@ export function ExpandableImage({
     const topic = (caption || alt || "educational diagram").trim();
     // Dynamic topic-matched fallback matching actual image context
     setImgSrc(
-      `https://image.pollinations.ai/prompt/${encodeURIComponent(topic + " scientific diagram educational illustration hd")}?width=800&height=500&nologo=true`
+      `https://image.pollinations.ai/prompt/${encodeURIComponent(topic + " scientific diagram educational illustration hd")}?width=800&height=500&nologo=true`,
     );
   };
 
@@ -57,7 +51,7 @@ export function ExpandableImage({
         <div
           className={cn(
             "group relative flex flex-col cursor-pointer overflow-hidden rounded-2xl border border-border/70 bg-card/90 shadow-xs transition-all hover:border-primary/50 hover:shadow-md max-w-2xl my-3.5",
-            containerClassName
+            containerClassName,
           )}
           role="button"
           tabIndex={0}
@@ -78,7 +72,7 @@ export function ExpandableImage({
               className={cn(
                 "w-full h-auto max-h-[520px] object-contain rounded-xl transition-transform duration-200 group-hover:scale-[1.01]",
                 imageClassName,
-                className
+                className,
               )}
               {...props}
             />
@@ -136,11 +130,7 @@ export function ExpandableImage({
           </div>
 
           {/* Expanded Caption */}
-          {caption && (
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              {caption}
-            </p>
-          )}
+          {caption && <p className="mt-3 text-center text-xs text-muted-foreground">{caption}</p>}
         </div>
       </DialogContent>
     </Dialog>

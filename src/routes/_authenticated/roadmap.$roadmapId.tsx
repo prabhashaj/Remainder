@@ -58,10 +58,8 @@ function RoadmapDetail() {
   });
 
   const toggle = useMutation({
-    mutationFn: ({ id, done }: { id: string; done: boolean }) =>
-      updateRoadmapItem(id, { done }),
-    onSuccess: () =>
-      void qc.invalidateQueries({ queryKey: ["roadmap-items", roadmapId] }),
+    mutationFn: ({ id, done }: { id: string; done: boolean }) => updateRoadmapItem(id, { done }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["roadmap-items", roadmapId] }),
   });
 
   const topics = items.filter((i) => !i.parent_id);
@@ -86,13 +84,9 @@ function RoadmapDetail() {
         <ArrowLeft className="size-4" /> All roadmaps
       </Link>
 
-      <h1 className="mt-4 font-display text-3xl font-bold">
-        {roadmap?.topic ?? "Roadmap"}
-      </h1>
+      <h1 className="mt-4 font-display text-3xl font-bold">{roadmap?.topic ?? "Roadmap"}</h1>
       {roadmap?.summary && (
-        <p className="mt-2 leading-relaxed text-muted-foreground">
-          {roadmap.summary}
-        </p>
+        <p className="mt-2 leading-relaxed text-muted-foreground">{roadmap.summary}</p>
       )}
 
       <div className="mt-5 flex items-center gap-3">
@@ -114,9 +108,7 @@ function RoadmapDetail() {
                   <div className="flex items-start gap-3">
                     <Checkbox
                       checked={topic.done}
-                      onCheckedChange={(v) =>
-                        toggle.mutate({ id: topic.id, done: Boolean(v) })
-                      }
+                      onCheckedChange={(v) => toggle.mutate({ id: topic.id, done: Boolean(v) })}
                       className="mt-1 rounded-md"
                     />
                     <div className="min-w-0 flex-1">
@@ -132,8 +124,7 @@ function RoadmapDetail() {
                       )}
                       {topic.estimated_minutes ? (
                         <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="size-3" />~{topic.estimated_minutes}{" "}
-                          min
+                          <Clock className="size-3" />~{topic.estimated_minutes} min
                         </p>
                       ) : null}
                     </div>
@@ -145,9 +136,7 @@ function RoadmapDetail() {
                         <div className="flex items-start gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-muted/50">
                           <Checkbox
                             checked={sub.done}
-                            onCheckedChange={(v) =>
-                              toggle.mutate({ id: sub.id, done: Boolean(v) })
-                            }
+                            onCheckedChange={(v) => toggle.mutate({ id: sub.id, done: Boolean(v) })}
                             className="mt-0.5 rounded-md"
                           />
                           <Link

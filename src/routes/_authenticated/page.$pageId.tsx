@@ -26,8 +26,8 @@ function preprocessLatexText(text: string): string {
   result = result.replace(/\\\[([\s\S]*?)\\\]/g, "\n$$\n$1\n$$\n");
 
   // Convert inline $$ ... $$ inside sentences into $ ... $
-  result = result.replace(/([^\n])\$\$([^\n\$\#]+?)\$\$/g, "$1$$2$");
-  result = result.replace(/\$\$([^\n\$\#]+?)\$\$([^\n])/g, "$$1$$2");
+  result = result.replace(/([^\n])\$\$([^\n$#]+?)\$\$/g, "$1$$2$");
+  result = result.replace(/\$\$([^\n$#]+?)\$\$([^\n])/g, "$$1$$2");
 
   // Ensure block display math equations $$ ... $$ have newlines around them
   result = result.replace(/([^\n])\$\$([\s\S]+?)\$\$/g, "$1\n\n$$\n$2\n$$\n");
@@ -58,7 +58,10 @@ export const Route = createFileRoute("/_authenticated/page/$pageId")({
   head: () => ({
     meta: [
       { title: "Notebook — Remainder" },
-      { name: "description", content: "Write, nest and check things off in your Remainder notebook." },
+      {
+        name: "description",
+        content: "Write, nest and check things off in your Remainder notebook.",
+      },
       { property: "og:title", content: "Notebook — Remainder" },
       { property: "og:description", content: "A soft, flexible notebook page in Remainder." },
     ],
@@ -135,7 +138,10 @@ const PAGE_TEMPLATES: TemplateDef[] = [
     description: "Architecture design, edge cases, and safety checks",
     blocks: [
       { type: "heading", content: "System Goal & Architecture" },
-      { type: "text", content: "Describe the component responsibility, API endpoints, or data structures..." },
+      {
+        type: "text",
+        content: "Describe the component responsibility, API endpoints, or data structures...",
+      },
       { type: "heading", content: "Edge Cases & Safety Checks" },
       { type: "todo", content: "Verify null / empty input payloads" },
       { type: "todo", content: "Check error boundaries and fallback handlers" },
@@ -278,7 +284,10 @@ function PageView() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <motion.div whileTap={{ scale: 0.96 }}>
-              <Button variant="secondary" className="press gap-2 rounded-2xl px-4 py-2.5 text-base font-semibold shadow-xs">
+              <Button
+                variant="secondary"
+                className="press gap-2 rounded-2xl px-4 py-2.5 text-base font-semibold shadow-xs"
+              >
                 <Plus className="size-4 text-primary" /> Add block
               </Button>
             </motion.div>
@@ -380,14 +389,18 @@ function BlockRow({ block, onChanged }: { block: Block; onChanged: () => void })
           placeholder={block.type === "heading" ? "Heading" : "Write something…"}
           aria-label="Block content"
           className={`flex-1 resize-none bg-transparent py-1 outline-none placeholder:text-muted-foreground/40 ${textClass} ${
-            block.type === "todo" && block.checked ? "text-muted-foreground line-through opacity-70" : ""
+            block.type === "todo" && block.checked
+              ? "text-muted-foreground line-through opacity-70"
+              : ""
           }`}
         />
       ) : (
         <div
           onClick={() => setIsEditing(true)}
           className={`flex-1 cursor-text py-1 min-h-[36px] ${textClass} ${
-            block.type === "todo" && block.checked ? "text-muted-foreground line-through opacity-70" : ""
+            block.type === "todo" && block.checked
+              ? "text-muted-foreground line-through opacity-70"
+              : ""
           }`}
         >
           {value ? (

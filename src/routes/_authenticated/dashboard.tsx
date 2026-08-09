@@ -1,14 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  ArrowRight,
-  Brain,
-  CalendarHeart,
-  Compass,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, Brain, CalendarHeart, Compass, Plus, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import { RemiPanel } from "@/components/remi-dock";
@@ -16,12 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   createTask,
   fetchGoals,
@@ -146,9 +134,7 @@ function Dashboard() {
     }
 
     // 4. Undone Roadmap Lesson
-    const unreadItem = roadmapItems.find(
-      (item) => !item.done && item.content_status === "ready",
-    );
+    const unreadItem = roadmapItems.find((item) => !item.done && item.content_status === "ready");
     if (unreadItem) {
       return {
         category: "Roadmap Lesson",
@@ -214,10 +200,7 @@ function Dashboard() {
                 {nextBestAction.actionText} <ArrowRight className="ml-1.5 size-4" />
               </Button>
             ) : (
-              <Button
-                asChild
-                className="press rounded-2xl shrink-0 self-start sm:self-auto"
-              >
+              <Button asChild className="press rounded-2xl shrink-0 self-start sm:self-auto">
                 <Link to={nextBestAction.link ?? "#"}>
                   {nextBestAction.actionText} <ArrowRight className="ml-1.5 size-4" />
                 </Link>

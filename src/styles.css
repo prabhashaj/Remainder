@@ -519,8 +519,6 @@
   --sidebar-border: oklch(0.27 0.03 320);
 }
 
-
-
 @layer base {
   * {
     border-color: var(--color-border);

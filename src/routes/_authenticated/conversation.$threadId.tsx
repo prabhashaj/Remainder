@@ -73,9 +73,7 @@ function ConversationThread() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       <div className="flex items-center justify-between border-b border-border/60 bg-background/50 px-4 py-2 backdrop-blur-sm">
-        <span className="text-xs font-semibold text-muted-foreground">
-          Conversation
-        </span>
+        <span className="text-xs font-semibold text-muted-foreground">Conversation</span>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

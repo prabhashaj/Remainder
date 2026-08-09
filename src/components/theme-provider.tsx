@@ -1,12 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-import {
-  applyThemeClass,
-  isThemeId,
-  THEME_STORAGE_KEY,
-  type ThemeId,
-} from "@/lib/themes";
+import { applyThemeClass, isThemeId, THEME_STORAGE_KEY, type ThemeId } from "@/lib/themes";
 
 type ThemeContextValue = {
   theme: ThemeId;
@@ -73,10 +68,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [previewTheme],
   );
 
-  const value = useMemo(
-    () => ({ theme, previewTheme, setTheme }),
-    [theme, previewTheme, setTheme],
-  );
+  const value = useMemo(() => ({ theme, previewTheme, setTheme }), [theme, previewTheme, setTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
