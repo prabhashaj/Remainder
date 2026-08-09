@@ -1,6 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
 import {
   AlertCircle,
   BookOpen,
@@ -8,9 +8,12 @@ import {
   CheckCircle2,
   ChevronDown,
   Compass,
+  FileText,
   Loader2,
+  Paperclip,
   Sparkles,
   Wrench,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -21,25 +24,19 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import {
-  Message,
-  MessageContent,
-  MessageResponse,
-} from "@/components/ai-elements/message";
+import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import {
   PromptInput,
+  PromptInputButton,
   PromptInputFooter,
   PromptInputSubmit,
   PromptInputTextarea,
+  usePromptInputAttachments,
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { ChatVideoEmbeds } from "@/components/chat-video-embeds";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { supabase } from "@/integrations/supabase/client";
 import { renameThread } from "@/lib/db";
@@ -67,11 +64,10 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
   const names = Array.from(
     new Set(
       parts.map((p) => {
-        const name =
-          p.type === "dynamic-tool" ? "tool" : p.type.replace(/^tool-/, "");
+        const name = p.type === "dynamic-tool" ? "tool" : p.type.replace(/^tool-/, "");
         return toolLabels[name] ?? name;
-      })
-    )
+      }),
+    ),
   );
 
   const summaryText = isRunning
@@ -83,11 +79,7 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
         : `Completed ${parts.length} steps (${names.slice(0, 2).join(", ")})`;
 
   return (
-    <Collapsible
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      className="my-2 flex flex-col items-start"
-    >
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="my-2 flex flex-col items-start">
       <CollapsibleTrigger className="group inline-flex items-center gap-2 rounded-xl border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
         {isRunning ? (
           <Loader2 className="size-3.5 animate-spin text-primary shrink-0" />
@@ -100,15 +92,14 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
         <ChevronDown
           className={cn(
             "size-3 text-muted-foreground/60 transition-transform duration-200",
-            isOpen && "rotate-180"
+            isOpen && "rotate-180",
           )}
         />
       </CollapsibleTrigger>
 
       <CollapsibleContent className="mt-2 ml-2.5 border-l border-border/60 pl-3.5 py-1 space-y-2 text-xs">
         {parts.map((part, idx) => {
-          const rawName =
-            part.type === "dynamic-tool" ? "tool" : part.type.replace(/^tool-/, "");
+          const rawName = part.type === "dynamic-tool" ? "tool" : part.type.replace(/^tool-/, "");
           const label = toolLabels[rawName] ?? rawName;
           const done = part.state === "output-available";
           const errored = part.state === "output-error";
@@ -128,6 +119,56 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
         })}
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function AttachmentPreviews() {
+  const { files, remove } = usePromptInputAttachments();
+  if (files.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 px-3 pt-2.5 pb-1 border-b border-border/50">
+      {files.map((file) => {
+        const isImage = file.mediaType?.startsWith("image/");
+        return (
+          <div
+            key={file.id}
+            className="group relative flex items-center gap-2 rounded-xl bg-muted/70 px-2.5 py-1.5 text-xs font-medium text-foreground border border-border/60 shadow-xs"
+          >
+            {isImage && file.url ? (
+              <img src={file.url} alt="" className="size-7 rounded-md object-cover shrink-0" />
+            ) : (
+              <FileText className="size-4 text-primary shrink-0" />
+            )}
+            <span className="max-w-[140px] truncate">{file.filename || "Attached file"}</span>
+            <button
+              type="button"
+              onClick={() => remove(file.id)}
+              className="rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+              aria-label="Remove attachment"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AttachButton() {
+  const { openFileDialog } = usePromptInputAttachments();
+  return (
+    <PromptInputButton
+      type="button"
+      onClick={openFileDialog}
+      tooltip="Attach documents or images"
+      variant="ghost"
+      size="icon-sm"
+      className="rounded-xl text-muted-foreground hover:text-foreground"
+    >
+      <Paperclip className="size-4" />
+    </PromptInputButton>
   );
 }
 
@@ -169,8 +210,7 @@ export function RemiChat({
         return token ? { Authorization: `Bearer ${token}` } : {};
       },
     }),
-    onError: (error) =>
-      toast.error(error.message || "Remi couldn't reply just now."),
+    onError: (error) => toast.error(error.message || "Remi couldn't reply just now."),
     onFinish: () => {
       void queryClient.invalidateQueries({ queryKey: ["roadmaps"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -178,14 +218,15 @@ export function RemiChat({
       void queryClient.invalidateQueries({ queryKey: ["goals"] });
       void queryClient.invalidateQueries({ queryKey: ["pages"] });
       void queryClient.invalidateQueries({ queryKey: ["blocks"] });
+      void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
     },
   });
 
-  async function submit(text: string) {
+  async function submit(text: string, files: FileUIPart[] = []) {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed && files.length === 0) return;
     onActivity?.();
-    if (!renamed.current) {
+    if (!renamed.current && trimmed) {
       renamed.current = true;
       await renameThread(threadId, trimmed.slice(0, 60));
       void queryClient.invalidateQueries({ queryKey: ["threads"] });
@@ -195,13 +236,23 @@ export function RemiChat({
     const pageMatch = pathname.match(/\/page\/([^/]+)/);
     const activePageId = pageMatch ? pageMatch[1] : undefined;
 
+    // Serialize file attachments as {filename, mimeType, dataUrl} for the API
+    const attachments = files
+      .filter((f) => f.url)
+      .map((f) => ({
+        filename: f.filename ?? "file",
+        mimeType: f.mediaType ?? "application/octet-stream",
+        dataUrl: f.url,
+      }));
+
     await sendMessage(
-      { text: trimmed },
+      { text: trimmed || "(attached files)", files },
       {
         body: {
           threadId,
           topicItemId: topicId,
           activePageId,
+          ...(attachments.length > 0 ? { attachments } : {}),
         },
       },
     );
@@ -225,9 +276,7 @@ export function RemiChat({
     <div className="flex h-full min-h-0 flex-col text-base">
       {showTranscript && (
         <Conversation className="min-h-0 flex-1">
-          <ConversationContent
-            className={compact ? "w-full" : "mx-auto w-full max-w-3xl"}
-          >
+          <ConversationContent className={compact ? "w-full" : "mx-auto w-full max-w-3xl"}>
             {messages.length === 0 && (
               <div className={compact ? "py-6 text-center" : "py-16 text-center"}>
                 <img
@@ -237,15 +286,12 @@ export function RemiChat({
                   height={compact ? 56 : 80}
                   className={compact ? "mx-auto size-14" : "mx-auto size-20"}
                 />
-                <h1
-                  className={`mt-4 font-display font-bold ${compact ? "text-xl" : "text-3xl"}`}
-                >
+                <h1 className={`mt-4 font-display font-bold ${compact ? "text-xl" : "text-3xl"}`}>
                   Hi, I'm Remi.
                 </h1>
                 <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-muted-foreground">
-                  Ask me to build a detailed roadmap, research a topic, or plan
-                  your week. I can search the web for the latest and write full
-                  lessons for every sub-topic.
+                  Ask me to build a detailed roadmap, research a topic, or plan your week. Attach
+                  documents or images to save them to your workspace library.
                 </p>
                 {suggestions.length > 0 && (
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -268,9 +314,11 @@ export function RemiChat({
               <Message from={message.role} key={message.id}>
                 <MessageContent>
                   {(() => {
+                    const fileParts = message.parts.filter(
+                      (p): p is FileUIPart => p.type === "file",
+                    );
                     const groupedParts: Array<
-                      | { type: "text"; text: string }
-                      | { type: "tools"; parts: ToolPartLike[] }
+                      { type: "text"; text: string } | { type: "tools"; parts: ToolPartLike[] }
                     > = [];
                     let currentTools: ToolPartLike[] = [];
 
@@ -281,10 +329,7 @@ export function RemiChat({
                           currentTools = [];
                         }
                         groupedParts.push({ type: "text", text: part.text });
-                      } else if (
-                        part.type === "dynamic-tool" ||
-                        part.type.startsWith("tool-")
-                      ) {
+                      } else if (part.type === "dynamic-tool" || part.type.startsWith("tool-")) {
                         currentTools.push(part as ToolPartLike);
                       }
                     }
@@ -292,22 +337,52 @@ export function RemiChat({
                       groupedParts.push({ type: "tools", parts: currentTools });
                     }
 
-                    return groupedParts.map((group, gIdx) => {
-                      if (group.type === "text") {
-                        return (
-                          <div key={gIdx}>
-                            <MessageResponse>{group.text}</MessageResponse>
-                            {message.role === "assistant" && (
-                              <>
-                                <ChatVideoEmbeds text={group.text} />
-                                <SpeechAndCopyToolbar text={group.text} className="mt-2" />
-                              </>
-                            )}
+                    return (
+                      <>
+                        {fileParts.length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-2">
+                            {fileParts.map((f, fIdx) => {
+                              const isImg = f.mediaType?.startsWith("image/");
+                              return (
+                                <div
+                                  key={fIdx}
+                                  className="flex items-center gap-2 rounded-xl bg-muted/80 px-3 py-1.5 text-xs font-medium border border-border/60"
+                                >
+                                  {isImg && f.url ? (
+                                    <img
+                                      src={f.url}
+                                      alt=""
+                                      className="size-8 rounded-md object-cover"
+                                    />
+                                  ) : (
+                                    <FileText className="size-4 text-primary shrink-0" />
+                                  )}
+                                  <span className="truncate max-w-[160px]">
+                                    {f.filename || "Attached file"}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      }
-                      return <ToolGroup key={gIdx} parts={group.parts} />;
-                    });
+                        )}
+                        {groupedParts.map((group, gIdx) => {
+                          if (group.type === "text") {
+                            return (
+                              <div key={gIdx}>
+                                <MessageResponse>{group.text}</MessageResponse>
+                                {message.role === "assistant" && (
+                                  <>
+                                    <ChatVideoEmbeds text={group.text} />
+                                    <SpeechAndCopyToolbar text={group.text} className="mt-2" />
+                                  </>
+                                )}
+                              </div>
+                            );
+                          }
+                          return <ToolGroup key={gIdx} parts={group.parts} />;
+                        })}
+                      </>
+                    );
                   })()}
                 </MessageContent>
               </Message>
@@ -323,11 +398,7 @@ export function RemiChat({
         </Conversation>
       )}
 
-      <div
-        className={
-          compact ? "w-full px-3 pb-3" : "mx-auto w-full max-w-3xl px-3 pb-5"
-        }
-      >
+      <div className={compact ? "w-full px-3 pb-3" : "mx-auto w-full max-w-3xl px-3 pb-5"}>
         {topic && (
           <p className="mb-2 flex items-center gap-2 px-1 text-sm text-muted-foreground">
             <BookOpen className="size-4 text-primary" />
@@ -337,21 +408,20 @@ export function RemiChat({
             </span>
           </p>
         )}
-        <PromptInput onSubmit={(message) => void submit(message.text ?? "")}>
+        <PromptInput onSubmit={(message) => void submit(message.text ?? "", message.files)}>
+          <AttachmentPreviews />
           <PromptInputTextarea
             ref={textareaRef}
             placeholder={
-              topic
-                ? `Ask a doubt about ${topic.label}…`
-                : "What do you want to create?"
+              topic ? `Ask a doubt about ${topic.label}…` : "What do you want to create or ask?"
             }
             className="min-h-[64px]"
           />
 
-          <PromptInputFooter className="justify-end">
+          <PromptInputFooter className="justify-between">
+            <AttachButton />
             <PromptInputSubmit status={status} disabled={busy} />
           </PromptInputFooter>
-
         </PromptInput>
       </div>
     </div>

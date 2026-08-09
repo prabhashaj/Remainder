@@ -58,9 +58,6 @@ function RemiHeader({
         <Sparkle className="size-5 text-primary" />
       </span>
       <span className="font-display text-lg font-bold">Remi</span>
-      <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">
-        Agent
-      </span>
       <div className="flex-1" />
       <Button
         variant="ghost"
@@ -99,8 +96,7 @@ export function RemiDock() {
   const { threadId, startFresh } = useDockThread();
   const [open, setOpen] = useState(false);
 
-  if (pathname.startsWith("/conversation") || pathname.startsWith("/dashboard"))
-    return null;
+  if (pathname.startsWith("/conversation") || pathname.startsWith("/dashboard")) return null;
 
   if (!open) {
     return (
@@ -135,9 +131,7 @@ export function RemiDock() {
       {threadId ? (
         <DockChat threadId={threadId} topic={topic} />
       ) : (
-        <div className="px-5 py-6 text-base text-muted-foreground">
-          Waking Remi up…
-        </div>
+        <div className="px-5 py-6 text-base text-muted-foreground">Waking Remi up…</div>
       )}
     </div>
   );
@@ -156,9 +150,7 @@ export function RemiPanel({ className = "" }: { className?: string }) {
       {threadId ? (
         <DockChat threadId={threadId} topic={topic} />
       ) : (
-        <div className="px-5 py-6 text-base text-muted-foreground">
-          Waking Remi up…
-        </div>
+        <div className="px-5 py-6 text-base text-muted-foreground">Waking Remi up…</div>
       )}
     </section>
   );
@@ -177,9 +169,7 @@ function DockChat({
   });
 
   if (isLoading) {
-    return (
-      <div className="px-5 py-6 text-sm text-muted-foreground">Loading…</div>
-    );
+    return <div className="px-5 py-6 text-sm text-muted-foreground">Loading…</div>;
   }
 
   const initial = (rows ?? [])
@@ -194,10 +184,7 @@ function DockChat({
         initialMessages={initial}
         compact
         topic={topic}
-        suggestions={[
-          "Plan a detailed roadmap for me",
-          "What should I do today?",
-        ]}
+        suggestions={["Plan a detailed roadmap for me", "What should I do today?"]}
       />
     </div>
   );

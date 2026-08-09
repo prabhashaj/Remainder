@@ -63,57 +63,46 @@ export async function writeLesson(params: {
     .maybeSingle();
   if (itemErr) return { success: false, error: itemErr.message };
   if (!item) return { success: false, error: "Sub-topic not found" };
-  if (item.content && !params.force)
-    return { success: true, cached: true, title: item.title };
+  if (item.content && !params.force) return { success: true, cached: true, title: item.title };
 
   const [{ data: roadmap }, { data: parent }] = await Promise.all([
-    supabase
-      .from("roadmaps")
-      .select("topic")
-      .eq("id", item.roadmap_id)
-      .maybeSingle(),
+    supabase.from("roadmaps").select("topic").eq("id", item.roadmap_id).maybeSingle(),
     item.parent_id
-      ? supabase
-          .from("roadmap_items")
-          .select("title")
-          .eq("id", item.parent_id)
-          .maybeSingle()
+      ? supabase.from("roadmap_items").select("title").eq("id", item.parent_id).maybeSingle()
       : Promise.resolve({ data: null as { title: string } | null }),
   ]);
 
   const subject = roadmap?.topic ?? "";
-  const context = [subject, parent?.title, item.title]
-    .filter(Boolean)
-    .join(" — ");
+  const context = [subject, parent?.title, item.title].filter(Boolean).join(" — ");
 
-  await supabase
-    .from("roadmap_items")
-    .update({ content_status: "generating" })
-    .eq("id", itemId);
+  await supabase.from("roadmap_items").update({ content_status: "generating" }).eq("id", itemId);
 
-  // Visuals and videos are scoped to this sub-topic (not the whole roadmap),
-  // so a learner sees material about exactly what they're reading.
-  const narrow = [item.title, parent?.title].filter(Boolean).join(" ");
+  // Visuals and videos must be specifically targeted to this exact sub-topic title.
+  const cleanSubtopicTitle = item.title
+    .replace(/^(Phase|Part|Section|Chapter)\s*\d+:?\s*/i, "")
+    .trim();
+
+  const videoQuery = `${cleanSubtopicTitle} youtube tutorial video`;
+  const imageQuery = `${cleanSubtopicTitle} visual diagram illustration explained`;
+  const researchQuery = `${cleanSubtopicTitle} ${subject} explanation guide`;
 
   const [research, imageSearch, videoSearch] = await Promise.all([
-    tavilySearch(`${context} explained tutorial guide`, {
+    tavilySearch(researchQuery, {
       maxResults: 6,
       depth: "advanced",
     }),
-    tavilySearch(`${narrow} diagram illustration explained`, {
+    tavilySearch(imageQuery, {
       maxResults: 6,
       includeImages: true,
     }),
-    tavilySearch(`${narrow} tutorial explained`, {
-      maxResults: 8,
+    tavilySearch(videoQuery, {
+      maxResults: 10,
       includeDomains: ["youtube.com", "youtu.be"],
     }),
   ]);
 
   const researchBlock = research.results.length
-    ? research.results
-        .map((r, i) => `[${i + 1}] ${r.title} (${r.url})\n${r.content}`)
-        .join("\n\n")
+    ? research.results.map((r, i) => `[${i + 1}] ${r.title} (${r.url})\n${r.content}`).join("\n\n")
     : "No web research available — rely on well-established fundamentals only.";
 
   const gateway = createAiGatewayProvider(params.apiKey);
@@ -135,10 +124,7 @@ Write the lesson now.`,
     });
     content = result.text.trim();
   } catch (err) {
-    await supabase
-      .from("roadmap_items")
-      .update({ content_status: "error" })
-      .eq("id", itemId);
+    await supabase.from("roadmap_items").update({ content_status: "error" }).eq("id", itemId);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Lesson generation failed",
@@ -150,13 +136,30 @@ Write the lesson now.`,
     caption: img.description,
   }));
 
+  // Rank video results by relevance to key terms in the subtopic title
+  const titleKeywords = cleanSubtopicTitle
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(
+      (w) =>
+        w.length > 2 &&
+        !["with", "from", "into", "that", "this", "your", "for", "and", "the"].includes(w),
+    );
+
+  const sortedVideoResults = [...videoSearch.results].sort((a, b) => {
+    const scoreA = titleKeywords.filter((k) => a.title.toLowerCase().includes(k)).length;
+    const scoreB = titleKeywords.filter((k) => b.title.toLowerCase().includes(k)).length;
+    return scoreB - scoreA;
+  });
+
   const seen = new Set<string>();
   const videos: LessonVideo[] = [];
-  for (const r of videoSearch.results) {
+  for (const r of sortedVideoResults) {
     const id = youtubeIdFromUrl(r.url);
-    const key = id ?? r.url;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (!id) continue; // Skip channels, playlists, or invalid video links
+
+    if (seen.has(id)) continue;
+    seen.add(id);
     videos.push({ title: r.title, url: r.url, youtube_id: id });
     if (videos.length >= 2) break;
   }

@@ -25,10 +25,7 @@ type Supabase = SupabaseClient<Database>;
 const subtopicSchema = z.object({
   title: z.string().describe("The specific concept to learn"),
   detail: z.string().nullable().describe("One-line explanation, or null"),
-  estimated_minutes: z
-    .number()
-    .nullable()
-    .describe("Rough time estimate in minutes, or null"),
+  estimated_minutes: z.number().nullable().describe("Rough time estimate in minutes, or null"),
 });
 
 function createPlannerTools(supabase: Supabase, userId: string) {
@@ -123,7 +120,6 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         if (error) return { success: false, error: error.message };
         return { success: true, id: data.id, title: data.title };
       },
-
     }),
 
     createGoal: tool({
@@ -131,10 +127,7 @@ function createPlannerTools(supabase: Supabase, userId: string) {
       inputSchema: z.object({
         title: z.string().describe("The goal title"),
         description: z.string().nullable().describe("A short description, or null"),
-        target_date: z
-          .string()
-          .nullable()
-          .describe("Target date in YYYY-MM-DD format, or null"),
+        target_date: z.string().nullable().describe("Target date in YYYY-MM-DD format, or null"),
         milestones: z
           .array(z.object({ title: z.string() }))
           .nullable()
@@ -166,8 +159,7 @@ function createPlannerTools(supabase: Supabase, userId: string) {
             position: i,
           }));
           const { error: mErr } = await supabase.from("milestones").insert(rows);
-          if (mErr)
-            return { success: false, error: mErr.message, goal_id: goal.id };
+          if (mErr) return { success: false, error: mErr.message, goal_id: goal.id };
           milestoneCount = rows.length;
         }
         return { success: true, id: goal.id, title, milestones: milestoneCount };
@@ -269,9 +261,7 @@ function createPlannerTools(supabase: Supabase, userId: string) {
               position: pi * 1000 + ti * 10 + (si + 1) / 100,
             }));
             if (subs.length > 0) {
-              const { error: sErr } = await supabase
-                .from("roadmap_items")
-                .insert(subs);
+              const { error: sErr } = await supabase.from("roadmap_items").insert(subs);
               if (!sErr) subCount += subs.length;
             }
           }
@@ -301,7 +291,7 @@ export async function runPlanner(params: {
   try {
     const result = await generateText({
       model: gateway(getAiModelName()),
-      system: PLANNER_PROMPT,
+      system: `${PLANNER_PROMPT}\n\nToday's date is: ${new Date().toISOString().split("T")[0]}.`,
       prompt: params.instruction,
       tools,
       stopWhen: stepCountIs(10),

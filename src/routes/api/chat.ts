@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import {
-  convertToModelMessages,
-  stepCountIs,
-  streamText,
-  tool,
-  type UIMessage,
-} from "ai";
+import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
 import { z } from "zod";
 
 import { writeLesson } from "@/lib/agents/curriculum.server";
@@ -19,38 +13,48 @@ import { fetchYoutubeTranscript } from "@/lib/transcript.server";
 import { searchTopicPhotos, tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
 import type { Database } from "@/integrations/supabase/types";
 
-const SYSTEM_PROMPT = `You are Remi, the warm, encouraging coach inside Remainder — a calm workspace for notes, habits, goals and learning.
-Voice: personal, kind, concrete. Short paragraphs. Never guilt-trip the user about missed days; help them restart small.
+const SYSTEM_PROMPT = `You are Remi, an intelligent, versatile AI assistant inside Remainder — a calm, modern workspace for notes, learning, goals, habits, and productivity across any topic or domain.
 
-You help with: planning learning roadmaps, breaking goals into milestones, suggesting tasks and habits, reflecting on the user's week, and explaining topics simply with clear text, photos, diagrams, and video resources.
+Voice & Tone:
+- Warm, clear, direct, and helpful. Short, well-structured paragraphs.
+- Adaptable to any subject: science, coding, math, history, general productivity, language learning, creative work, or personal goals.
 
-You have access to the user's current workspace state and long-term memories (shown below). Use this context to give personalized, relevant coaching — reference their actual tasks, streaks, and goals when relevant.
+Capabilities & Media Rendering Rules:
+- Answer questions, explain concepts simply, solve problems, brainstorm, and assist with any user request.
+- When the user asks to see, get, or show images, photos, illustrations, or visual diagrams: call \`searchPhotos\` AND render each returned photo directly inside your response text using markdown image syntax: \`![caption](url)\`. Always embed the actual markdown images directly in the chat interface so the user sees the visual photos/diagrams inline. Limit to max 4 images.
+- When the user asks for video tutorials or YouTube videos: call \`researchResources\` or search the web and include the YouTube watch URLs (e.g., \`https://www.youtube.com/watch?v=...\`) directly in your message text so an inline video player renders in the chat interface.
+- Analyze and discuss attached images, PDFs, and text documents accurately when provided by the user.
 
-You delegate to specialists ONLY when the user explicitly requests workspace actions:
-- delegateToPlanner: Use ONLY when the user explicitly asks to create or build roadmaps, goals, tasks, or habits in their workspace.
-- researchResources: Use ONLY when the user explicitly asks to search for and save learning resources or videos to a roadmap.
-- webSearch: Use whenever answering factual questions that benefit from current web search results.
-- searchPhotos: Use ONLY when the user explicitly asks for photos, images, visual diagrams, or illustrations. NEVER call this tool unless the user explicitly requests an image or diagram.
-- writeLessonForSubtopic: Use ONLY when the user asks to write or expand a specific roadmap subtopic lesson.
-- generateNotebook: Use ONLY when the user explicitly requests to generate, create, or build a notebook, notes, or structured workspace page. Do NOT call this tool for normal conversational questions or topic discussions unless the user explicitly asks to create or generate a notebook page.
-- editNotebook: Use when the user asks to edit a notebook page, append content, or search the web and add visual diagrams/images to the end of a notebook.
-- saveMemory: Use when learning a durable fact, preference, or goal context about the user.
+Tool Delegation:
+- delegateToPlanner: Use when the user explicitly asks to create or build NEW roadmaps, complex goals, or habits. Do NOT use this for simple tasks.
+- createTask: Use to instantly create a new simple task for the user (e.g. "remind me to wash the car tomorrow", "add a task for watching tv").
+- readRoadmap: Use to read the full structure (phases, topics, subtopics) of an existing roadmap using its ID before creating tasks from it.
+- updateTask: Use to modify an EXISTING task (mark as done, change title/due date). Do NOT use this to create new tasks by overwriting old ones.
+- updateGoal: Use to update the progress percentage of an existing goal.
+- updateHabit: Use to update or archive an existing habit.
+- researchResources: Use when asked to search for and save learning resources or video tutorials.
+- webSearch: Use when answering factual or technical questions that benefit from up-to-date web search results.
+- searchPhotos: Use when the user asks to see, show, or get photos, images, visual diagrams, or illustrations.
+- writeLessonForSubtopic: Use when asked to write or expand a specific roadmap subtopic lesson.
+- generateNotebook: Use when the user asks to generate, create, or build a structured notebook or notes page.
+- editNotebook: Use when asked to edit a notebook page, append content, or add visual diagrams to a notebook.
+- saveMemory: Use to remember durable facts or preferences about the user.
 
-When you delegate, briefly tell the user what you're doing, then summarize what the specialist accomplished. When you propose a plan without tools, format it as clear markdown with phases and short bullet steps, and end with one gentle next action the user could take today.
+Workspace Context Usage:
+- Workspace state and active roadmaps (shown below) provide helpful background context. Do NOT repeat or fixate on the user's active roadmap topic when providing general examples, lists, or bullet points. Keep example suggestions varied across multiple distinct subjects (e.g. astronomy, design, history, biology, coding) unless the user specifically asks about their active topic.
 
-Formatting rules (always follow):
-- Use markdown headings and short paragraphs; keep lines readable.
-- **Bold** the key term the first time it appears — never bold whole sentences.
-- Include markdown images ONLY when the user explicitly asks for photos, images, or diagrams in their prompt. Otherwise, do NOT output markdown images.
-- Format all math, chemistry, variables, and formulas in strict LaTeX: inline using single dollar signs $x^2$ or $H_2O$, block equations on dedicated lines with double dollar signs $$E = mc^2$$. Always use explicit operators (\times, \cdot, \frac{a}{b}), never plain-text math, ASCII operators, or bracket delimiters \(...\)/\[...\].
-- Use fenced code blocks with a language tag for code.
-- Use \`inline code\` for identifiers, commands, and file names.`;
+Formatting:
+- Use markdown headings and short, readable paragraphs.
+- **Bold** key terms when introduced — avoid bolding entire sentences.
+- Format all math, formulas, and variables in strict LaTeX ($inline$ or $$block$$).
+- Use fenced code blocks with language tags for code snippet formatting.`;
 
 type ChatBody = {
   messages?: unknown;
   threadId?: unknown;
   topicItemId?: unknown;
   activePageId?: unknown;
+  attachments?: { filename: string; mimeType: string; dataUrl: string }[];
 };
 
 function fmtDate(d: Date): string {
@@ -79,30 +83,20 @@ async function buildUserContext(
   ] = await Promise.all([
     supabase
       .from("tasks")
-      .select("title,due_date,done")
+      .select("id,title,due_date,done")
       .eq("done", false)
       .order("due_date", { nullsFirst: false })
       .limit(5),
     supabase.from("habits").select("id,title,icon").eq("archived", false).limit(6),
-    supabase
-      .from("habit_logs")
-      .select("habit_id,day")
-      .gte("day", fmtDate(thirtyDaysAgo)),
-    supabase.from("goals").select("title,progress").eq("status", "active").limit(4),
+    supabase.from("habit_logs").select("habit_id,day").gte("day", fmtDate(thirtyDaysAgo)),
+    supabase.from("goals").select("id,title,progress").eq("status", "active").limit(4),
     supabase
       .from("roadmaps")
       .select("id,topic,summary")
       .order("created_at", { ascending: false })
       .limit(3),
-    supabase
-      .from("journal_entries")
-      .select("mood,day")
-      .order("day", { ascending: false })
-      .limit(7),
-    supabase
-      .from("focus_sessions")
-      .select("minutes")
-      .gte("created_at", weekAgo.toISOString()),
+    supabase.from("journal_entries").select("mood,day").order("day", { ascending: false }).limit(7),
+    supabase.from("focus_sessions").select("minutes").gte("created_at", weekAgo.toISOString()),
     supabase
       .from("agent_memories")
       .select("content,category")
@@ -122,13 +116,14 @@ async function buildUserContext(
   }
 
   lines.push("## Their workspace right now");
+  lines.push(`Current Date: ${todayStr}`);
 
   const openTasks = tasks ?? [];
   if (openTasks.length > 0) {
     const taskStr = openTasks
-      .map((t) => `"${t.title}"${t.due_date ? ` (due ${t.due_date})` : ""}`)
-      .join(", ");
-    lines.push(`- ${openTasks.length} open task(s): ${taskStr}`);
+      .map((t) => `[ID: ${t.id}] "${t.title}"${t.due_date ? ` (due ${t.due_date})` : ""}`)
+      .join("\n  ");
+    lines.push(`- Open task(s):\n  ${taskStr}`);
   } else {
     lines.push("- No open tasks");
   }
@@ -136,12 +131,8 @@ async function buildUserContext(
   const habitsList = habits ?? [];
   if (habitsList.length > 0) {
     const habitStrs = habitsList.map((h) => {
-      const doneToday = (habitLogs ?? []).some(
-        (l) => l.habit_id === h.id && l.day === todayStr,
-      );
-      const days = new Set(
-        (habitLogs ?? []).filter((l) => l.habit_id === h.id).map((l) => l.day),
-      );
+      const doneToday = (habitLogs ?? []).some((l) => l.habit_id === h.id && l.day === todayStr);
+      const days = new Set((habitLogs ?? []).filter((l) => l.habit_id === h.id).map((l) => l.day));
       let streak = 0;
       for (let i = 0; i < 365; i++) {
         const d = new Date(now);
@@ -149,9 +140,9 @@ async function buildUserContext(
         if (days.has(fmtDate(d))) streak++;
         else if (i > 0) break;
       }
-      return `${h.title} (${streak}-day streak${doneToday ? ", done today" : ""})`;
+      return `[ID: ${h.id}] ${h.title} (${streak}-day streak${doneToday ? ", done today" : ""})`;
     });
-    lines.push(`- Habits: ${habitStrs.join(", ")}`);
+    lines.push(`- Habits:\n  ${habitStrs.join("\n  ")}`);
   } else {
     lines.push("- No habits set up");
   }
@@ -159,14 +150,14 @@ async function buildUserContext(
   const goalsList = goals ?? [];
   if (goalsList.length > 0) {
     lines.push(
-      `- Goals: ${goalsList.map((g) => `${g.title} at ${g.progress}%`).join(", ")}`,
+      `- Goals:\n  ${goalsList.map((g) => `[ID: ${g.id}] ${g.title} at ${g.progress}%`).join("\n  ")}`,
     );
   }
 
   const roadmapsList = roadmaps ?? [];
   if (roadmapsList.length > 0) {
     lines.push(
-      `- Roadmaps: ${roadmapsList.map((r) => r.topic).join(", ")}`,
+      `- Roadmaps:\n  ${roadmapsList.map((r) => `[ID: ${r.id}] ${r.topic}`).join("\n  ")}`,
     );
   }
 
@@ -175,10 +166,7 @@ async function buildUserContext(
     lines.push(`- Mood this week: ${moodStr}`);
   }
 
-  const focusMin = (focusSessions ?? []).reduce(
-    (sum, s) => sum + (s.minutes ?? 0),
-    0,
-  );
+  const focusMin = (focusSessions ?? []).reduce((sum, s) => sum + (s.minutes ?? 0), 0);
   lines.push(`- Focus: ${focusMin} min this week`);
 
   return lines.join("\n");
@@ -190,17 +178,14 @@ export const Route = createFileRoute("/api/chat")({
       POST: async ({ request }) => {
         const body = (await request.json()) as ChatBody;
         const messages = body.messages;
-        const threadId =
-          typeof body.threadId === "string" ? body.threadId : null;
+        const threadId = typeof body.threadId === "string" ? body.threadId : null;
         if (!Array.isArray(messages) || !threadId) {
           return new Response("messages and threadId are required", {
             status: 400,
           });
         }
 
-        const token = request.headers
-          .get("authorization")
-          ?.replace(/^Bearer\s+/i, "");
+        const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
         if (!token) return new Response("Unauthorized", { status: 401 });
 
         const supabase = createClient<Database>(
@@ -211,10 +196,8 @@ export const Route = createFileRoute("/api/chat")({
             global: { headers: { Authorization: `Bearer ${token}` } },
           },
         );
-        const { data: userData, error: userError } =
-          await supabase.auth.getUser(token);
-        if (userError || !userData.user)
-          return new Response("Unauthorized", { status: 401 });
+        const { data: userData, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !userData.user) return new Response("Unauthorized", { status: 401 });
         const userId = userData.user.id;
 
         const { data: thread } = await supabase
@@ -228,13 +211,15 @@ export const Route = createFileRoute("/api/chat")({
           const { error: threadError } = await supabase
             .from("chat_threads")
             .insert({ id: threadId, user_id: userId, title: "New conversation" });
-          if (threadError)
-            return new Response("Thread not found", { status: 404 });
+          if (threadError) return new Response("Thread not found", { status: 404 });
         }
 
-
         const key = getAiApiKey();
-        if (!key) return new Response("Missing AI API Key (please set MISTRAL_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY)", { status: 500 });
+        if (!key)
+          return new Response(
+            "Missing AI API Key (please set MISTRAL_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY)",
+            { status: 500 },
+          );
 
         const uiMessages = messages as UIMessage[];
         const last = uiMessages[uiMessages.length - 1];
@@ -246,16 +231,14 @@ export const Route = createFileRoute("/api/chat")({
             message: last as never,
             client_id: last.id,
           });
-          if (error)
-            console.error("Failed to persist user message", error.message);
+          if (error) console.error("Failed to persist user message", error.message);
         }
 
         const userContext = await buildUserContext(supabase);
 
         // When the learner asks a doubt from a lesson page, give Remi that lesson.
         let topicBlock = "";
-        const topicItemId =
-          typeof body.topicItemId === "string" ? body.topicItemId : null;
+        const topicItemId = typeof body.topicItemId === "string" ? body.topicItemId : null;
         if (topicItemId) {
           const { data: item } = await supabase
             .from("roadmap_items")
@@ -264,11 +247,7 @@ export const Route = createFileRoute("/api/chat")({
             .maybeSingle();
           if (item) {
             const [{ data: roadmap }, { data: parent }] = await Promise.all([
-              supabase
-                .from("roadmaps")
-                .select("topic")
-                .eq("id", item.roadmap_id)
-                .maybeSingle(),
+              supabase.from("roadmaps").select("topic").eq("id", item.roadmap_id).maybeSingle(),
               item.parent_id
                 ? supabase
                     .from("roadmap_items")
@@ -288,8 +267,7 @@ ${(item.content ?? "No lesson written yet.").slice(0, 6000)}`;
         }
 
         let activePageBlock = "";
-        const activePageId =
-          typeof body.activePageId === "string" ? body.activePageId : null;
+        const activePageId = typeof body.activePageId === "string" ? body.activePageId : null;
         if (activePageId) {
           const { data: curPage } = await supabase
             .from("pages")
@@ -306,9 +284,7 @@ Title: "${curPage.title}"
 
         // --- Search-Routing: classify query before streaming ---
         let preSearchBlock = "";
-        const lastUserMsg = uiMessages
-          .filter((m) => m.role === "user")
-          .at(-1);
+        const lastUserMsg = uiMessages.filter((m) => m.role === "user").at(-1);
         const lastUserText =
           lastUserMsg?.parts
             ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
@@ -318,14 +294,18 @@ Title: "${curPage.title}"
 
         if (lastUserText) {
           // Build conversation context from recent messages for disambiguation
-          const recentMessages = uiMessages.slice(-10).map((m) => {
-            const text = m.parts
-              ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-              .map((p) => p.text)
-              .join(" ")
-              .trim();
-            return `${m.role}: ${(text ?? "").slice(0, 200)}`;
-          }).filter(Boolean).join("\n");
+          const recentMessages = uiMessages
+            .slice(-10)
+            .map((m) => {
+              const text = m.parts
+                ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+                .map((p) => p.text)
+                .join(" ")
+                .trim();
+              return `${m.role}: ${(text ?? "").slice(0, 200)}`;
+            })
+            .filter(Boolean)
+            .join("\n");
 
           try {
             const routing = await classifyQueryRouting({
@@ -357,7 +337,7 @@ Title: "${curPage.title}"
         const tools = {
           delegateToPlanner: tool({
             description:
-              "Delegate to the planning specialist to create roadmaps, goals, tasks, or habits in the user's workspace. The planner will actually build them.",
+              "Delegate to the planning specialist to create NEW roadmaps, goals, tasks, or habits in the user's workspace. The planner will build them.",
             inputSchema: z.object({
               instruction: z
                 .string()
@@ -373,13 +353,170 @@ Title: "${curPage.title}"
             },
           }),
 
+          readRoadmap: tool({
+            description:
+              "Read the full structure (phases, topics, subtopics) of a specific roadmap by its ID.",
+            inputSchema: z.object({
+              roadmap_id: z.string().describe("ID of the roadmap to read"),
+            }),
+            execute: async ({ roadmap_id }: { roadmap_id: string }) => {
+              const { data: roadmap, error } = await supabase
+                .from("roadmaps")
+                .select("id,topic,summary")
+                .eq("id", roadmap_id)
+                .single();
+              if (error) return { success: false, error: error.message };
+
+              const { data: items } = await supabase
+                .from("roadmap_items")
+                .select("id,title,phase,parent_id,detail")
+                .eq("roadmap_id", roadmap_id)
+                .order("position");
+              return { success: true, roadmap, items: items ?? [] };
+            },
+          }),
+
+          createTask: tool({
+            description: "Create a new task in the user's workspace instantly.",
+            inputSchema: z.object({
+              title: z.string().describe("The task title"),
+              due_date: z
+                .string()
+                .nullable()
+                .describe("Optional due date in YYYY-MM-DD format, or null"),
+            }),
+            execute: async ({ title, due_date }: { title: string; due_date: string | null }) => {
+              const { data, error } = await supabase
+                .from("tasks")
+                .insert({ user_id: userId, title, due_date: due_date ?? null, source: "remi" })
+                .select("id, title")
+                .single();
+              if (error) return { success: false, error: error.message };
+              return {
+                success: true,
+                id: data.id,
+                message: `Task '${title}' created successfully.`,
+              };
+            },
+          }),
+
+          updateTask: tool({
+            description:
+              "Update an existing task (e.g., mark as done, change title, or change due date).",
+            inputSchema: z.object({
+              task_id: z.string().describe("ID of the task to update"),
+              done: z
+                .boolean()
+                .nullable()
+                .describe("Set to true to mark done, false to reopen, or null to leave unchanged"),
+              title: z.string().nullable().describe("New title, or null to leave unchanged"),
+              due_date: z
+                .string()
+                .nullable()
+                .describe("New due date (YYYY-MM-DD), or null to leave unchanged"),
+            }),
+            execute: async ({
+              task_id,
+              done,
+              title,
+              due_date,
+            }: {
+              task_id: string;
+              done: boolean | null;
+              title: string | null;
+              due_date: string | null;
+            }) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const updates: any = {};
+              if (done !== null) updates.done = done;
+              if (title !== null) updates.title = title;
+              if (due_date !== null) updates.due_date = due_date;
+
+              if (Object.keys(updates).length === 0)
+                return { success: false, error: "No fields to update" };
+
+              const { error } = await supabase
+                .from("tasks")
+                .update(updates)
+                .eq("id", task_id)
+                .eq("user_id", userId);
+              if (error) return { success: false, error: error.message };
+              return { success: true, message: `Task ${task_id} updated successfully.` };
+            },
+          }),
+
+          updateGoal: tool({
+            description: "Update the progress percentage of an existing goal.",
+            inputSchema: z.object({
+              goal_id: z.string().describe("ID of the goal to update"),
+              progress: z.number().describe("New progress percentage (0-100)"),
+            }),
+            execute: async ({ goal_id, progress }: { goal_id: string; progress: number }) => {
+              const { error } = await supabase
+                .from("goals")
+                .update({ progress })
+                .eq("id", goal_id)
+                .eq("user_id", userId);
+              if (error) return { success: false, error: error.message };
+              return {
+                success: true,
+                message: `Goal ${goal_id} progress updated to ${progress}%.`,
+              };
+            },
+          }),
+
+          updateHabit: tool({
+            description:
+              "Update an existing habit (e.g., change title, target completions, or archive it).",
+            inputSchema: z.object({
+              habit_id: z.string().describe("ID of the habit to update"),
+              title: z.string().nullable().describe("New title, or null to leave unchanged"),
+              target_per_week: z
+                .number()
+                .nullable()
+                .describe("New target per week (1-7), or null to leave unchanged"),
+              archived: z
+                .boolean()
+                .nullable()
+                .describe(
+                  "Set to true to archive the habit, false to unarchive, or null to leave unchanged",
+                ),
+            }),
+            execute: async ({
+              habit_id,
+              title,
+              target_per_week,
+              archived,
+            }: {
+              habit_id: string;
+              title: string | null;
+              target_per_week: number | null;
+              archived: boolean | null;
+            }) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const updates: any = {};
+              if (title !== null) updates.title = title;
+              if (target_per_week !== null) updates.target_per_week = target_per_week;
+              if (archived !== null) updates.archived = archived;
+
+              if (Object.keys(updates).length === 0)
+                return { success: false, error: "No fields to update" };
+
+              const { error } = await supabase
+                .from("habits")
+                .update(updates)
+                .eq("id", habit_id)
+                .eq("user_id", userId);
+              if (error) return { success: false, error: error.message };
+              return { success: true, message: `Habit ${habit_id} updated successfully.` };
+            },
+          }),
+
           researchResources: tool({
             description:
               "Find tutorials, videos, and courses for a learning topic using web search. Saves results to the user's roadmap.",
             inputSchema: z.object({
-              topic: z
-                .string()
-                .describe("The topic to find learning resources for"),
+              topic: z.string().describe("The topic to find learning resources for"),
               roadmap_id: z
                 .string()
                 .nullable()
@@ -406,9 +543,7 @@ Title: "${curPage.title}"
             description:
               "Save a durable fact or preference about the user for future conversations.",
             inputSchema: z.object({
-              content: z
-                .string()
-                .describe("The fact or preference to remember"),
+              content: z.string().describe("The fact or preference to remember"),
               category: z
                 .enum(["fact", "preference", "goal_context", "learning_style"])
                 .nullable()
@@ -466,7 +601,7 @@ Title: "${curPage.title}"
             }),
             execute: async ({ query }: { query: string }) => {
               const res = await searchTopicPhotos(query);
-              const photos = res.map((img) => ({
+              const photos = res.slice(0, 4).map((img) => ({
                 url: img.url,
                 caption: img.description ?? query,
               }));
@@ -474,6 +609,8 @@ Title: "${curPage.title}"
               return {
                 query,
                 photos,
+                instruction:
+                  "Render each photo in your response text using markdown image syntax: ![caption](url). Do NOT list text bullets — embed the markdown images directly so they display visually in the chat.",
               };
             },
           }),
@@ -501,21 +638,18 @@ Title: "${curPage.title}"
               topicOrUrl: z
                 .string()
                 .describe("Topic name OR YouTube video URL / ID to build the notebook from"),
-              title: z
-                .string()
-                .describe("Optional title for the notebook page"),
+              title: z.string().describe("Optional title for the notebook page"),
+              include_images: z
+                .boolean()
+                .optional()
+                .describe(
+                  "Set to true ONLY if the user explicitly asked for photos, images, or visual diagrams in the notebook. Defaults to false.",
+                ),
             }),
-            execute: async ({
-              topicOrUrl,
-              title,
-            }: {
-              topicOrUrl: string;
-              title: string;
-            }) => {
+            execute: async ({ topicOrUrl, title, include_images }) => {
               const raw = topicOrUrl.trim();
               const directVideoId =
-                youtubeIdFromUrl(raw) ??
-                (raw.length === 11 && !raw.includes(" ") ? raw : null);
+                youtubeIdFromUrl(raw) ?? (raw.length === 11 && !raw.includes(" ") ? raw : null);
               const notebookTitle = title ?? raw;
 
               let sourceMaterial = "";
@@ -538,9 +672,7 @@ Title: "${curPage.title}"
                 ]);
 
                 // Try extracting transcript from top video result
-                const videoResult = videoSearch.results.find((r) =>
-                  youtubeIdFromUrl(r.url),
-                );
+                const videoResult = videoSearch.results.find((r) => youtubeIdFromUrl(r.url));
                 if (videoResult) {
                   const vid = youtubeIdFromUrl(videoResult.url);
                   if (vid) {
@@ -555,9 +687,7 @@ Title: "${curPage.title}"
                 const researchContext = [
                   videoSearch.answer ? `Search Answer: ${videoSearch.answer}` : "",
                   webSearch.answer ? `Summary: ${webSearch.answer}` : "",
-                  ...webSearch.results.map(
-                    (r) => `### ${r.title}\nURL: ${r.url}\n${r.content}`,
-                  ),
+                  ...webSearch.results.map((r) => `### ${r.title}\nURL: ${r.url}\n${r.content}`),
                 ]
                   .filter(Boolean)
                   .join("\n\n");
@@ -589,7 +719,7 @@ Title: "${curPage.title}"
                 apiKey: key,
                 supabase,
                 userId,
-                includeImages: true,
+                includeImages: Boolean(include_images),
               });
 
               return {
@@ -613,9 +743,7 @@ Title: "${curPage.title}"
                 ),
               topic_or_query: z
                 .string()
-                .describe(
-                  "The topic name or visual query to search images/diagrams for (e.g., 'photosynthesis diagram')",
-                ),
+                .describe("The topic name or visual query to search images/diagrams for"),
               action: z
                 .enum(["add_images", "append_content", "add_section"])
                 .default("add_images")
@@ -701,41 +829,46 @@ Title: "${curPage.title}"
                   : -1;
               let nextPos = lastPos + 1;
               let addedCount = 0;
+              let imageCount = 0;
 
               if (action === "add_images" || topic_or_query) {
-                const photos = await searchTopicPhotos(topic_or_query);
+                const rawPhotos = await searchTopicPhotos(topic_or_query);
+                const photos = rawPhotos.slice(0, 4);
 
-                await supabase.from("blocks").insert({
-                  page_id: targetPageId,
-                  user_id: userId,
-                  type: "divider",
-                  content: "",
-                  checked: false,
-                  position: nextPos++,
-                });
-                addedCount++;
-
-                await supabase.from("blocks").insert({
-                  page_id: targetPageId,
-                  user_id: userId,
-                  type: "heading",
-                  content: `Visual Reference & Diagrams — ${topic_or_query}`,
-                  checked: false,
-                  position: nextPos++,
-                });
-                addedCount++;
-
-                for (const img of photos) {
-                  const caption = img.description || `${topic_or_query} diagram`;
+                if (photos.length > 0) {
                   await supabase.from("blocks").insert({
                     page_id: targetPageId,
                     user_id: userId,
-                    type: "text",
-                    content: `![${caption}](${img.url})`,
+                    type: "divider",
+                    content: "",
                     checked: false,
                     position: nextPos++,
                   });
                   addedCount++;
+
+                  await supabase.from("blocks").insert({
+                    page_id: targetPageId,
+                    user_id: userId,
+                    type: "heading",
+                    content: `Visual Reference & Diagrams — ${topic_or_query}`,
+                    checked: false,
+                    position: nextPos++,
+                  });
+                  addedCount++;
+
+                  for (const img of photos) {
+                    const caption = img.description || `${topic_or_query} diagram`;
+                    await supabase.from("blocks").insert({
+                      page_id: targetPageId,
+                      user_id: userId,
+                      type: "text",
+                      content: `![${caption}](${img.url})`,
+                      checked: false,
+                      position: nextPos++,
+                    });
+                    imageCount++;
+                    addedCount++;
+                  }
                 }
               }
 
@@ -759,8 +892,9 @@ Title: "${curPage.title}"
               return {
                 success: true,
                 pageId: targetPageId,
+                imageCount,
                 blocksAdded: addedCount,
-                message: `Successfully edited notebook page (ID: ${targetPageId}) and added ${addedCount} blocks (including visual diagrams at the end).`,
+                message: `Successfully updated notebook page (ID: ${targetPageId}) with ${imageCount} visual diagram(s) (${addedCount} blocks total).`,
               };
             },
           }),
@@ -785,15 +919,65 @@ Title: "${curPage.title}"
               message: responseMessage as never,
               client_id: responseMessage.id,
             });
-            if (error)
-              console.error(
-                "Failed to persist assistant message",
-                error.message,
-              );
+            if (error) console.error("Failed to persist assistant message", error.message);
             await supabase
               .from("chat_threads")
               .update({ updated_at: new Date().toISOString() })
               .eq("id", threadId);
+
+            // --- Persist chat attachments as study_resources (best-effort) ---
+            const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
+            for (const att of rawAttachments) {
+              try {
+                if (typeof att.dataUrl !== "string" || typeof att.filename !== "string") continue;
+
+                // Decode base64 data URL → Buffer
+                const match = att.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+                if (!match || !match[2]) continue;
+                const buffer = Buffer.from(match[2], "base64");
+                const mime =
+                  typeof att.mimeType === "string" && att.mimeType
+                    ? att.mimeType
+                    : (match[1] ?? "application/octet-stream");
+
+                // Determine kind from mime type
+                let kind: string;
+                if (mime.startsWith("image/")) kind = "image";
+                else if (mime === "application/pdf") kind = "pdf";
+                else kind = "note";
+
+                // Upload to storage
+                const safeName = att.filename.replace(/[^\w.-]+/g, "_");
+                const storagePath = `${userId}/${Date.now()}-${safeName}`;
+                const { error: uploadErr } = await supabase.storage
+                  .from("materials")
+                  .upload(storagePath, buffer, {
+                    contentType: mime,
+                    upsert: true,
+                  });
+                if (uploadErr) {
+                  console.error("Failed to upload chat attachment", uploadErr.message);
+                  continue;
+                }
+
+                // Insert study_resources row
+                const title = att.filename.replace(/\.[^.]+$/, "");
+                const { error: insertErr } = await supabase.from("study_resources").insert({
+                  user_id: userId,
+                  title,
+                  kind,
+                  storage_path: storagePath,
+                  mime_type: mime,
+                  roadmap_id: null,
+                  status: "ready",
+                });
+                if (insertErr) {
+                  console.error("Failed to save chat attachment resource", insertErr.message);
+                }
+              } catch (attErr) {
+                console.error("Error persisting chat attachment", attErr);
+              }
+            }
           },
         });
       },

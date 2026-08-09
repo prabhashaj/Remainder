@@ -3,9 +3,9 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BookOpen,
   CalendarHeart,
-
   ChevronRight,
   Compass,
+  FolderOpen,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -91,7 +91,7 @@ const navItems = [
   { title: "Goals", to: "/goals", icon: Target },
   { title: "Roadmaps", to: "/roadmaps", icon: Compass },
   { title: "Study Place", to: "/study", icon: BookOpen },
-
+  { title: "Documents", to: "/documents", icon: FolderOpen },
 ] as const;
 
 const SIDEBAR_WIDTH_KEY = "remainder.sidebar.width";
@@ -388,8 +388,16 @@ function CommandPalette({
   const queryClient = useQueryClient();
   const { start } = useFocusTimer();
   const { data: pages = [] } = useQuery({ queryKey: ["pages"], queryFn: fetchPages });
-  const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: fetchTasks, enabled: open });
-  const { data: goals = [] } = useQuery({ queryKey: ["goals"], queryFn: fetchGoals, enabled: open });
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks"],
+    queryFn: fetchTasks,
+    enabled: open,
+  });
+  const { data: goals = [] } = useQuery({
+    queryKey: ["goals"],
+    queryFn: fetchGoals,
+    enabled: open,
+  });
   const { data: habits = [] } = useQuery({
     queryKey: ["habits"],
     queryFn: fetchHabits,
@@ -500,7 +508,9 @@ function CommandPalette({
                 onSelect={() => go(() => navigate({ to: "/tasks" }))}
               >
                 <ListChecks className="size-4" />
-                <span className={`truncate ${task.done ? "text-muted-foreground line-through" : ""}`}>
+                <span
+                  className={`truncate ${task.done ? "text-muted-foreground line-through" : ""}`}
+                >
                   {task.title}
                 </span>
               </CommandItem>
@@ -518,7 +528,6 @@ function CommandPalette({
               >
                 <CalendarHeart className="size-4" />
                 <span className="truncate">{habit.title}</span>
-
               </CommandItem>
             ))}
           </CommandGroup>
@@ -584,13 +593,7 @@ function CommandPalette({
 }
 
 /** Thin vertical handle that lets the user drag the sidebar wider or narrower. */
-function SidebarResizer({
-  width,
-  onWidth,
-}: {
-  width: number;
-  onWidth: (width: number) => void;
-}) {
+function SidebarResizer({ width, onWidth }: { width: number; onWidth: (width: number) => void }) {
   const { open, setOpen, isMobile } = useSidebar();
   const dragging = useRef(false);
 
@@ -639,7 +642,6 @@ function SidebarResizer({
     </div>
   );
 }
-
 
 function ConversationsGroup() {
   const navigate = useNavigate();

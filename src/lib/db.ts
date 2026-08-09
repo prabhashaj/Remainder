@@ -391,6 +391,15 @@ export async function fetchMemories(): Promise<AgentMemory[]> {
   );
 }
 
+export async function clearMemories(): Promise<void> {
+  const userId = await requireUserId();
+  const { error } = await supabase
+    .from("agent_memories")
+    .delete()
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+}
+
 /* ---------- roadmap resources ---------- */
 
 export async function fetchRoadmapResources(

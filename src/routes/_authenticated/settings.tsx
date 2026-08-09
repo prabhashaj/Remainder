@@ -1,22 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Moon, Sun } from "lucide-react";
+import { Check, Moon, Sun, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useTheme } from "@/components/theme-provider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { fetchProfile, updateProfile } from "@/lib/db";
+import { clearMemories, fetchMemories, fetchProfile, updateProfile } from "@/lib/db";
 import { THEMES, type ThemeId } from "@/lib/themes";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
       { title: "Settings & themes — Remainder" },
-      { name: "description", content: "Choose your pastel theme, dark mode, name and reminder preferences." },
+      {
+        name: "description",
+        content: "Choose your pastel theme, dark mode, name and reminder preferences.",
+      },
       { property: "og:title", content: "Settings & themes — Remainder" },
       { property: "og:description", content: "Personalize your Remainder workspace." },
     ],
@@ -38,6 +52,17 @@ function SettingsPage() {
       void qc.invalidateQueries({ queryKey: ["profile"] });
       toast.success("Saved.");
     },
+  });
+
+  const { data: memories = [] } = useQuery({ queryKey: ["memories"], queryFn: fetchMemories });
+
+  const resetMemories = useMutation({
+    mutationFn: clearMemories,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["memories"] });
+      toast.success("Agent's memory has been reset.");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to reset memory."),
   });
 
   const lightThemes = THEMES.filter((t) => !t.isDark);
@@ -86,7 +111,9 @@ function SettingsPage() {
               onMouseLeave={() => previewTheme(theme)}
               onClick={() => setTheme(t.id as ThemeId)}
               className={`press relative overflow-hidden rounded-3xl border p-3 text-left transition-shadow ${
-                theme === t.id ? "border-primary/50 shadow-soft ring-2 ring-primary/20" : "border-border"
+                theme === t.id
+                  ? "border-primary/50 shadow-soft ring-2 ring-primary/20"
+                  : "border-border"
               }`}
             >
               <span className="flex gap-1.5">
@@ -125,7 +152,9 @@ function SettingsPage() {
               onMouseLeave={() => previewTheme(theme)}
               onClick={() => setTheme(t.id as ThemeId)}
               className={`press relative overflow-hidden rounded-3xl border p-4 text-left transition-shadow ${
-                theme === t.id ? "border-primary/50 shadow-soft ring-2 ring-primary/20" : "border-border"
+                theme === t.id
+                  ? "border-primary/50 shadow-soft ring-2 ring-primary/20"
+                  : "border-border"
               }`}
             >
               <span className="flex gap-2">
@@ -144,6 +173,53 @@ function SettingsPage() {
               )}
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* Remi's Memory */}
+      <section className="card-soft p-6">
+        <div>
+          <h2 className="font-display text-lg font-semibold">Remi's Memory</h2>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Remi learns durable facts, preferences, and context as you converse. You can reset or
+          clear this saved memory at any time.
+        </p>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+          <span className="text-sm font-medium text-foreground">
+            Saved memories ({memories.length})
+          </span>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="press gap-2 rounded-2xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="size-4" /> Reset Remi's Memory
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset Remi's Memory?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently erase all facts, preferences, and durable memories Remi has
+                  saved about you. Remi will start fresh in future conversations.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-2xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => resetMemories.mutate()}
+                  disabled={resetMemories.isPending}
+                  className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {resetMemories.isPending ? "Erasing…" : "Reset Memory"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </section>
 
