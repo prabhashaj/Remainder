@@ -19,6 +19,7 @@ import { classifyQueryRouting } from "@/lib/agents/router.server";
 import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
 import { fetchYoutubeTranscript } from "@/lib/transcript.server";
 import { searchTopicPhotos, tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
+import { searchArxivServer, searchPapersServer, searchDocsServer } from "@/lib/academic-tools.server";
 import { extractPdfTextServer } from "@/lib/pdf-parser.server";
 import { chunkText } from "@/lib/chunking.server";
 import { generateEmbeddings, generateEmbedding } from "@/lib/embeddings.server";
@@ -26,7 +27,6 @@ import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit, handleRateLimitError } from "@/lib/rate-limit.server";
 import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
-import { getMcpTools } from "@/lib/mcp.server";
 
 /**
  * Wraps a tool execute function with timing, structured logging, and a
@@ -120,6 +120,9 @@ Tool Delegation:
 - createHabit: Use to instantly create a new habit for the user (e.g. "add a habit to drink water").
 - delegateToPlanner: Use when the user explicitly asks to build a complete learning roadmap or multi-phase study plan.
 - ALWAYS execute the tool immediately when the user asks to create a task, goal, habit, roadmap, or notebook. NEVER ask for confirmation, and NEVER say "I cannot create goals/tasks for you". Always call the tool instantly.
+- searchArxiv: Use when asked to search arXiv for scientific research papers (physics, math, computer science, AI, quantitative finance).
+- searchPapers: Use when asked to search general academic literature, scientific journals, or research publications.
+- searchDocs: Use when asked to look up technical documentation, API specifications, or code examples for libraries and frameworks.
 - researchResources: Use when asked to search for and save learning resources or video tutorials.
 - webSearch: Use ALWAYS when answering questions about current events, news, live sports scores, recent facts, or technical questions that benefit from up-to-date web search results. NEVER guess or hallucinate live scores or news.
 - searchPhotos: Use ONLY when the user explicitly asks to see, show, or get photos, images, or visual diagrams. When used for diagrams/architectures, return exactly 2 images. Do NOT use proactively or give example diagrams unless asked.
@@ -616,20 +619,7 @@ Title: "${curPage.title}"
 
         const systemPrompt = `${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}`;
 
-        const rawMcpTools = await getMcpTools(supabase, userId, traceId);
-        
-        // Wrap MCP tools with audit logging
-        const mcpTools: Record<string, any> = {};
-        for (const [key, mcpTool] of Object.entries(rawMcpTools)) {
-          mcpTools[key] = {
-            ...mcpTool,
-            execute: async (args: any, context: any) =>
-              wrapTool(key, () => (mcpTool as any).execute(args, context), supabase, userId, traceId, threadId, args),
-          };
-        }
-
         const tools = {
-          ...mcpTools,
           delegateToPlanner: tool({
             description:
               "Delegate to the planning specialist to create NEW roadmaps, goals, tasks, or habits in the user's workspace. The planner will build them.",
@@ -1068,6 +1058,70 @@ Title: "${curPage.title}"
                 traceId,
                 threadId,
                 { query },
+              ),
+          }),
+
+          searchArxiv: tool({
+            description:
+              "Search arXiv for research papers in physics, computer science, mathematics, quantitative biology, and statistics.",
+            inputSchema: z.object({
+              query: z.string().describe("Search query or paper topic"),
+            }),
+            execute: async ({ query }: { query: string }) =>
+              wrapTool(
+                "searchArxiv",
+                async () => {
+                  const papers = await searchArxivServer(query);
+                  return { query, papers };
+                },
+                supabase,
+                userId,
+                traceId,
+                threadId,
+                { query },
+              ),
+          }),
+
+          searchPapers: tool({
+            description:
+              "Search academic databases (Semantic Scholar / OpenAlex) across all scientific disciplines for research papers.",
+            inputSchema: z.object({
+              query: z.string().describe("Paper title, subject, or research topic"),
+            }),
+            execute: async ({ query }: { query: string }) =>
+              wrapTool(
+                "searchPapers",
+                async () => {
+                  const papers = await searchPapersServer(query);
+                  return { query, papers };
+                },
+                supabase,
+                userId,
+                traceId,
+                threadId,
+                { query },
+              ),
+          }),
+
+          searchDocs: tool({
+            description:
+              "Search technical documentation, framework guides, and API reference pages for software libraries.",
+            inputSchema: z.object({
+              library: z.string().describe("Library or framework name (e.g. React, PyTorch, Tailwind)"),
+              topic: z.string().describe("Specific feature, hook, or API method to look up"),
+            }),
+            execute: async ({ library, topic }: { library: string; topic: string }) =>
+              wrapTool(
+                "searchDocs",
+                async () => {
+                  const docs = await searchDocsServer(library, topic);
+                  return { library, topic, docs };
+                },
+                supabase,
+                userId,
+                traceId,
+                threadId,
+                { library, topic },
               ),
           }),
 

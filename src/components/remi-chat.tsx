@@ -40,7 +40,6 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { ChatVideoEmbeds } from "@/components/chat-video-embeds";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ConnectButton } from "@/components/mcp-connect-button";
 
 import { supabase } from "@/integrations/supabase/client";
 import { renameThread } from "@/lib/db";
@@ -59,8 +58,14 @@ function getToolLabel(part: any, isRunning: boolean): string {
 
   if (name === "delegateToPlanner") {
     const inst = (typeof args.instruction === "string" ? args.instruction : "").toLowerCase();
-    if (inst.includes("task") || inst.includes("todo")) {
-      return isRunning ? "Creating tasks" : "Created tasks";
+    if (
+      inst.includes("roadmap") ||
+      inst.includes("curriculum") ||
+      inst.includes("study plan") ||
+      inst.includes("learning plan") ||
+      inst.includes("learn")
+    ) {
+      return isRunning ? "Creating roadmap" : "Created roadmap";
     }
     if (inst.includes("goal") || inst.includes("milestone")) {
       return isRunning ? "Creating goals" : "Created goals";
@@ -68,7 +73,10 @@ function getToolLabel(part: any, isRunning: boolean): string {
     if (inst.includes("habit")) {
       return isRunning ? "Creating habits" : "Created habits";
     }
-    return isRunning ? "Building learning plan" : "Built learning plan";
+    if (inst.includes("task") || inst.includes("todo")) {
+      return isRunning ? "Creating tasks" : "Created tasks";
+    }
+    return isRunning ? "Creating roadmap" : "Created roadmap";
   }
 
   const mapping: Record<string, { active: string; done: string }> = {
@@ -90,11 +98,6 @@ function getToolLabel(part: any, isRunning: boolean): string {
     readDocument: { active: "Reading document", done: "Read document" },
     getCurrentTime: { active: "Checking time", done: "Checked time" },
   };
-
-  if (name.startsWith("mcp_")) {
-    const cleanName = name.replace(/^mcp_([^_]+)_(.+)$/, "$1: $2").replace(/_/g, " ");
-    return isRunning ? `Running ${cleanName}` : `Completed ${cleanName}`;
-  }
 
   const found = mapping[name];
   if (found) {
@@ -597,7 +600,6 @@ export function RemiChat({
           <PromptInputFooter className="justify-between">
             <div className="flex items-center gap-1">
               <AttachButton />
-              <ConnectButton />
               <VoiceInputButton textareaRef={textareaRef} />
             </div>
             <PromptInputSubmit status={status} disabled={busy} />
