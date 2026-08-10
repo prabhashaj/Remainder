@@ -322,7 +322,9 @@ export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
         if (text && text.trim().length > 0) {
           const { saveDocumentTextAndEmbed } = await import("@/lib/document-processor.server");
           await saveDocumentTextAndEmbed(supabaseAdmin, data.resourceId, text);
-          console.log(`[DocumentExtraction] Successfully extracted and embedded ${data.resourceId}`);
+          console.log(
+            `[DocumentExtraction] Successfully extracted and embedded ${data.resourceId}`,
+          );
         } else {
           console.warn(`[DocumentExtraction] Empty text extracted for ${data.resourceId}`);
         }

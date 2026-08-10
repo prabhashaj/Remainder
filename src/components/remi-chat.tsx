@@ -40,21 +40,71 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { ChatVideoEmbeds } from "@/components/chat-video-embeds";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ConnectButton } from "@/components/mcp-connect-button";
 
 import { supabase } from "@/integrations/supabase/client";
 import { renameThread } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
-const toolLabels: Record<string, string> = {
-  delegateToPlanner: "Building learning plan",
-  researchResources: "Finding video tutorials",
-  webSearch: "Searching the web",
-  searchPhotos: "Searching photos & diagrams",
-  writeLessonForSubtopic: "Writing subtopic lesson",
-  generateNotebook: "Generating study notebook",
-  editNotebook: "Updating study notebook",
-  saveMemory: "Saving memory note",
-};
+function getToolLabel(part: any, isRunning: boolean): string {
+  let name = part.type.replace(/^tool-/, "");
+  if (part.type === "dynamic-tool" && part.toolName) {
+    name = part.toolName;
+  }
+  if (part.toolName) {
+    name = part.toolName;
+  }
+
+  const args = part.args || part.input || {};
+
+  if (name === "delegateToPlanner") {
+    const inst = (typeof args.instruction === "string" ? args.instruction : "").toLowerCase();
+    if (inst.includes("task") || inst.includes("todo")) {
+      return isRunning ? "Creating tasks" : "Created tasks";
+    }
+    if (inst.includes("goal") || inst.includes("milestone")) {
+      return isRunning ? "Creating goals" : "Created goals";
+    }
+    if (inst.includes("habit")) {
+      return isRunning ? "Creating habits" : "Created habits";
+    }
+    return isRunning ? "Building learning plan" : "Built learning plan";
+  }
+
+  const mapping: Record<string, { active: string; done: string }> = {
+    createTask: { active: "Creating task", done: "Created task" },
+    updateTask: { active: "Updating task", done: "Updated task" },
+    createGoal: { active: "Creating goal", done: "Created goal" },
+    updateGoal: { active: "Updating goal", done: "Updated goal" },
+    createHabit: { active: "Creating habit", done: "Created habit" },
+    updateHabit: { active: "Updating habit", done: "Updated habit" },
+    createRoadmap: { active: "Creating roadmap", done: "Created roadmap" },
+    readRoadmap: { active: "Reading roadmap", done: "Read roadmap" },
+    researchResources: { active: "Finding video tutorials", done: "Found video tutorials" },
+    webSearch: { active: "Searching the web", done: "Searched the web" },
+    searchPhotos: { active: "Searching photos & diagrams", done: "Searched photos & diagrams" },
+    writeLessonForSubtopic: { active: "Writing subtopic lesson", done: "Wrote subtopic lesson" },
+    generateNotebook: { active: "Generating study notebook", done: "Generated study notebook" },
+    editNotebook: { active: "Updating study notebook", done: "Updated study notebook" },
+    saveMemory: { active: "Saving memory note", done: "Saved memory note" },
+    readDocument: { active: "Reading document", done: "Read document" },
+    getCurrentTime: { active: "Checking time", done: "Checked time" },
+  };
+
+  if (name.startsWith("mcp_")) {
+    const cleanName = name.replace(/^mcp_([^_]+)_(.+)$/, "$1: $2").replace(/_/g, " ");
+    return isRunning ? `Running ${cleanName}` : `Completed ${cleanName}`;
+  }
+
+  const found = mapping[name];
+  if (found) {
+    return isRunning ? found.active : found.done;
+  }
+
+  const formattedName = name.replace(/([A-Z])/g, " $1").trim().toLowerCase();
+  const capitalized = formattedName.charAt(0).toUpperCase() + formattedName.slice(1);
+  return isRunning ? `Creating ${formattedName}` : `Created ${formattedName}`;
+}
 
 type ToolPartLike = { type: string; state: string };
 
@@ -65,12 +115,7 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
   const isRunning = !allDone && !anyError;
 
   const names = Array.from(
-    new Set(
-      parts.map((p) => {
-        const name = p.type === "dynamic-tool" ? "tool" : p.type.replace(/^tool-/, "");
-        return toolLabels[name] ?? name;
-      }),
-    ),
+    new Set(parts.map((p) => getToolLabel(p, isRunning)))
   );
 
   const summaryText = isRunning
@@ -82,28 +127,26 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
         : `Completed ${parts.length} steps (${names.slice(0, 2).join(", ")})`;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="my-2 flex flex-col items-start">
-      <CollapsibleTrigger className="group inline-flex items-center gap-2 rounded-xl border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="my-1 flex flex-col items-start">
+      <CollapsibleTrigger className="group inline-flex items-center gap-1.5 py-1 text-base font-normal text-muted-foreground transition-colors hover:text-foreground">
         {isRunning ? (
-          <Loader2 className="size-3.5 animate-spin text-primary shrink-0" />
-        ) : anyError ? (
-          <AlertCircle className="size-3.5 text-destructive shrink-0" />
+          <Shimmer>{summaryText || ""}</Shimmer>
         ) : (
-          <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+          <>
+            <span className="text-sm">{summaryText}</span>
+            <ChevronDown
+              className={cn(
+                "size-3 text-muted-foreground/60 transition-transform duration-200",
+                isOpen && "rotate-180",
+              )}
+            />
+          </>
         )}
-        <span>{summaryText}</span>
-        <ChevronDown
-          className={cn(
-            "size-3 text-muted-foreground/60 transition-transform duration-200",
-            isOpen && "rotate-180",
-          )}
-        />
       </CollapsibleTrigger>
 
       <CollapsibleContent className="mt-2 ml-2.5 border-l border-border/60 pl-3.5 py-1 space-y-2 text-xs">
         {parts.map((part, idx) => {
-          const rawName = part.type === "dynamic-tool" ? "tool" : part.type.replace(/^tool-/, "");
-          const label = toolLabels[rawName] ?? rawName;
+          const label = getToolLabel(part, false);
           const done = part.state === "output-available";
           const errored = part.state === "output-error";
 
@@ -170,7 +213,7 @@ function AttachButton() {
       size="icon-sm"
       className="rounded-xl p-2 text-muted-foreground hover:text-foreground"
     >
-      <Paperclip className="size-5" />
+      <Paperclip className="size-6" />
     </PromptInputButton>
   );
 }
@@ -297,7 +340,7 @@ function VoiceInputButton({
       ].join(" ")}
       aria-label={listening ? "Stop voice input" : "Start voice input"}
     >
-      {listening ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+      {listening ? <MicOff className="size-6" /> : <Mic className="size-6" />}
     </PromptInputButton>
   );
 }
@@ -538,7 +581,10 @@ export function RemiChat({
             </span>
           </p>
         )}
-        <PromptInput onSubmit={(message) => void submit(message.text ?? "", message.files)}>
+        <PromptInput 
+          onSubmit={(message) => void submit(message.text ?? "", message.files)}
+          maxFileSize={10 * 1024 * 1024}
+        >
           <AttachmentPreviews />
           <PromptInputTextarea
             ref={textareaRef}
@@ -551,6 +597,7 @@ export function RemiChat({
           <PromptInputFooter className="justify-between">
             <div className="flex items-center gap-1">
               <AttachButton />
+              <ConnectButton />
               <VoiceInputButton textareaRef={textareaRef} />
             </div>
             <PromptInputSubmit status={status} disabled={busy} />

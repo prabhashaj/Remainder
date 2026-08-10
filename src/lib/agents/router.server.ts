@@ -104,14 +104,20 @@ Before answering, evaluate:
    If the query is asking about the user's personal workspace, notes, documents, habits, 
    goals, or tasks, a web search is NEVER required because you already have this context.
 
+9. EXPLICIT TOOL OR INTEGRATION REQUESTS
+   Does the user explicitly ask to use a specific tool, integration, or MCP server 
+   (e.g., "search through arXiv", "use github", "check linear")? 
+   If so, a general web search is NEVER required. The main agent has access to these 
+   specialized tools and must be allowed to invoke them directly.
+
 DECISION RULE:
-- If dimension 8 applies (user asking about their own workspace/documents), return search_required: false.
+- If dimension 8 or 9 applies (user asking about their own workspace, or explicitly requesting a specific tool/integration like arXiv), return search_required: false.
 - If dimension 4 resolves to (b), OR dimensions 1/3 clearly apply with less than 
   very high confidence, OR dimension 6 fires, OR dimension 7 identifies a 
   context-established sense that differs from your default association → SEARCH 
   before answering.
 - If stakes (5) are high, prefer search even under moderate uncertainty.
-- Only skip search if the query concerns broad, long-established knowledge or personal workspace data.
+- Only skip search if the query concerns broad, long-established knowledge, personal workspace data, or explicit tool requests.
 
 === STAGE 2: POST-GENERATION VERIFICATION (applies even if you skipped search) ===
 

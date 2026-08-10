@@ -6,9 +6,16 @@ import { ExpandableImage } from "@/components/ui/expandable-image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { cjk } from "@streamdown/cjk";
-import { code } from "@streamdown/code";
-import { math } from "@streamdown/math";
+import { createMathPlugin } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from "./code-block";
+import { PlayableCodeBlock } from "./python-run-button";
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
@@ -271,27 +278,79 @@ export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProp
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
-const streamdownPlugins = { cjk, code, math, mermaid } as never;
+const mathPlugin = createMathPlugin({ singleDollarTextMath: true });
+const streamdownPlugins = { cjk, math: mathPlugin, mermaid } as never;
 
 import "katex/dist/katex.min.css";
 
-function preprocessLatexText(children?: React.ReactNode): string {
+function preprocessMarkdown(children?: React.ReactNode): string {
   if (typeof children !== "string") return "";
   let text = children;
 
-  // Convert \( ... \) inline math to $ ... $
+  // 1. Force fenced code blocks with language tags to start on a new line
+  text = text.replace(/([^\s])([ \t]*)(```[a-zA-Z]+)/g, "$1\n\n$2$3");
+  text = text.replace(/(```)(?![a-zA-Z])([ \t]*)([^\s])/g, "$1\n\n$2$4");
+
+  // 2. Fix rogue $ at the start of a line
+  text = text.replace(/(^|\n)\$\s+/g, "$1\\$ ");
+
+  // 3. Convert \( ... \) inline math to $ ... $
   text = text.replace(/\\\(([\s\S]*?)\\\)/g, " $1 ");
 
-  // Convert \[ ... \] display math to \n$$\n$1\n$$\n
-  text = text.replace(/\\\[([\s\S]*?)\\\]/g, "\n$$\n$1\n$$\n");
+  // 4. Convert \[ ... \] display math to \n$$\n...\n$$\n
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, p1) => `\n$$\n${p1}\n$$\n`);
 
-  // Convert inline $$ ... $$ inside sentences into $ ... $
-  text = text.replace(/([^\n])\$\$([^\n$#]+?)\$\$/g, "$1$$2$");
-  text = text.replace(/\$\$([^\n$#]+?)\$\$([^\n])/g, "$$1$$2");
+  // 5. Clean up $$ blocks. We iterate through all $$ pairs.
+  let parts = text.split('$$');
+  for (let i = 1; i < parts.length; i += 2) {
+    if (i + 1 >= parts.length) break;
 
-  // Ensure block display math equations $$ ... $$ have newlines around them
-  text = text.replace(/([^\n])\$\$([\s\S]+?)\$\$/g, "$1\n\n$$\n$2\n$$\n");
-  text = text.replace(/\$\$([\s\S]+?)\$\$([^\n])/g, "\n$$\n$1\n$$\n$2");
+    const before = parts[i - 1]!;
+    const mathContent = parts[i]!;
+    const after = parts[i + 1]!;
+
+    const isInline = !mathContent.includes('\n') && 
+                     (/[^\s\r\n]$/.test(before) || /^[^\s\r\n]/.test(after));
+
+    if (isInline) {
+      parts[i - 1] = before + ' $';
+      parts[i] = mathContent.trim();
+      parts[i + 1] = '$ ' + after;
+    } else {
+      parts[i - 1] = before.replace(/[ \t]*\r?\n?[ \t]*$/, '') + '\n\n$$\n';
+      parts[i] = mathContent.trim();
+      parts[i + 1] = '\n$$\n\n' + after.replace(/^[ \t]*\r?\n?[ \t]*/, '');
+    }
+  }
+  
+  text = parts[0] || '';
+  for (let i = 1; i < parts.length; i += 2) {
+    if (i + 1 < parts.length) {
+      text += (parts[i] || '') + (parts[i + 1] || '');
+    } else {
+      text += '$$' + (parts[i] || '');
+    }
+  }
+
+  // ROBUST FIX: Prevent $ from spanning code blocks or double newlines.
+  const blocks: string[] = [];
+  text = text.replace(/\$\$([\s\S]+?)\$\$/g, (match) => {
+    blocks.push(match);
+    return `__MATH_BLOCK_${blocks.length - 1}__`;
+  });
+
+  const inlines: string[] = [];
+  // Reject match if it contains ``` or \n\n
+  text = text.replace(/\$((?:(?!\n\n|```)[\s\S])+?)\$/g, (match) => {
+    inlines.push(match);
+    return `__MATH_INLINE_${inlines.length - 1}__`;
+  });
+
+  // Escape any remaining unpaired/rogue $
+  text = text.replace(/\$/g, "\\$");
+
+  text = text.replace(/__MATH_INLINE_(\d+)__/g, (_, i) => inlines[Number(i)] || '');
+  text = text.replace(/__MATH_BLOCK_(\d+)__/g, (_, i) => blocks[Number(i)] || '');
 
   return text;
 }
@@ -316,11 +375,49 @@ export const MessageResponse = memo(
               caption={typeof alt === "string" && alt !== "image" ? alt : undefined}
             />
           ) : null,
+        code: ({ className, children, ...props }) => {
+          const match = /language-(\w+)/.exec(className || "");
+          if (match && match[1]) {
+            const lang = match[1];
+            const codeText = String(children).replace(/\n$/, "");
+
+            if (lang.toLowerCase() === "python") {
+              return <PlayableCodeBlock code={codeText} language={lang} />;
+            }
+
+            return (
+              <CodeBlock
+                code={codeText}
+                language={lang as never}
+                className="my-4 shadow-sm"
+                showLineNumbers
+              >
+                <CodeBlockHeader>
+                  <CodeBlockTitle className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {lang}
+                  </CodeBlockTitle>
+                  <CodeBlockActions>
+                    <CodeBlockCopyButton />
+                  </CodeBlockActions>
+                </CodeBlockHeader>
+              </CodeBlock>
+            );
+          }
+          return (
+            <code
+              className={cn("bg-muted px-1.5 py-0.5 rounded-md font-mono text-[13.5px]", className)}
+              {...props}
+            >
+              {children}
+            </code>
+          );
+        },
+        pre: ({ children }) => <>{children}</>,
         ...components,
       }}
       {...props}
     >
-      {preprocessLatexText(children)}
+      {preprocessMarkdown(children)}
     </Streamdown>
   ),
   (prevProps, nextProps) =>

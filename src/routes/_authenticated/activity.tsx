@@ -99,9 +99,18 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function isEmptyData(data: unknown) {
+  if (data === null || data === undefined) return true;
+  if (typeof data === "string" && data.trim() === "{}") return true;
+  if (typeof data === "object" && !Array.isArray(data) && Object.keys(data as object).length === 0)
+    return true;
+  return false;
+}
+
 function JsonViewer({ data }: { data: unknown }) {
-  if (data === null || data === undefined)
-    return <span className="text-muted-foreground text-xs">—</span>;
+  if (isEmptyData(data)) {
+    return null;
+  }
   return (
     <pre className="rounded-md bg-muted/50 p-3 text-xs overflow-x-auto max-h-64 whitespace-pre-wrap break-all">
       {JSON.stringify(data, null, 2)}
@@ -131,13 +140,15 @@ function ActionCard({ action }: { action: AgentAction }) {
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent className="px-3 pb-3 space-y-3">
-        <div className="space-y-1">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Input
-          </h4>
-          <JsonViewer data={action.input} />
-        </div>
-        {action.output !== null && (
+        {!isEmptyData(action.input) && (
+          <div className="space-y-1">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Input
+            </h4>
+            <JsonViewer data={action.input} />
+          </div>
+        )}
+        {!isEmptyData(action.output) && (
           <div className="space-y-1">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Output
@@ -159,7 +170,15 @@ function ActionCard({ action }: { action: AgentAction }) {
   );
 }
 
-function TraceGroup({ traceId, actions }: { traceId: string; actions: AgentAction[] }) {
+function TraceGroup({
+  traceId,
+  actions,
+  threadTitle,
+}: {
+  traceId: string;
+  actions: AgentAction[];
+  threadTitle?: string | undefined;
+}) {
   const [open, setOpen] = useState(false);
   const hasError = actions.some((a) => a.status === "error");
   const earliest = actions[actions.length - 1];
@@ -174,9 +193,15 @@ function TraceGroup({ traceId, actions }: { traceId: string; actions: AgentActio
           <ActivityIcon className="size-4 text-muted-foreground shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">
-              {actions.length} tool call{actions.length !== 1 ? "s" : ""}
+              {threadTitle
+                ? threadTitle
+                : `${actions.length} tool call${actions.length !== 1 ? "s" : ""}`}
             </p>
-            <p className="text-xs text-muted-foreground font-mono truncate">{traceId}</p>
+            <p className="text-xs text-muted-foreground font-mono truncate">
+              {threadTitle
+                ? `${actions.length} tool call${actions.length !== 1 ? "s" : ""} • ${traceId}`
+                : traceId}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -205,13 +230,24 @@ function TraceGroup({ traceId, actions }: { traceId: string; actions: AgentActio
   );
 }
 
-function JobCard({ job }: { job: BackgroundJob }) {
+function JobCard({
+  job,
+  resourceTitle,
+}: {
+  job: BackgroundJob;
+  resourceTitle?: string | undefined;
+}) {
   return (
     <div className="rounded-md border bg-card p-3 flex items-center justify-between gap-4">
       <div className="flex items-center gap-2 min-w-0">
         <DatabaseIcon className="size-4 text-muted-foreground shrink-0" />
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate">{job.job_type}</p>
+          <p className="text-sm font-medium truncate">
+            {job.job_type}
+            {resourceTitle && (
+              <span className="ml-2 font-normal text-muted-foreground">({resourceTitle})</span>
+            )}
+          </p>
           {job.resource_id && (
             <p className="text-xs text-muted-foreground font-mono truncate">{job.resource_id}</p>
           )}
@@ -265,6 +301,31 @@ function ActivityPage() {
     },
   });
 
+  const { data: threads = [] } = useQuery({
+    queryKey: ["chat_threads"],
+    enabled: !!session,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).from("chat_threads").select("id, title");
+      if (error) throw error;
+      return (data ?? []) as { id: string; title: string }[];
+    },
+  });
+
+  const { data: resources = [] } = useQuery({
+    queryKey: ["study_resources"],
+    enabled: !!session,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).from("study_resources").select("id, title");
+      if (error) throw error;
+      return (data ?? []) as { id: string; title: string }[];
+    },
+  });
+
+  const threadMap = new Map(threads.map((t) => [t.id, t.title]));
+  const resourceMap = new Map(resources.map((r) => [r.id, r.title]));
+
   // Group actions by trace_id
   const filteredActions = traceFilter
     ? actions.filter((a) => a.trace_id.toLowerCase().includes(traceFilter.toLowerCase()))
@@ -286,7 +347,7 @@ function ActivityPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <ActivityIcon className="size-6" />
-          Activity
+          My Activity
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           End-to-end trace of every AI tool call and background job. Use the trace ID from{" "}
@@ -342,9 +403,18 @@ function ActivityPage() {
           )}
 
           <div className="space-y-3">
-            {traceGroups.map(([traceId, traceActions]) => (
-              <TraceGroup key={traceId} traceId={traceId} actions={traceActions} />
-            ))}
+            {traceGroups.map(([traceId, traceActions]) => {
+              const firstThreadId = traceActions.find((a) => a.thread_id)?.thread_id;
+              const threadTitle = firstThreadId ? threadMap.get(firstThreadId) : undefined;
+              return (
+                <TraceGroup
+                  key={traceId}
+                  traceId={traceId}
+                  actions={traceActions}
+                  threadTitle={threadTitle}
+                />
+              );
+            })}
           </div>
         </>
       )}
@@ -364,7 +434,11 @@ function ActivityPage() {
           )}
           <div className="space-y-2">
             {jobs.map((job) => (
-              <JobCard key={job.id} job={job} />
+              <JobCard
+                key={job.id}
+                job={job}
+                resourceTitle={job.resource_id ? resourceMap.get(job.resource_id) : undefined}
+              />
             ))}
           </div>
         </>

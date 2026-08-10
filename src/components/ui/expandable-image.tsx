@@ -38,12 +38,11 @@ export function ExpandableImage({
   const handleError = () => {
     if (hasError) return;
     setHasError(true);
-    const topic = (caption || alt || "educational diagram").trim();
-    // Dynamic topic-matched fallback matching actual image context
-    setImgSrc(
-      `https://image.pollinations.ai/prompt/${encodeURIComponent(topic + " scientific diagram educational illustration hd")}?width=800&height=500&nologo=true`,
-    );
   };
+
+  if (hasError) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

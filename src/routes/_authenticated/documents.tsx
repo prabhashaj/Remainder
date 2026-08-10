@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Download,
   FileText,
@@ -12,9 +11,8 @@ import {
   Search,
   StickyNote,
   Trash2,
-  Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -38,14 +36,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  createStudyResource,
   deleteStudyResource,
   fetchStudyResources,
   signedMaterialUrl,
-  uploadMaterial,
   type StudyResource,
 } from "@/lib/study";
-import { triggerDocumentExtractionFn } from "@/lib/study.functions";
 
 export const Route = createFileRoute("/_authenticated/documents")({
   head: () => ({
@@ -54,7 +49,7 @@ export const Route = createFileRoute("/_authenticated/documents")({
       {
         name: "description",
         content:
-          "Browse, search and manage every document, image and file you've uploaded or attached to Remi chat.",
+          "Browse, search and manage every document, image and file you've attached to Remi chat.",
       },
       { property: "og:title", content: "Documents — Remainder" },
       {
@@ -160,11 +155,8 @@ function ImageThumbnail({ storagePath }: { storagePath: string }) {
 
 function DocumentsPage() {
   const qc = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
-  const [uploading, setUploading] = useState(false);
-  const triggerExtraction = useServerFn(triggerDocumentExtractionFn);
   const [deleteTarget, setDeleteTarget] = useState<StudyResource | null>(null);
 
   const { data: resources = [], isLoading } = useQuery({
@@ -196,70 +188,14 @@ function DocumentsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleUpload = async (file: File) => {
-    setUploading(true);
-    try {
-      const path = await uploadMaterial(file);
-      const mime = file.type || "application/octet-stream";
-      let kind: string;
-      if (mime.startsWith("image/")) kind = "image";
-      else if (mime === "application/pdf") kind = "pdf";
-      else kind = "note";
-
-      const resource = await createStudyResource({
-        title: file.name.replace(/\.[^.]+$/, ""),
-        kind,
-        storage_path: path,
-        mime_type: mime,
-        roadmap_id: null,
-      });
-      
-      if (kind === "pdf") {
-        await triggerExtraction({ data: { resourceId: resource.id, storagePath: path } });
-      }
-      
-      refreshResources();
-      toast.success("Uploaded to your library");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">Documents</h1>
           <p className="mt-2 text-muted-foreground">
-            Every file you've uploaded or attached to Remi, in one place.
+            Every file you've attached to Remi, in one place.
           </p>
-        </div>
-        <div className="flex gap-2">
-          <input
-            ref={fileRef}
-            type="file"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleUpload(file);
-              e.target.value = "";
-            }}
-          />
-          <Button
-            variant="secondary"
-            className="press gap-1.5 rounded-2xl"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Upload className="size-4" />
-            )}
-            Upload
-          </Button>
         </div>
       </div>
 
@@ -317,20 +253,8 @@ function DocumentsPage() {
           <FolderOpen className="mx-auto size-12 text-muted-foreground/40" />
           <h2 className="mt-4 font-display text-lg font-bold">No documents yet</h2>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-            Attach a file to Remi or upload one here — it'll appear in this library automatically.
+            Attach a file to Remi — it'll appear in this library automatically.
           </p>
-          <Button
-            className="press mt-5 gap-1.5 rounded-2xl"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Upload className="size-4" />
-            )}
-            Upload your first document
-          </Button>
         </div>
       )}
 

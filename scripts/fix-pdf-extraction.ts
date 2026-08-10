@@ -29,12 +29,12 @@ async function fix() {
       const { data: fileData, error: downloadErr } = await supabase.storage
         .from("materials")
         .download(doc.storage_path);
-        
+
       if (downloadErr || !fileData) {
         console.error(`Failed to download ${doc.title}:`, downloadErr);
         continue;
       }
-      
+
       const buffer = Buffer.from(await fileData.arrayBuffer());
       try {
         console.log(`Extracting text for ${doc.title}...`);

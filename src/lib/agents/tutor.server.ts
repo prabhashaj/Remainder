@@ -40,7 +40,7 @@ Style:
 - **Bold** each key term the first time it appears.
 - Include markdown photos/illustrations ONLY if the learner explicitly asks for an image, photo, or diagram. Otherwise, do NOT include images.
 - Formulas in LaTeX: inline as $x^2$, display on dedicated lines as $$\\frac{dy}{dx} = 2x$$. Use explicit operators (\\times, \\cdot), never plain-text math or bracket delimiters.
-- Fenced code blocks with a language tag; \`inline code\` for identifiers.
+- Fenced code blocks with a language tag; \`inline code\` for identifiers. For code examples, ALWAYS provide complete, runnable code that produces visible output (e.g., using \`print()\`).
 - End with one short "Try this" line the learner can act on.`;
 
 function clip(text: string | null | undefined, max: number): string {

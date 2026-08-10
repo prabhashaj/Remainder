@@ -13,6 +13,21 @@ export type ThemeId =
   | "emerald"
   | "velvet";
 
+export type FontId = "sans" | "serif" | "merienda";
+
+export const FONT_STORAGE_KEY = "remainder-font";
+
+export function isFontId(val: unknown): val is FontId {
+  return typeof val === "string" && ["sans", "serif", "merienda"].includes(val);
+}
+
+export function applyFontClass(font: FontId) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.classList.remove("font-sans", "font-serif", "font-merienda");
+  root.classList.add(`font-${font}`);
+}
+
 export type ThemeDef = {
   id: ThemeId;
   name: string;

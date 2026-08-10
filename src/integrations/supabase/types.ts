@@ -113,6 +113,47 @@ export type Database = {
         };
         Relationships: [];
       };
+      code_snippets: {
+        Row: {
+          id: string;
+          user_id: string;
+          roadmap_item_id: string | null;
+          title: string;
+          code: string;
+          language: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          roadmap_item_id?: string | null;
+          title: string;
+          code: string;
+          language?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          roadmap_item_id?: string | null;
+          title?: string;
+          code?: string;
+          language?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "code_snippets_roadmap_item_id_fkey";
+            columns: ["roadmap_item_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       blocks: {
         Row: {
           checked: boolean;
@@ -575,6 +616,7 @@ export type Database = {
           notify_daily: boolean;
           onboarded: boolean;
           theme: string;
+          font: string;
           updated_at: string;
         };
         Insert: {
@@ -586,6 +628,7 @@ export type Database = {
           notify_daily?: boolean;
           onboarded?: boolean;
           theme?: string;
+          font?: string;
           updated_at?: string;
         };
         Update: {
@@ -597,6 +640,7 @@ export type Database = {
           notify_daily?: boolean;
           onboarded?: boolean;
           theme?: string;
+          font?: string;
           updated_at?: string;
         };
         Relationships: [];

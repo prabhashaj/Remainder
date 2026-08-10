@@ -25,8 +25,8 @@ type Supabase = SupabaseClient<Database>;
 
 const subtopicSchema = z.object({
   title: z.string().describe("The specific concept to learn"),
-  detail: z.string().nullable().describe("One-line explanation, or null"),
-  estimated_minutes: z.number().nullable().describe("Rough time estimate in minutes, or null"),
+  detail: z.string().nullable().optional().describe("One-line explanation, or null"),
+  estimated_minutes: z.number().nullable().optional().describe("Rough time estimate in minutes, or null"),
 });
 
 function createPlannerTools(supabase: Supabase, userId: string) {
@@ -56,9 +56,10 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         due_date: z
           .string()
           .nullable()
+          .optional()
           .describe("Due date in YYYY-MM-DD format, or null for no specific date"),
       }),
-      execute: async ({ title, due_date }: { title: string; due_date: string | null }) => {
+      execute: async ({ title, due_date }: { title: string; due_date?: string | null | undefined }) => {
         const { data, error } = await supabase
           .from("tasks")
           .insert({ user_id: userId, title, due_date: due_date ?? null, source: "remi" })
@@ -93,10 +94,12 @@ function createPlannerTools(supabase: Supabase, userId: string) {
             "file",
           ])
           .nullable()
+          .optional()
           .describe("Icon key that best fits the habit, or null"),
         target_per_week: z
           .number()
           .nullable()
+          .optional()
           .describe("Target completions per week, or null for daily (7)"),
       }),
       execute: async ({
@@ -105,8 +108,8 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         target_per_week,
       }: {
         title: string;
-        icon: string | null;
-        target_per_week: number | null;
+        icon?: string | null | undefined;
+        target_per_week?: number | null | undefined;
       }) => {
         const { data, error } = await supabase
           .from("habits")
@@ -127,11 +130,12 @@ function createPlannerTools(supabase: Supabase, userId: string) {
       description: "Create a long-term goal, optionally with milestones (smaller checkpoints).",
       inputSchema: z.object({
         title: z.string().describe("The goal title"),
-        description: z.string().nullable().describe("A short description, or null"),
-        target_date: z.string().nullable().describe("Target date in YYYY-MM-DD format, or null"),
+        description: z.string().nullable().optional().describe("A short description, or null"),
+        target_date: z.string().nullable().optional().describe("Target date in YYYY-MM-DD format, or null"),
         milestones: z
           .array(z.object({ title: z.string() }))
           .nullable()
+          .optional()
           .describe("Optional list of milestone titles, or null"),
       }),
       execute: async ({
@@ -141,13 +145,13 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         milestones,
       }: {
         title: string;
-        description: string | null;
-        target_date: string | null;
-        milestones: { title: string }[] | null;
+        description?: string | null | undefined;
+        target_date?: string | null | undefined;
+        milestones?: { title: string }[] | null | undefined;
       }) => {
         const { data: goal, error: gErr } = await supabase
           .from("goals")
-          .insert({ user_id: userId, title, description, target_date })
+          .insert({ user_id: userId, title, description: description ?? null, target_date: target_date ?? null })
           .select("id")
           .single();
         if (gErr) return { success: false, error: gErr.message };
@@ -175,6 +179,7 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         summary: z
           .string()
           .nullable()
+          .optional()
           .describe("A one- or two-line summary of the roadmap, or null"),
         phases: z
           .array(
@@ -187,10 +192,12 @@ function createPlannerTools(supabase: Supabase, userId: string) {
                     detail: z
                       .string()
                       .nullable()
+                      .optional()
                       .describe("One-line explanation of the topic, or null"),
                     estimated_minutes: z
                       .number()
                       .nullable()
+                      .optional()
                       .describe("Rough time estimate in minutes, or null"),
                     subtopics: z
                       .array(subtopicSchema)
@@ -208,24 +215,24 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         phases,
       }: {
         topic: string;
-        summary: string | null;
+        summary?: string | null | undefined;
         phases: {
           name: string;
           topics: {
             title: string;
-            detail: string | null;
-            estimated_minutes: number | null;
+            detail?: string | null | undefined;
+            estimated_minutes?: number | null | undefined;
             subtopics: {
               title: string;
-              detail: string | null;
-              estimated_minutes: number | null;
+              detail?: string | null | undefined;
+              estimated_minutes?: number | null | undefined;
             }[];
           }[];
         }[];
       }) => {
         const { data: roadmap, error: rErr } = await supabase
           .from("roadmaps")
-          .insert({ user_id: userId, topic, summary })
+          .insert({ user_id: userId, topic, summary: summary ?? null })
           .select("id")
           .single();
         if (rErr) return { success: false, error: rErr.message };
@@ -242,8 +249,8 @@ function createPlannerTools(supabase: Supabase, userId: string) {
                 roadmap_id: roadmap.id,
                 phase: phase.name,
                 title: t.title,
-                detail: t.detail,
-                estimated_minutes: t.estimated_minutes,
+                detail: t.detail ?? null,
+                estimated_minutes: t.estimated_minutes ?? null,
                 position: pi * 1000 + ti * 10,
               })
               .select("id")
@@ -257,8 +264,8 @@ function createPlannerTools(supabase: Supabase, userId: string) {
               parent_id: parent.id,
               phase: phase.name,
               title: s.title,
-              detail: s.detail,
-              estimated_minutes: s.estimated_minutes,
+              detail: s.detail ?? null,
+              estimated_minutes: s.estimated_minutes ?? null,
               position: pi * 1000 + ti * 10 + (si + 1) / 100,
             }));
             if (subs.length > 0) {

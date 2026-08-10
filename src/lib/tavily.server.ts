@@ -82,7 +82,7 @@ export function youtubeIdFromUrl(url: string): string | null {
 
 /**
  * Robust photo/diagram search for topics.
- * Combines Wikimedia Commons search API, Tavily image search, and dynamic Pollinations AI fallback.
+ * Combines Wikimedia Commons search API and Tavily image search.
  * Guarantees topic-matched visual diagrams and images without returning generic stock photos.
  */
 export async function searchTopicPhotos(query: string): Promise<ImageResult[]> {

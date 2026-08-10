@@ -93,7 +93,6 @@ const navItems = [
   { title: "Roadmaps", to: "/roadmaps", icon: Compass },
   { title: "Study Place", to: "/study", icon: BookOpen },
   { title: "Documents", to: "/documents", icon: FolderOpen },
-  { title: "Activity", to: "/activity", icon: Activity },
 ] as const;
 
 const SIDEBAR_WIDTH_KEY = "remainder.sidebar.width";
@@ -136,15 +135,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-border/70 bg-background/80 px-3 backdrop-blur">
                 <SidebarTrigger className="size-10 rounded-xl [&>svg]:size-5" />
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   onClick={() => setPaletteOpen(true)}
                   className="ml-1 h-10 gap-2 rounded-2xl px-3.5 text-muted-foreground"
                 >
                   <Search className="size-5" />
                   <span className="hidden text-base sm:inline">Search</span>
-                  <kbd className="ml-2 hidden rounded-md bg-muted px-1.5 py-0.5 text-[10px] sm:inline">
-                    ⌘K
-                  </kbd>
                 </Button>
                 <div className="flex-1" />
                 <FocusTimerButton />
@@ -366,6 +362,11 @@ function AccountMenu() {
           {label}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className="rounded-xl">
+          <Link to="/activity">
+            <Activity className="size-5" /> My Activity
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild className="rounded-xl">
           <Link to="/settings">
             <Settings className="size-5" /> Settings & themes

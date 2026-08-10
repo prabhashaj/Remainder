@@ -30,7 +30,7 @@ Formatting rules (strict):
 - **Bold** each key term the first time it appears; never bold whole sentences or headings
 - Write every formula in LaTeX: inline as $a^2 + b^2 = c^2$, and important/derived formulas on their own line as $$\\frac{dy}{dx} = 2x$$
 - Use explicit operators (\\times, \\cdot), no plain-text math ("x^2", "a/b"), and never bracket delimiters
-- Use fenced code blocks with a language tag; use \`inline code\` for identifiers and commands
+- Use fenced code blocks with a language tag; use \`inline code\` for identifiers and commands. For code examples, ALWAYS provide complete, runnable code that produces visible output (e.g., using \`print()\`).
 - Keep paragraphs to 2-4 sentences and use tables only for genuine comparisons
 
 Rules:
