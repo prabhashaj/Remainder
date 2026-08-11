@@ -15,7 +15,7 @@ import { THEMES, type ThemeId } from "@/lib/themes";
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
     meta: [
-      { title: "Welcome to Remainder" },
+      { title: "Welcome to Remispace" },
       { name: "description", content: "A quick setup so Remi knows how to coach you." },
     ],
   }),
@@ -77,7 +77,7 @@ function Onboarding() {
           <div>
             <img src={remiLogo} alt="Remi" width={64} height={64} className="mx-auto size-16" />
             <h1 className="mt-5 text-center font-display text-2xl font-bold">
-              Welcome to Remainder
+              Welcome to Remispace
             </h1>
             <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-relaxed text-muted-foreground">
               I'm Remi, your learning coach. First — what should I call you?

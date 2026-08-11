@@ -52,7 +52,7 @@ export async function runNotebookAgent(params: {
   const gateway = createAiGatewayProvider(apiKey);
   const model = gateway(getAiModelName());
 
-  const prompt = `You are an expert AI Study Notebook Agent inside Remainder. Your job is to transform learning source material (video transcripts and web research) into a comprehensive, beautifully structured study notebook page made of native blocks.
+  const prompt = `You are an expert AI Study Notebook Agent inside Remispace. Your job is to transform learning source material (video transcripts and web research) into a comprehensive, beautifully structured study notebook page made of native blocks.
 
 Topic Title: ${topicTitle}
 

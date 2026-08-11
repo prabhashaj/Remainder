@@ -7,7 +7,7 @@ import { tavilySearch } from "@/lib/tavily.server";
 import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
-const PLANNER_PROMPT = `You are the planning specialist inside Remainder, a calm productivity and learning workspace.
+const PLANNER_PROMPT = `You are the planning specialist inside Remispace, a calm productivity and learning workspace.
 Your job: turn the user's request into concrete structure in their workspace — tasks, habits, goals, and deeply detailed learning roadmaps.
 
 Roadmap quality bar (this is a production learning product, be thorough):
@@ -168,6 +168,145 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           milestoneCount = rows.length;
         }
         return { success: true, id: goal.id, title, milestones: milestoneCount };
+      },
+    }),
+
+    updateGoal: tool({
+      description: "Update an existing goal's title, description, target date, progress percentage, or status.",
+      inputSchema: z.object({
+        goal_id: z.string().describe("ID or title of the goal to update"),
+        title: z.string().optional().describe("New title"),
+        description: z.string().nullable().optional().describe("New description, or null"),
+        target_date: z.string().nullable().optional().describe("Target date YYYY-MM-DD, or null"),
+        progress: z.number().min(0).max(100).optional().describe("Progress percentage (0-100)"),
+        status: z.enum(["active", "done", "archived"]).optional().describe("Goal status"),
+      }),
+      execute: async ({
+        goal_id,
+        title,
+        description,
+        target_date,
+        progress,
+        status,
+      }: {
+        goal_id: string;
+        title?: string | undefined;
+        description?: string | null | undefined;
+        target_date?: string | null | undefined;
+        progress?: number | undefined;
+        status?: "active" | "done" | "archived" | undefined;
+      }) => {
+        let targetId = goal_id;
+        const { data: byId } = await supabase.from("goals").select("id").eq("id", goal_id).eq("user_id", userId).maybeSingle();
+        if (byId) {
+          targetId = byId.id;
+        } else {
+          const { data: allGoals } = await supabase.from("goals").select("id, title").eq("user_id", userId);
+          const norm = goal_id.toLowerCase().trim();
+          const match = (allGoals ?? []).find(
+            (g) => g.id === goal_id || g.title.toLowerCase().trim() === norm || g.title.toLowerCase().includes(norm),
+          );
+          if (match) {
+            targetId = match.id;
+          } else {
+            return { success: false, error: `Goal matching '${goal_id}' not found.` };
+          }
+        }
+        const patch: Database["public"]["Tables"]["goals"]["Update"] = {};
+        if (title !== undefined) patch.title = title;
+        if (description !== undefined) patch.description = description;
+        if (target_date !== undefined) patch.target_date = target_date;
+        if (progress !== undefined) patch.progress = progress;
+        if (status !== undefined) patch.status = status;
+        const { data: updated, error } = await supabase
+          .from("goals")
+          .update(patch)
+          .eq("id", targetId)
+          .eq("user_id", userId)
+          .select("*")
+          .single();
+        if (error) return { success: false, error: error.message };
+        return { success: true, id: updated.id, title: updated.title };
+      },
+    }),
+
+    addMilestone: tool({
+      description: "Add milestone(s) to an existing goal.",
+      inputSchema: z.object({
+        goal_id: z.string().describe("ID or title of the goal to add milestone(s) to"),
+        title: z.string().optional().describe("Single milestone title to add"),
+        milestones: z.array(z.object({ title: z.string() })).optional().describe("List of milestone titles to add"),
+      }),
+      execute: async ({
+        goal_id,
+        title,
+        milestones,
+      }: {
+        goal_id: string;
+        title?: string | undefined;
+        milestones?: { title: string }[] | undefined;
+      }) => {
+        let targetId = goal_id;
+        let targetGoalTitle = goal_id;
+        const { data: byId } = await supabase.from("goals").select("id, title").eq("id", goal_id).eq("user_id", userId).maybeSingle();
+        if (byId) {
+          targetId = byId.id;
+          targetGoalTitle = byId.title;
+        } else {
+          const { data: allGoals } = await supabase.from("goals").select("id, title").eq("user_id", userId);
+          const norm = goal_id.toLowerCase().trim();
+          const match = (allGoals ?? []).find(
+            (g) => g.id === goal_id || g.title.toLowerCase().trim() === norm || g.title.toLowerCase().includes(norm),
+          );
+          if (match) {
+            targetId = match.id;
+            targetGoalTitle = match.title;
+          } else {
+            return { success: false, error: `Goal matching '${goal_id}' not found.` };
+          }
+        }
+
+        const titlesToAdd: string[] = [];
+        if (title && title.trim()) titlesToAdd.push(title.trim());
+        if (milestones && milestones.length > 0) {
+          for (const m of milestones) {
+            if (m.title && m.title.trim()) titlesToAdd.push(m.title.trim());
+          }
+        }
+        if (titlesToAdd.length === 0) return { success: false, error: "No milestone title provided." };
+
+        const { data: existingMs } = await supabase
+          .from("milestones")
+          .select("id, done, position")
+          .eq("goal_id", targetId)
+          .order("position", { ascending: true });
+
+        const startPos = (existingMs ?? []).length;
+        const rows = titlesToAdd.map((t, i) => ({
+          user_id: userId,
+          goal_id: targetId,
+          title: t,
+          position: startPos + i,
+          done: false,
+        }));
+
+        const { data: inserted, error: mErr } = await supabase
+          .from("milestones")
+          .insert(rows)
+          .select("id, title");
+
+        if (mErr) return { success: false, error: mErr.message };
+
+        const totalCount = (existingMs ?? []).length + (inserted ?? []).length;
+        const doneCount = (existingMs ?? []).filter((m) => m.done).length;
+        const newProgress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+
+        await supabase
+          .from("goals")
+          .update({ progress: newProgress, status: newProgress === 100 ? "done" : "active" })
+          .eq("id", targetId);
+
+        return { success: true, goal_id: targetId, goal_title: targetGoalTitle, added: (inserted ?? []).map((m) => m.title) };
       },
     }),
 

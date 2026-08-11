@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { createFocusSession, finishFocusSession } from "@/lib/db";
 
-const STORAGE_KEY = "remainder.focus.timer";
+const STORAGE_KEY = "remispace.focus.timer";
 const PRESETS = [15, 25, 45, 60];
 
 type TimerState = {

@@ -171,7 +171,13 @@ export async function classifyQueryRouting(params: {
   const { query, apiKey, conversationContext } = params;
 
   const gateway = createAiGatewayProvider(apiKey);
-  const model = gateway(getAiModelName());
+  const baseModelName = getAiModelName();
+  const fastModelName = baseModelName
+    .toLowerCase()
+    .replace("pro", "flash")
+    .replace(/^gpt-4o$/, "gpt-4o-mini")
+    .replace(/claude-3(?:-5)?-(?:opus|sonnet).*/, "claude-3-5-haiku-latest");
+  const model = gateway(fastModelName);
 
   let prompt = `QUERY: "${query}"`;
   if (conversationContext) {

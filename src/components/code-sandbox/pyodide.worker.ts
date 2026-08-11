@@ -22,10 +22,9 @@ let currentRunId: string | null = null;
 async function initPyodide() {
   if (!pyodideReadyPromise) {
     pyodideReadyPromise = (async () => {
-      const pyodideModule =
-        await import("https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.mjs");
+      self.importScripts("https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js");
 
-      const pyodide = await pyodideModule.loadPyodide({
+      const pyodide = await loadPyodide({
         indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/",
       });
 
@@ -79,7 +78,8 @@ async function processQueue() {
     let match;
     const packages = new Set<string>();
     while ((match = importRegex.exec(code)) !== null) {
-      packages.add(match[1]);
+      const pkgName = match[1];
+      if (pkgName) packages.add(pkgName);
     }
     for (const pkg of packages) {
       if (!pkg) continue;

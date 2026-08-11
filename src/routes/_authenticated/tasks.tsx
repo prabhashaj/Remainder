@@ -21,14 +21,14 @@ import { createTask, deleteTask, fetchTasks, today, updateTask, type Task } from
 export const Route = createFileRoute("/_authenticated/tasks")({
   head: () => ({
     meta: [
-      { title: "Tasks — Remainder" },
+      { title: "Tasks — Remispace" },
       {
         name: "description",
         content:
           "Everything on your plate, sorted gently by when it matters and how much it counts.",
       },
-      { property: "og:title", content: "Tasks — Remainder" },
-      { property: "og:description", content: "Your Remainder task list." },
+      { property: "og:title", content: "Tasks — Remispace" },
+      { property: "og:description", content: "Your Remispace task list." },
     ],
   }),
   component: TasksPage,

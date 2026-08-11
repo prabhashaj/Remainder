@@ -8,15 +8,15 @@ import { fetchRoadmapResource } from "@/lib/db";
 export const Route = createFileRoute("/_authenticated/resource/$resourceId")({
   head: () => ({
     meta: [
-      { title: "Resource — Remainder" },
+      { title: "Resource — Remispace" },
       {
         name: "description",
-        content: "Watch or read a learning resource without leaving Remainder.",
+        content: "Watch or read a learning resource without leaving Remispace.",
       },
-      { property: "og:title", content: "Resource — Remainder" },
+      { property: "og:title", content: "Resource — Remispace" },
       {
         property: "og:description",
-        content: "Learn inside Remainder — no redirects.",
+        content: "Learn inside Remispace — no redirects.",
       },
     ],
   }),

@@ -11,9 +11,11 @@ import {
   Search,
   StickyNote,
   Trash2,
+  Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 
 import {
   AlertDialog,
@@ -36,22 +38,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  createStudyResource,
   deleteStudyResource,
   fetchStudyResources,
   signedMaterialUrl,
+  uploadMaterial,
   type StudyResource,
 } from "@/lib/study";
+import { saveExtractedTextFn, triggerDocumentExtractionFn } from "@/lib/study.functions";
 
 export const Route = createFileRoute("/_authenticated/documents")({
   head: () => ({
     meta: [
-      { title: "Documents — Remainder" },
+      { title: "Documents — Remispace" },
       {
         name: "description",
         content:
           "Browse, search and manage every document, image and file you've attached to Remi chat.",
       },
-      { property: "og:title", content: "Documents — Remainder" },
+      { property: "og:title", content: "Documents — Remispace" },
       {
         property: "og:description",
         content: "Your full document library — PDFs, images, notes and links in one place.",
@@ -158,6 +163,11 @@ function DocumentsPage() {
   const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
   const [deleteTarget, setDeleteTarget] = useState<StudyResource | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const runTriggerExtraction = useServerFn(triggerDocumentExtractionFn);
+  const runSaveText = useServerFn(saveExtractedTextFn);
 
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ["study-resources"],
@@ -178,6 +188,44 @@ function DocumentsPage() {
 
   const refreshResources = () => void qc.invalidateQueries({ queryKey: ["study-resources"] });
 
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const path = await uploadMaterial(file);
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      const kind = isPdf ? "pdf" : file.type.startsWith("image/") ? "image" : "note";
+
+      const created = await createStudyResource({
+        title: file.name.replace(/\.[^.]+$/, ""),
+        kind,
+        storage_path: path,
+        mime_type: file.type || "application/octet-stream",
+      });
+
+      refreshResources();
+      toast.success("Document added — processing text & chunks...");
+
+      // 1. Immediately trigger server-side extraction, chunking & embedding
+      void runTriggerExtraction({ data: { resourceId: created.id, storagePath: path } }).then(() => {
+        refreshResources();
+      });
+
+      // 2. If client can read plain text immediately (e.g. .txt, .md, .json, .csv)
+      if (!isPdf && (file.type.startsWith("text/") || file.name.endsWith(".txt") || file.name.endsWith(".md"))) {
+        const text = await file.text();
+        if (text && text.trim()) {
+          void runSaveText({ data: { resourceId: created.id, text } }).then(() => {
+            refreshResources();
+          });
+        }
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const removeResource = useMutation({
     mutationFn: (resource: StudyResource) => deleteStudyResource(resource),
     onSuccess: () => {
@@ -190,6 +238,17 @@ function DocumentsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.txt,.md,.doc,.docx,.png,.jpg,.jpeg,.json,.csv"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleUpload(file);
+          e.target.value = "";
+        }}
+      />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">Documents</h1>
@@ -197,6 +256,18 @@ function DocumentsPage() {
             Every file you've attached to Remi, in one place.
           </p>
         </div>
+        <Button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="rounded-full gap-2 shadow-sm"
+        >
+          {uploading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Upload className="size-4" />
+          )}
+          Upload Document
+        </Button>
       </div>
 
       {/* Filters */}

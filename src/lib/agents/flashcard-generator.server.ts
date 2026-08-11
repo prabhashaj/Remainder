@@ -27,7 +27,7 @@ function flashcardFromUnknown(value: unknown) {
   };
 }
 
-const FLASHCARD_PROMPT = `You generate spaced-repetition flashcards from a lesson written by Remainder, a calm learning workspace.
+const FLASHCARD_PROMPT = `You generate spaced-repetition flashcards from a lesson written by Remispace, a calm learning workspace.
 
 Rules:
 - Create 5-8 cards from the lesson content provided

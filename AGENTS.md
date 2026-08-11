@@ -1,6 +1,6 @@
-# Remainder — Development Guidelines
+# Remispace — Development Guidelines
 
-Remainder is a calm, slow-productivity workspace and AI learning companion built with TanStack Start, React 19, Supabase, Vercel AI SDK, and Tailwind CSS.
+Remispace is a calm, slow-productivity workspace and AI learning companion built with TanStack Start, React 19, Supabase, Vercel AI SDK, and Tailwind CSS.
 
 ## Key Principles
 

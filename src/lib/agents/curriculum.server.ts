@@ -15,7 +15,7 @@ export type LessonVideo = {
   youtube_id: string | null;
 };
 
-const LESSON_PROMPT = `You are the curriculum writer inside Remainder, a calm learning workspace.
+const LESSON_PROMPT = `You are the curriculum writer inside Remispace, a calm learning workspace.
 You write a single self-contained lesson for one sub-topic of a learning roadmap.
 
 Write in clear, warm, plain language for a motivated self-learner. Use markdown:

@@ -42,12 +42,12 @@ const PdfReader = lazy(() => import("@/components/study/pdf-reader"));
 export const Route = createFileRoute("/_authenticated/material/$resourceId")({
   head: () => ({
     meta: [
-      { title: "Material — Remainder" },
+      { title: "Material — Remispace" },
       {
         name: "description",
-        content: "Read, highlight and question your own study material without leaving Remainder.",
+        content: "Read, highlight and question your own study material without leaving Remispace.",
       },
-      { property: "og:title", content: "Material — Remainder" },
+      { property: "og:title", content: "Material — Remispace" },
       {
         property: "og:description",
         content: "Annotate documents and videos, then ask Remi about them.",

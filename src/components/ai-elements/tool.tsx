@@ -36,10 +36,12 @@ export type ToolHeaderProps = {
 
 const getToolName = (toolName: string, isRunning: boolean) => {
   const mapping: Record<string, { active: string; done: string }> = {
-    createTask: { active: "Creating task", done: "Created task" },
-    updateTask: { active: "Updating task", done: "Updated task" },
-    createGoal: { active: "Creating goal", done: "Created goal" },
-    updateGoal: { active: "Updating goal", done: "Updated goal" },
+    createTask: { active: "Creating task...", done: "Created task" },
+    updateTask: { active: "Updating task...", done: "Updated task" },
+    createGoal: { active: "Creating goal...", done: "Created goal" },
+    updateGoal: { active: "Updating goal...", done: "Updated goal" },
+    addMilestone: { active: "Adding milestone...", done: "Added milestone" },
+    createMilestone: { active: "Adding milestone...", done: "Added milestone" },
     createHabit: { active: "Creating habit", done: "Created habit" },
     updateHabit: { active: "Updating habit", done: "Updated habit" },
     createRoadmap: { active: "Creating roadmap", done: "Created roadmap" },

@@ -24,13 +24,13 @@ import {
 export const Route = createFileRoute("/_authenticated/roadmap/$roadmapId")({
   head: () => ({
     meta: [
-      { title: "Learning roadmap — Remainder" },
+      { title: "Learning roadmap — Remispace" },
       {
         name: "description",
         content:
           "A detailed learning roadmap with phases, topics, sub-topic lessons, images and videos.",
       },
-      { property: "og:title", content: "Learning roadmap — Remainder" },
+      { property: "og:title", content: "Learning roadmap — Remispace" },
       {
         property: "og:description",
         content: "Phases, topics and full lessons for every sub-topic.",

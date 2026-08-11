@@ -11,15 +11,15 @@ import { createThread, deleteThread, fetchThreadMessages } from "@/lib/db";
 export const Route = createFileRoute("/_authenticated/conversation/$threadId")({
   head: () => ({
     meta: [
-      { title: "Conversation — Remainder" },
+      { title: "Conversation — Remispace" },
       {
         name: "description",
         content: "Chat with Remi to plan roadmaps, shape goals and stay encouraged.",
       },
-      { property: "og:title", content: "Conversation — Remainder" },
+      { property: "og:title", content: "Conversation — Remispace" },
       {
         property: "og:description",
-        content: "Threaded conversations with Remi inside Remainder.",
+        content: "Threaded conversations with Remi inside Remispace.",
       },
     ],
   }),

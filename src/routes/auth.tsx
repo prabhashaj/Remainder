@@ -17,12 +17,12 @@ export const Route = createFileRoute("/auth")({
   }),
   head: () => ({
     meta: [
-      { title: "Sign in — Remainder" },
+      { title: "Sign in — Remispace" },
       {
         name: "description",
-        content: "Sign in to your Remainder workspace and continue learning.",
+        content: "Sign in to your Remispace workspace and continue learning.",
       },
-      { property: "og:title", content: "Sign in — Remainder" },
+      { property: "og:title", content: "Sign in — Remispace" },
       {
         property: "og:description",
         content: "Sign in to your calm workspace and AI learning coach.",
@@ -92,8 +92,8 @@ function AuthPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-md">
         <Link to="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <img src={remiLogo} alt="Remainder" width={44} height={44} className="size-11" />
-          <span className="font-display text-2xl font-bold">Remainder</span>
+          <img src={remiLogo} alt="Remispace" width={44} height={44} className="size-11" />
+          <span className="font-display text-2xl font-bold">Remispace</span>
         </Link>
 
         <div className="panel-soft p-7">

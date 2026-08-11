@@ -1,24 +1,24 @@
-# Remainder — Your Gentle Guide & AI Learning Companion
+# Remispace — Your Gentle Guide & AI Learning Companion
 
-**Remainder** is a calm, slow-productivity workspace and intelligent AI-powered learning companion. It is designed to replace fragmented tools, aggressive notification loops, and productivity overwhelm with a tranquil environment where notes, habits, goals, focus, and deep learning live harmoniously together.
+**Remispace** is a calm, slow-productivity workspace and intelligent AI-powered learning companion. It is designed to replace fragmented tools, aggressive notification loops, and productivity overwhelm with a tranquil environment where notes, habits, goals, focus, and deep learning live harmoniously together.
 
-At the heart of Remainder is **Remi** — a supportive, multi-agent AI learning coach that transforms any complex topic into structured study roadmaps, interactive study notebooks, grounded document tutors, and comprehensive step-by-step curricula.
+At the heart of Remispace is **Remi** — a supportive, multi-agent AI learning coach that transforms any complex topic into structured study roadmaps, interactive study notebooks, grounded document tutors, and comprehensive step-by-step curricula.
 
 ---
 
-## 💡 Why Remainder is Useful
+## 💡 Why Remispace is Useful
 
 ### 1. Slow Productivity Over Anxiety
 
-Traditional productivity apps rely on aggressive red badge counters, streak-shaming, and endless notification loops that cause burnout. Remainder is built on the philosophy of **slow, steady progress**. It celebrates incremental effort, provides guilt-free restarts when life gets busy, and offers a quiet, glassmorphic interface that reduces cognitive fatigue.
+Traditional productivity apps rely on aggressive red badge counters, streak-shaming, and endless notification loops that cause burnout. Remispace is built on the philosophy of **slow, steady progress**. It celebrates incremental effort, provides guilt-free restarts when life gets busy, and offers a quiet, glassmorphic interface that reduces cognitive fatigue.
 
 ### 2. Unified Learning & Execution Hub
 
-Most learners struggle because their learning materials (videos, PDFs, notes) are disconnected from their execution systems (tasks, habits, calendars). Remainder bridges this gap by embedding AI-generated study roadmaps, document tutors, and notes directly alongside your daily habits, goal milestones, and focus timers.
+Most learners struggle because their learning materials (videos, PDFs, notes) are disconnected from their execution systems (tasks, habits, calendars). Remispace bridges this gap by embedding AI-generated study roadmaps, document tutors, and notes directly alongside your daily habits, goal milestones, and focus timers.
 
 ### 3. Truthful, Confabulation-Free AI Assistance
 
-Standard AI assistants often hallucinate plausible-sounding answers or guess when faced with novel terms, current events, or niche concepts. Remainder includes an intelligent **Search-Routing & Confabulation-Prevention Policy** that evaluates queries across 7 cognitive dimensions. It senses when information needs real-world verification and automatically searches the web _before_ answering, ensuring reliable, grounded guidance.
+Standard AI assistants often hallucinate plausible-sounding answers or guess when faced with novel terms, current events, or niche concepts. Remispace includes an intelligent **Search-Routing & Confabulation-Prevention Policy** that evaluates queries across 7 cognitive dimensions. It senses when information needs real-world verification and automatically searches the web _before_ answering, ensuring reliable, grounded guidance.
 
 ---
 
@@ -45,7 +45,7 @@ Remi isn't just a generic chatbot; it is a coordinated team of AI agents designe
 - **Habit Progress Rings**: Track daily habits visually with smooth progress rings.
 - **Streak & Consistency Analytics**: Monitor your consistency over 30-day and 365-day views.
 - **Mood Check-ins**: Record how you feel each day to maintain awareness of your mental well-being alongside your productivity.
-- **Guilt-Free Restarts**: Missed a few days? Remainder encourages you to start small today without penalty or negative reinforcement.
+- **Guilt-Free Restarts**: Missed a few days? Remispace encourages you to start small today without penalty or negative reinforcement.
 
 ### 🎯 Goal & Milestone Management
 
@@ -70,12 +70,12 @@ Remi isn't just a generic chatbot; it is a coordinated team of AI agents designe
 ### 📚 2. Deep Academic & Research Study
 
 - **Scenario**: You have a dense research paper, textbook PDF, or long YouTube lecture.
-- **Workflow**: Import the resource into Remainder. Read Remi's **Pre-Reading Brief** to evaluate key takeaways in 2 minutes. Use the **Material Tutor** to ask specific questions; Remi answers strictly grounded in the document text with direct blockquotes.
+- **Workflow**: Import the resource into Remispace. Read Remi's **Pre-Reading Brief** to evaluate key takeaways in 2 minutes. Use the **Material Tutor** to ask specific questions; Remi answers strictly grounded in the document text with direct blockquotes.
 
 ### 🎯 3. Personal Productivity & Habit Building
 
 - **Scenario**: You want to build sustainable daily routines like morning reading, exercise, journaling, or regular study sessions.
-- **Workflow**: Create habits in Remainder, track progress with visual rings, monitor mood trends, and receive gentle weekly reflections that keep you motivated without pressure.
+- **Workflow**: Create habits in Remispace, track progress with visual rings, monitor mood trends, and receive gentle weekly reflections that keep you motivated without pressure.
 
 ### 📒 4. Automated Knowledge Base Creation
 
@@ -84,8 +84,8 @@ Remi isn't just a generic chatbot; it is a coordinated team of AI agents designe
 
 ---
 
-## 💚 The Remainder Philosophy
+## 💚 The Remispace Philosophy
 
 > _"Progress isn't measured by how fast you sprint, but by the quiet consistency of showing up."_
 
-Remainder was crafted to make learning and working feel calm, purposeful, and deeply rewarding. Whether you are mastering a complex discipline or simply organizing your day, Remainder is your gentle guide.
+Remispace was crafted to make learning and working feel calm, purposeful, and deeply rewarding. Whether you are mastering a complex discipline or simply organizing your day, Remispace is your gentle guide.

@@ -142,7 +142,7 @@ export function PlayableCodeBlock({
 
   return (
     <div className={cn("relative flex flex-col gap-2 my-4", className)}>
-      <CodeBlock code={code} language={language} className="shadow-sm" showLineNumbers>
+      <CodeBlock code={code} language={language as import("shiki").BundledLanguage} className="shadow-sm" showLineNumbers>
         <CodeBlockHeader>
           <CodeBlockTitle className="text-xs uppercase tracking-wider text-muted-foreground">
             {language}

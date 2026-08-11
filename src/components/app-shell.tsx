@@ -95,7 +95,7 @@ const navItems = [
   { title: "Documents", to: "/documents", icon: FolderOpen },
 ] as const;
 
-const SIDEBAR_WIDTH_KEY = "remainder.sidebar.width";
+const SIDEBAR_WIDTH_KEY = "remispace.sidebar.width";
 const MIN_SIDEBAR = 190;
 const MAX_SIDEBAR = 420;
 
@@ -189,7 +189,7 @@ function WorkspaceSidebar() {
         <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1.5">
           <img src={remiLogo} alt="" width={36} height={36} className="size-9 shrink-0" />
           <span className="font-display text-xl font-bold group-data-[collapsible=icon]:hidden">
-            Remainder
+            Remispace
           </span>
         </Link>
       </SidebarHeader>

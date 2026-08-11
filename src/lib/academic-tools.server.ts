@@ -36,7 +36,7 @@ export async function searchArxivServer(query: string): Promise<ArxivPaper[]> {
 
     const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(cleanQuery)}&max_results=5&sortBy=relevance&sortOrder=descending`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "Remainderr-Academic-Search/1.0" },
+      headers: { "User-Agent": "Remispace-Academic-Search/1.0" },
     });
 
     if (!res.ok) {
@@ -102,7 +102,7 @@ export async function searchPapersServer(query: string): Promise<AcademicPaper[]
     // Try Semantic Scholar REST API first
     const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(cleanQuery)}&limit=5&fields=title,authors,abstract,url,year,citationCount`;
     const s2Res = await fetch(s2Url, {
-      headers: { "User-Agent": "Remainderr-Paper-Search/1.0" },
+      headers: { "User-Agent": "Remispace-Paper-Search/1.0" },
     });
 
     if (s2Res.ok) {
@@ -125,7 +125,7 @@ export async function searchPapersServer(query: string): Promise<AcademicPaper[]
     // Fallback to OpenAlex API (100% free open academic database)
     const oaUrl = `https://api.openalex.org/works?search=${encodeURIComponent(cleanQuery)}&per-page=5`;
     const oaRes = await fetch(oaUrl, {
-      headers: { "User-Agent": "Remainderr-Paper-Search/1.0" },
+      headers: { "User-Agent": "Remispace-Paper-Search/1.0" },
     });
 
     if (oaRes.ok) {

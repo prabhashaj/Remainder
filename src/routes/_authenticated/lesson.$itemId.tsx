@@ -23,13 +23,13 @@ import type { LessonImage, LessonVideo } from "@/lib/agents/curriculum.server";
 export const Route = createFileRoute("/_authenticated/lesson/$itemId")({
   head: () => ({
     meta: [
-      { title: "Lesson — Remainder" },
+      { title: "Lesson — Remispace" },
       {
         name: "description",
         content:
           "A researched lesson for this sub-topic, with visuals and videos for further study.",
       },
-      { property: "og:title", content: "Lesson — Remainder" },
+      { property: "og:title", content: "Lesson — Remispace" },
       {
         property: "og:description",
         content: "Read, look, and watch — everything for this sub-topic in one place.",

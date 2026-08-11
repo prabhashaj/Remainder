@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useServerFn } from "@tanstack/react-start";
 import { fetchRoadmapItems, fetchRoadmaps, fetchTasks, today, updateTask } from "@/lib/db";
 import {
   createStudyResource,
@@ -37,17 +38,18 @@ import {
   youtubeId,
   type StudyResource,
 } from "@/lib/study";
+import { saveExtractedTextFn, triggerDocumentExtractionFn } from "@/lib/study.functions";
 
 export const Route = createFileRoute("/_authenticated/study")({
   head: () => ({
     meta: [
-      { title: "Study Place — Remainder" },
+      { title: "Study Place — Remispace" },
       {
         name: "description",
         content:
           "One distraction-free view with your current lesson, today's study tasks, a focus timer and every resource for the subject.",
       },
-      { property: "og:title", content: "Study Place — Remainder" },
+      { property: "og:title", content: "Study Place — Remispace" },
       {
         property: "og:description",
         content: "Lesson, tasks, timer and your whole resource library in one calm place.",
@@ -133,19 +135,41 @@ function StudyPlacePage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 
+  const runTriggerExtraction = useServerFn(triggerDocumentExtractionFn);
+  const runSaveText = useServerFn(saveExtractedTextFn);
+
   const handleUpload = async (file: File) => {
     setUploading(true);
     try {
       const path = await uploadMaterial(file);
-      await createStudyResource({
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      const kind = isPdf ? "pdf" : file.type.startsWith("image/") ? "image" : "note";
+
+      const created = await createStudyResource({
         title: file.name.replace(/\.[^.]+$/, ""),
-        kind: "pdf",
+        kind,
         storage_path: path,
-        mime_type: file.type || "application/pdf",
+        mime_type: file.type || "application/octet-stream",
         roadmap_id: roadmapId,
       });
+
       refreshResources();
-      toast.success("Added to your library");
+      toast.success("Document added — processing text & chunks...");
+
+      // 1. Immediately trigger server-side extraction, chunking & embedding
+      void runTriggerExtraction({ data: { resourceId: created.id, storagePath: path } }).then(() => {
+        refreshResources();
+      });
+
+      // 2. If client can read plain text immediately (e.g. .txt, .md, .json, .csv)
+      if (!isPdf && (file.type.startsWith("text/") || file.name.endsWith(".txt") || file.name.endsWith(".md"))) {
+        const text = await file.text();
+        if (text && text.trim()) {
+          void runSaveText({ data: { resourceId: created.id, text } }).then(() => {
+            refreshResources();
+          });
+        }
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {

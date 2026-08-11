@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const VOICE_STORAGE_KEY = "remainder-preferred-voice";
-const RATE_STORAGE_KEY = "remainder-preferred-rate";
+const VOICE_STORAGE_KEY = "remispace-preferred-voice";
+const RATE_STORAGE_KEY = "remispace-preferred-rate";
 
 /**
  * Clean markdown formatting tags so speech synthesis speaks natural plain text.
@@ -36,6 +36,33 @@ export function cleanTextForSpeech(text: string): string {
     .trim();
 }
 
+function getVoiceRank(voice: SpeechSynthesisVoice): number {
+  const name = voice.name.toLowerCase();
+  const lang = voice.lang.replace("_", "-").toLowerCase();
+  const isIndianLang = lang.includes("in") || name.includes("india");
+
+  // 1. Microsoft Neerja Natural (Female, Soft Neural)
+  if (name.includes("neerja")) return 1;
+
+  // 2. Microsoft Prabhat Natural (Male, Professional Neural)
+  if (name.includes("prabhat")) return 2;
+
+  // 3. Google English (India) (Neural Wavenet)
+  if (name.includes("google") && isIndianLang) return 3;
+
+  // 4. Apple Veena & Rishi (Natural Neural)
+  if (name.includes("veena") || name.includes("rishi")) return 4;
+
+  // 5. Other Indian English / Neural voices
+  if (isIndianLang && (name.includes("natural") || name.includes("neural"))) return 5;
+  if (isIndianLang) return 6;
+
+  // 6. Other natural/neural English voices
+  if (name.includes("natural") || name.includes("neural")) return 7;
+
+  return 8;
+}
+
 /**
  * Returns available browser voices sorted with high-quality Indian English voices first.
  */
@@ -44,27 +71,10 @@ export function getSortedVoices(): SpeechSynthesisVoice[] {
   const voices = window.speechSynthesis.getVoices();
   if (!voices || voices.length === 0) return [];
 
-  // Filter Indian voices or English voices
   return [...voices].sort((a, b) => {
-    const aLang = a.lang.replace("_", "-").toLowerCase();
-    const bLang = b.lang.replace("_", "-").toLowerCase();
-    const aName = a.name.toLowerCase();
-    const bName = b.name.toLowerCase();
-
-    const aIsIndian = aLang.includes("in") || aName.includes("india");
-    const bIsIndian = bLang.includes("in") || bName.includes("india");
-
-    if (aIsIndian && !bIsIndian) return -1;
-    if (!aIsIndian && bIsIndian) return 1;
-
-    const aIsNatural =
-      aName.includes("natural") || aName.includes("google") || aName.includes("microsoft");
-    const bIsNatural =
-      bName.includes("natural") || bName.includes("google") || bName.includes("microsoft");
-
-    if (aIsNatural && !bIsNatural) return -1;
-    if (!aIsNatural && bIsNatural) return 1;
-
+    const rankA = getVoiceRank(a);
+    const rankB = getVoiceRank(b);
+    if (rankA !== rankB) return rankA - rankB;
     return a.name.localeCompare(b.name);
   });
 }
@@ -85,18 +95,7 @@ export function getDefaultIndianVoice(): SpeechSynthesisVoice | null {
     }
   }
 
-  // Look for Microsoft Neerja Natural, Microsoft Prabhat Natural, or Google English India
-  const preferred = voices.find(
-    (v) =>
-      v.name.toLowerCase().includes("neerja") ||
-      v.name.toLowerCase().includes("prabhat") ||
-      (v.name.toLowerCase().includes("google") && v.lang.toLowerCase().includes("in")) ||
-      v.name.toLowerCase().includes("natural") ||
-      v.name.toLowerCase().includes("veena") ||
-      v.name.toLowerCase().includes("rishi"),
-  );
-
-  return preferred ?? voices[0] ?? null;
+  return voices[0] ?? null;
 }
 
 export function ReadAloudButton({ text, className }: { text: string; className?: string }) {

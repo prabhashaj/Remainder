@@ -9,15 +9,15 @@ import { deleteRoadmap, fetchRoadmapItems, fetchRoadmaps, type Roadmap } from "@
 export const Route = createFileRoute("/_authenticated/roadmaps")({
   head: () => ({
     meta: [
-      { title: "Roadmaps — Remainder" },
+      { title: "Roadmaps — Remispace" },
       {
         name: "description",
         content: "Learning paths Remi built for you, phase by phase.",
       },
-      { property: "og:title", content: "Roadmaps — Remainder" },
+      { property: "og:title", content: "Roadmaps — Remispace" },
       {
         property: "og:description",
-        content: "Your AI-built learning roadmaps in Remainder.",
+        content: "Your AI-built learning roadmaps in Remispace.",
       },
     ],
   }),

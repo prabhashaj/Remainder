@@ -67,7 +67,7 @@ function questionFromUnknown(value: unknown, checkpoint = false): QuizQuestion {
   };
 }
 
-const QUIZ_PROMPT = `You generate a quiz from a lesson written by Remainder, a calm learning workspace.
+const QUIZ_PROMPT = `You generate a quiz from a lesson written by Remispace, a calm learning workspace.
 
 Rules:
 - Create exactly 5 questions from the lesson content

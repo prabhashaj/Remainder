@@ -29,10 +29,10 @@ import { FlashcardReview } from "@/components/flashcard-review";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Today — Remainder" },
+      { title: "Today — Remispace" },
       { name: "description", content: "Your day at a glance: tasks, mood and goal progress." },
-      { property: "og:title", content: "Today — Remainder" },
-      { property: "og:description", content: "Your day at a glance in Remainder." },
+      { property: "og:title", content: "Today — Remispace" },
+      { property: "og:description", content: "Your day at a glance in Remispace." },
     ],
   }),
   component: Dashboard,

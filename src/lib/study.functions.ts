@@ -316,8 +316,22 @@ export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
         }
 
         const buffer = Buffer.from(await fileData.arrayBuffer());
-        const { extractPdfTextServer } = await import("@/lib/pdf-parser.server");
-        const text = await extractPdfTextServer(buffer);
+        let text = "";
+
+        const isPdf =
+          data.storagePath.toLowerCase().endsWith(".pdf") || data.storagePath.includes(".pdf");
+        if (isPdf) {
+          const { extractPdfTextServer } = await import("@/lib/pdf-parser.server");
+          text = await extractPdfTextServer(buffer);
+        }
+
+        // Fallback to text reading if PDF extraction yielded no text or file is non-PDF text/markdown
+        if (!text || text.trim().length === 0) {
+          const raw = buffer.toString("utf-8");
+          if (!/\0/.test(raw.slice(0, 1000))) {
+            text = raw;
+          }
+        }
 
         if (text && text.trim().length > 0) {
           const { saveDocumentTextAndEmbed } = await import("@/lib/document-processor.server");

@@ -22,13 +22,13 @@ import {
 export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
     meta: [
-      { title: "Goals — Remainder" },
+      { title: "Goals — Remispace" },
       {
         name: "description",
         content: "Bigger intentions, broken into milestones you can actually see.",
       },
-      { property: "og:title", content: "Goals — Remainder" },
-      { property: "og:description", content: "Track goals and milestones in Remainder." },
+      { property: "og:title", content: "Goals — Remispace" },
+      { property: "og:description", content: "Track goals and milestones in Remispace." },
     ],
   }),
   component: GoalsPage,

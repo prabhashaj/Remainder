@@ -26,13 +26,13 @@ import { THEMES, type ThemeId } from "@/lib/themes";
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Settings & themes — Remainder" },
+      { title: "Settings & themes — Remispace" },
       {
         name: "description",
         content: "Choose your pastel theme, dark mode, name and reminder preferences.",
       },
-      { property: "og:title", content: "Settings & themes — Remainder" },
-      { property: "og:description", content: "Personalize your Remainder workspace." },
+      { property: "og:title", content: "Settings & themes — Remispace" },
+      { property: "og:description", content: "Personalize your Remispace workspace." },
     ],
   }),
   component: SettingsPage,
@@ -72,7 +72,7 @@ function SettingsPage() {
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 space-y-6">
       <div>
         <h1 className="font-display text-3xl font-bold">Settings</h1>
-        <p className="mt-2 text-muted-foreground">Make Remainder feel like yours.</p>
+        <p className="mt-2 text-muted-foreground">Make Remispace feel like yours.</p>
       </div>
 
       <section className="card-soft p-6">

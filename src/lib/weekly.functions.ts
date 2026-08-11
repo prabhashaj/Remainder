@@ -9,7 +9,7 @@ function fmtDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const REFLECTION_PROMPT = `You write a short weekly reflection for someone using Remainder, their calm productivity and learning workspace.
+const REFLECTION_PROMPT = `You write a short weekly reflection for someone using Remispace, their calm productivity and learning workspace.
 Speak as "Remi", their coach — warm, personal, observant, never preachy.
 
 Structure (markdown, 90-140 words total):

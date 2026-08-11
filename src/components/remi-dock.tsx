@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { createThread, fetchThreadMessages } from "@/lib/db";
 import { useTopicContext } from "@/lib/topic-context";
 
-const STORAGE_KEY = "remainder.dock.thread";
+const STORAGE_KEY = "remispace.dock.thread";
 
 /** Shared thread bootstrap so the dock and the dashboard panel share one chat. */
 function useDockThread() {

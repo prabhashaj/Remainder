@@ -57,13 +57,13 @@ import {
 export const Route = createFileRoute("/_authenticated/page/$pageId")({
   head: () => ({
     meta: [
-      { title: "Notebook — Remainder" },
+      { title: "Notebook — Remispace" },
       {
         name: "description",
-        content: "Write, nest and check things off in your Remainder notebook.",
+        content: "Write, nest and check things off in your Remispace notebook.",
       },
-      { property: "og:title", content: "Notebook — Remainder" },
-      { property: "og:description", content: "A soft, flexible notebook page in Remainder." },
+      { property: "og:title", content: "Notebook — Remispace" },
+      { property: "og:description", content: "A soft, flexible notebook page in Remispace." },
     ],
   }),
   component: PageView,

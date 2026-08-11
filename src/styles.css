@@ -7,7 +7,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Remainder design system — soft, curvy, light.
+ * Remispace design system — soft, curvy, light.
  * Every theme is a class on <html> that swaps the token values below.
  * Components never hardcode colors; they use semantic tokens only.
  */

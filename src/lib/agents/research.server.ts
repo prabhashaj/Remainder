@@ -6,7 +6,7 @@ import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server
 import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
-const RESEARCH_PROMPT = `You are the research specialist inside Remainder, a calm learning workspace.
+const RESEARCH_PROMPT = `You are the research specialist inside Remispace, a calm learning workspace.
 Your job: find quality learning resources (tutorials, videos, courses) for a given topic and save them to the user's roadmap.
 
 Steps:

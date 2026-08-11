@@ -9,13 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Remainder — a warm notebook with an AI learning coach" },
+      { title: "Remispace — a warm notebook with an AI learning coach" },
       {
         name: "description",
         content:
           "Track your days, build habits, and let Remi turn any topic into a study roadmap you actually finish — all inside one calm workspace.",
       },
-      { property: "og:title", content: "Remainder — a warm notebook with an AI learning coach" },
+      { property: "og:title", content: "Remispace — a warm notebook with an AI learning coach" },
       {
         property: "og:description",
         content:
@@ -45,7 +45,7 @@ const features = [
   {
     icon: Leaf,
     title: "Focus that stays put",
-    body: "Open resources inside Remainder, jot notes beside them, and finish with a gentle summary.",
+    body: "Open resources inside Remispace, jot notes beside them, and finish with a gentle summary.",
   },
 ];
 
@@ -70,12 +70,12 @@ function Landing() {
         <div className="flex items-center gap-2.5">
           <img
             src={remiLogo}
-            alt="Remi, the Remainder coach"
+            alt="Remi, the Remispace coach"
             width={40}
             height={40}
             className="size-10"
           />
-          <span className="font-display text-xl font-bold">Remainder</span>
+          <span className="font-display text-xl font-bold">Remispace</span>
         </div>
         <Button asChild variant="ghost" className="rounded-2xl">
           <Link to="/auth" search={{ mode: "signin" }}>
@@ -93,7 +93,7 @@ function Landing() {
             Everything you're learning, in one warm place.
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Remainder is part notebook, part daily tracker, part learning coach. Write freely, keep
+            Remispace is part notebook, part daily tracker, part learning coach. Write freely, keep
             your streaks, and let Remi turn "I want to learn this" into a plan that fits your week.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -141,7 +141,7 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        Remainder — made for slow, steady progress.
+        Remispace — made for slow, steady progress.
       </footer>
     </main>
   );

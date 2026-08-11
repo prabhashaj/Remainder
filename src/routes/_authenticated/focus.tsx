@@ -24,13 +24,13 @@ export const Route = createFileRoute("/_authenticated/focus")({
   }),
   head: () => ({
     meta: [
-      { title: "Focus — Remainder" },
+      { title: "Focus — Remispace" },
       {
         name: "description",
         content: "A distraction-free timer with notes, kept inside your workspace.",
       },
-      { property: "og:title", content: "Focus — Remainder" },
-      { property: "og:description", content: "Focused learning sessions inside Remainder." },
+      { property: "og:title", content: "Focus — Remispace" },
+      { property: "og:description", content: "Focused learning sessions inside Remispace." },
     ],
   }),
   component: FocusPage,

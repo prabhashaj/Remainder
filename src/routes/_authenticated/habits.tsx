@@ -23,15 +23,15 @@ import { ICON_KEYS, iconFor } from "@/lib/icons";
 export const Route = createFileRoute("/_authenticated/habits")({
   head: () => ({
     meta: [
-      { title: "Habits — Remainder" },
+      { title: "Habits — Remispace" },
       {
         name: "description",
         content: "Weekly rhythms, streaks and consistency for the habits you're building.",
       },
-      { property: "og:title", content: "Habits — Remainder" },
+      { property: "og:title", content: "Habits — Remispace" },
       {
         property: "og:description",
-        content: "Track habits and weekly consistency in Remainder.",
+        content: "Track habits and weekly consistency in Remispace.",
       },
     ],
   }),

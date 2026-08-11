@@ -15,7 +15,7 @@ export type ThemeId =
 
 export type FontId = "sans" | "serif" | "merienda";
 
-export const FONT_STORAGE_KEY = "remainder-font";
+export const FONT_STORAGE_KEY = "remispace-font";
 
 export function isFontId(val: unknown): val is FontId {
   return typeof val === "string" && ["sans", "serif", "merienda"].includes(val);
@@ -121,7 +121,7 @@ export const THEMES: ThemeDef[] = [
 ];
 
 export const THEME_IDS = THEMES.map((t) => t.id);
-export const THEME_STORAGE_KEY = "remainder-theme";
+export const THEME_STORAGE_KEY = "remispace-theme";
 
 export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === "string" && (THEME_IDS as string[]).includes(value);

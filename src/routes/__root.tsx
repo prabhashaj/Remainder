@@ -90,13 +90,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Remainder — calm workspace + AI learning coach" },
+      { title: "Remispace — calm workspace + AI learning coach" },
       {
         name: "description",
         content:
-          "Remainder is a warm notebook for your notes, habits and goals, with Remi, an AI coach who builds study roadmaps and keeps you focused.",
+          "Remispace is a warm notebook for your notes, habits and goals, with Remi, an AI coach who builds study roadmaps and keeps you focused.",
       },
-      { property: "og:title", content: "Remainder — calm workspace + AI learning coach" },
+      { property: "og:title", content: "Remispace — calm workspace + AI learning coach" },
       {
         property: "og:description",
         content: "Notes, habits, goals and an AI learning coach in one soft, focused workspace.",

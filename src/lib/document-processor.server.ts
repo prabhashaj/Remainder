@@ -17,9 +17,9 @@ export async function saveDocumentTextAndEmbed(
   pageCount?: number,
   userId?: string,
 ) {
-  // 1. Update text and page count synchronously so UI updates immediately
+  // 1. Update text, page count, and status synchronously so UI updates immediately
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateData: any = { extracted_text: text };
+  const updateData: any = { extracted_text: text, status: "ready" };
   if (pageCount) updateData.page_count = pageCount;
 
   const { error: updateErr } = await supabase
@@ -60,13 +60,23 @@ export async function saveDocumentTextAndEmbed(
         // Batch process to avoid hitting API limits
         for (let i = 0; i < chunks.length; i += 50) {
           const batchChunks = chunks.slice(i, i + 50);
-          const batchEmbeddings = await generateEmbeddings(batchChunks);
+          let batchEmbeddings: number[][] = [];
+          try {
+            batchEmbeddings = await generateEmbeddings(batchChunks);
+          } catch (embErr) {
+            log("warn", "embed_generation_failed_fallback", {
+              error: embErr instanceof Error ? embErr.message : String(embErr),
+            });
+          }
 
-          const chunkRows = batchChunks.map((content, idx) => ({
-            document_id: resourceId,
-            content,
-            embedding: `[${(batchEmbeddings[idx] || []).join(",")}]`,
-          }));
+          const chunkRows = batchChunks.map((content, idx) => {
+            const emb = batchEmbeddings[idx];
+            return {
+              document_id: resourceId,
+              content,
+              ...(emb && emb.length > 0 ? { embedding: `[${emb.join(",")}]` } : {}),
+            };
+          });
 
           const { error: chunkErr } = await supabase.from("document_chunks").insert(chunkRows);
           if (chunkErr) {
