@@ -596,7 +596,7 @@ export function RemiChat({
             placeholder={
               topic ? `Ask a doubt about ${topic.label}…` : "What do you want to create or ask?"
             }
-            className="min-h-[80px] text-base"
+            className="min-h-[44px] text-base"
           />
 
           <PromptInputFooter className="justify-between">

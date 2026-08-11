@@ -5,6 +5,8 @@ import {
   CalendarHeart,
   ChevronRight,
   Compass,
+  FileText,
+  Folder,
   FolderOpen,
   LayoutDashboard,
   ListChecks,
@@ -144,16 +146,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Button>
                 <div className="flex-1" />
                 <FocusTimerButton />
-                <Button
-                  asChild
-                  variant="secondary"
-                  className="press h-10 gap-2 rounded-2xl text-base"
-                >
-                  <Link to="/conversation">
-                    <Sparkle className="size-5" />
-                    <span className="hidden sm:inline">Ask Remi</span>
-                  </Link>
-                </Button>
                 <AccountMenu />
               </header>
               <main className="flex-1">{children}</main>
@@ -315,7 +307,13 @@ function PageTreeItem({ page, pages, depth }: { page: Page; pages: Page[]; depth
             style={{ paddingLeft: depth ? 8 + depth * 8 : undefined }}
           >
             <Link to="/page/$pageId" params={{ pageId: page.id }}>
-              <span className="text-sm leading-none">{page.icon}</span>
+              {children.length > 0 ? (
+                <Folder className="size-4 shrink-0 text-muted-foreground" />
+              ) : page.icon && page.icon !== "📄" && page.icon !== "📁" ? (
+                <span className="text-sm leading-none">{page.icon}</span>
+              ) : (
+                <FileText className="size-4 shrink-0 text-muted-foreground" />
+              )}
               <span className="truncate">{page.title}</span>
             </Link>
           </SidebarMenuButton>
