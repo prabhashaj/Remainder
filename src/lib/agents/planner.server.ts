@@ -608,7 +608,8 @@ export async function runPlanner(params: {
       system: `${PLANNER_PROMPT}\n\nToday's date is: ${new Date().toISOString().split("T")[0]}.`,
       prompt: params.instruction,
       tools,
-      stopWhen: stepCountIs(10),
+      maxRetries: 5,
+      stopWhen: stepCountIs(5),
     });
     return { summary: result.text };
   } catch (err) {

@@ -101,6 +101,7 @@ Formatting Rules:
       system:
         "You are a JSON notebook agent. Return strictly a valid JSON object matching the requested schema.",
       prompt,
+      maxRetries: 5,
     });
 
     const jsonStr = result.text.replace(/```json\n?|\n?```/g, "").trim();

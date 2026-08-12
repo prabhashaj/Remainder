@@ -151,7 +151,8 @@ export async function runResearch(params: {
       system: RESEARCH_PROMPT,
       prompt: `Find 2-4 quality learning resources (tutorials, videos, courses) for: ${fullTopic}. Save each one using saveResourceToRoadmap.`,
       tools,
-      stopWhen: stepCountIs(10),
+      maxRetries: 5,
+      stopWhen: stepCountIs(5),
     });
     return { summary: result.text };
   } catch (err) {

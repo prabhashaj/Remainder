@@ -622,7 +622,11 @@ Title: "${curPage.title}"
           system: systemPrompt,
           messages: await convertToModelMessages(sanitizedUiMessages),
           tools,
+          maxRetries: 5,
           stopWhen: stepCountIs(50),
+          onError: ({ error }) => {
+            log("error", "chat_stream_error", { error: String(error) }, { userId, traceId });
+          },
         });
 
         const streamResponse = result.toUIMessageStreamResponse({

@@ -157,6 +157,7 @@ export async function writeLesson(params: {
     const result = await generateText({
       model: gateway(getAiModelName()),
       system: LESSON_PROMPT,
+      maxRetries: 5,
       prompt: `Roadmap subject: ${subject}
 Topic: ${parent?.title ?? item.phase}
 Sub-topic to teach: ${item.title}
