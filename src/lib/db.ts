@@ -303,10 +303,56 @@ export async function fetchRoadmapItem(id: string): Promise<RoadmapItem | null> 
   return data;
 }
 
+export async function checkAndRecordRoadmapCompletion(roadmapId: string): Promise<boolean> {
+  const { data: roadmap } = await supabase
+    .from("roadmaps")
+    .select("id,topic,user_id")
+    .eq("id", roadmapId)
+    .maybeSingle();
+
+  if (!roadmap || !roadmap.topic) return false;
+
+  const { data: items } = await supabase
+    .from("roadmap_items")
+    .select("id,done")
+    .eq("roadmap_id", roadmapId);
+
+  if (!items || items.length === 0) return false;
+
+  const allCompleted = items.every((i) => i.done === true);
+  if (!allCompleted) return false;
+
+  // Check if this mastered skill memory is already recorded
+  const { data: existing } = await supabase
+    .from("agent_memories")
+    .select("id")
+    .eq("user_id", roadmap.user_id)
+    .ilike("content", `%Mastered Skill: User completed 100% of the "${roadmap.topic}" roadmap%`)
+    .maybeSingle();
+
+  if (!existing) {
+    await supabase.from("agent_memories").insert({
+      user_id: roadmap.user_id,
+      category: "skill",
+      content: `Mastered Skill: User completed 100% of the "${roadmap.topic}" roadmap.`,
+      importance: 5,
+    });
+    return true;
+  }
+
+  return false;
+}
+
 export async function updateRoadmapItem(id: string, patch: Tables["roadmap_items"]["Update"]) {
-  return unwrap(
+  const updated = unwrap(
     await supabase.from("roadmap_items").update(patch).eq("id", id).select("*").single(),
   );
+
+  if (patch.done && updated.roadmap_id) {
+    void checkAndRecordRoadmapCompletion(updated.roadmap_id);
+  }
+
+  return updated;
 }
 
 export async function deleteRoadmap(id: string) {

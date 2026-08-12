@@ -10,10 +10,12 @@ import {
   Sparkle,
 } from "lucide-react";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import {
+  checkAndRecordRoadmapCompletion,
   fetchRoadmap,
   fetchRoadmapItems,
   fetchRoadmapResources,
@@ -58,7 +60,18 @@ function RoadmapDetail() {
   });
 
   const toggle = useMutation({
-    mutationFn: ({ id, done }: { id: string; done: boolean }) => updateRoadmapItem(id, { done }),
+    mutationFn: async ({ id, done }: { id: string; done: boolean }) => {
+      const updated = await updateRoadmapItem(id, { done });
+      if (done && roadmapId) {
+        const newlyMastered = await checkAndRecordRoadmapCompletion(roadmapId);
+        if (newlyMastered) {
+          toast.success(`🎉 Skill Mastered! Remi saved "${roadmap?.topic ?? "this roadmap"}" as a completed skill in your memory!`, {
+            duration: 6000,
+          });
+        }
+      }
+      return updated;
+    },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["roadmap-items", roadmapId] }),
   });
 
