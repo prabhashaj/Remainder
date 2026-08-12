@@ -8,7 +8,7 @@ import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const PLANNER_PROMPT = `You are the planning specialist inside Remispace, a calm productivity and learning workspace.
-Your job: turn the user's request into concrete structure in their workspace — tasks, habits, goals, and deeply detailed learning roadmaps.
+Your job: turn the user's request into concrete structure in their workspace — tasks, habits, goals, and deeply detailed learning roadmaps. You can create NEW ones or UPDATE existing ones.
 
 Roadmap quality bar (this is a production learning product, be thorough):
 - 3-5 phases that progress from foundations to advanced/applied work
@@ -418,6 +418,159 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           success: true,
           roadmap_id: roadmap.id,
           topic,
+          phases: phases.length,
+          topics: topicCount,
+          subtopics: subCount,
+        };
+      },
+    }),
+
+    updateRoadmap: tool({
+      description:
+        "Update an existing learning roadmap (e.g. modify phases, topics, sub-topics). Use this when the user asks to restructure or update an existing roadmap.",
+      inputSchema: z.object({
+        roadmap_id: z.string().describe("ID of the roadmap to update"),
+        topic: z.string().optional().describe("New topic name, if changing"),
+        summary: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("New one- or two-line summary of the roadmap, or null"),
+        phases: z
+          .array(
+            z.object({
+              name: z.string().describe("Phase label, e.g. 'Phase 1: Foundations'"),
+              topics: z
+                .array(
+                  z.object({
+                    title: z.string().describe("A topic within this phase"),
+                    detail: z
+                      .string()
+                      .nullable()
+                      .optional()
+                      .describe("One-line explanation of the topic, or null"),
+                    estimated_minutes: z
+                      .number()
+                      .nullable()
+                      .optional()
+                      .describe("Rough time estimate in minutes, or null"),
+                    subtopics: z
+                      .array(subtopicSchema)
+                      .describe("The specific concepts inside this topic"),
+                  }),
+                )
+                .describe("Topics in this phase, in order"),
+            }),
+          )
+          .describe("The updated phases of the roadmap, in order"),
+      }),
+      execute: async ({
+        roadmap_id,
+        topic,
+        summary,
+        phases,
+      }: {
+        roadmap_id: string;
+        topic?: string | undefined;
+        summary?: string | null | undefined;
+        phases: {
+          name: string;
+          topics: {
+            title: string;
+            detail?: string | null | undefined;
+            estimated_minutes?: number | null | undefined;
+            subtopics: {
+              title: string;
+              detail?: string | null | undefined;
+              estimated_minutes?: number | null | undefined;
+            }[];
+          }[];
+        }[];
+      }) => {
+        // 1. Update the roadmap itself
+        const patch: Database["public"]["Tables"]["roadmaps"]["Update"] = {};
+        if (topic !== undefined) patch.topic = topic;
+        if (summary !== undefined) patch.summary = summary;
+        
+        if (Object.keys(patch).length > 0) {
+          const { error: rErr } = await supabase
+            .from("roadmaps")
+            .update(patch)
+            .eq("id", roadmap_id)
+            .eq("user_id", userId);
+          if (rErr) return { success: false, error: rErr.message };
+        }
+
+        // 2. Fetch existing items to preserve progress (done, content, etc.)
+        const { data: existingItems } = await supabase
+          .from("roadmap_items")
+          .select("*")
+          .eq("roadmap_id", roadmap_id)
+          .eq("user_id", userId);
+
+        const itemsByTitle = new Map(existingItems?.map((item) => [item.title.toLowerCase().trim(), item]));
+
+        // 3. Delete existing items
+        await supabase
+          .from("roadmap_items")
+          .delete()
+          .eq("roadmap_id", roadmap_id)
+          .eq("user_id", userId);
+
+        let topicCount = 0;
+        let subCount = 0;
+
+        // 4. Insert new items
+        for (const [pi, phase] of phases.entries()) {
+          for (const [ti, t] of phase.topics.entries()) {
+            const oldTopic = itemsByTitle.get(t.title.toLowerCase().trim());
+            const { data: parent, error: tErr } = await supabase
+              .from("roadmap_items")
+              .insert({
+                user_id: userId,
+                roadmap_id: roadmap_id,
+                phase: phase.name,
+                title: t.title,
+                detail: t.detail ?? null,
+                estimated_minutes: t.estimated_minutes ?? null,
+                position: pi * 1000 + ti * 10,
+                done: oldTopic?.done ?? false,
+                content: oldTopic?.content ?? null,
+                content_status: oldTopic?.content_status ?? "not_started",
+              })
+              .select("id")
+              .single();
+            if (tErr) continue;
+            topicCount++;
+
+            const subs = (t.subtopics ?? []).map((s, si) => {
+              const oldSub = itemsByTitle.get(s.title.toLowerCase().trim());
+              return {
+                user_id: userId,
+                roadmap_id: roadmap_id,
+                parent_id: parent.id,
+                phase: phase.name,
+                title: s.title,
+                detail: s.detail ?? null,
+                estimated_minutes: s.estimated_minutes ?? null,
+                position: pi * 1000 + ti * 10 + (si + 1) / 100,
+                done: oldSub?.done ?? false,
+                content: oldSub?.content ?? null,
+                content_status: oldSub?.content_status ?? "not_started",
+              };
+            });
+            
+            if (subs.length > 0) {
+              const { error: sErr } = await supabase.from("roadmap_items").insert(subs);
+              if (!sErr) subCount += subs.length;
+            }
+          }
+        }
+
+        return {
+          success: true,
+          roadmap_id,
+          topic: topic ?? "Updated",
           phases: phases.length,
           topics: topicCount,
           subtopics: subCount,

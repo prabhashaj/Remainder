@@ -64,7 +64,7 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
         .order("day", { ascending: false }),
       supabase
         .from("focus_sessions")
-        .select("title,minutes,created_at,stayed_on_task,tab_away_count")
+        .select("title,minutes,counted_minutes,created_at,stayed_on_task,tab_away_count")
         .gte("created_at", weekAgo.toISOString()),
       supabase
         .from("roadmap_items")
@@ -84,7 +84,7 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
       const days = (habitLogs ?? []).filter((l) => l.habit_id === h.id).length;
       return `${h.title}: ${days}/7 days`;
     });
-    const focusMin = (focusSessions ?? []).reduce((sum, s) => sum + (s.minutes ?? 0), 0);
+    const focusMin = (focusSessions ?? []).reduce((sum, s) => sum + (s.counted_minutes ?? s.minutes ?? 0), 0);
     const focusDays = new Set((focusSessions ?? []).map((s) => (s.created_at ?? "").slice(0, 10)))
       .size;
     const moodLine = (moods ?? []).map((m) => `${m.day}: ${m.mood ?? "—"}`).join(", ");

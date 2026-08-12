@@ -17,7 +17,7 @@ export function getRoadmapTools(
   return {
     delegateToPlanner: tool({
       description:
-        "Delegate to the planning specialist to create NEW roadmaps, goals, tasks, or habits in the user's workspace. The planner will build them.",
+        "Delegate to the planning specialist to create NEW or UPDATE existing roadmaps, goals, tasks, or habits in the user's workspace. The planner will build or restructure them.",
       inputSchema: z.object({
         instruction: z
           .string()

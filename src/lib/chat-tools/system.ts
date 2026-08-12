@@ -13,7 +13,7 @@ export function getSystemTools(
   return {
     saveMemory: tool({
       description:
-        "Save a durable fact or preference about the user for future conversations.",
+        "CRITICAL: ALWAYS call this tool in the background whenever the user mentions ANY preference, working style, career goal, life aspiration, or shares a durable fact about themselves. Do NOT wait for them to explicitly ask.",
       inputSchema: z.object({
         content: z.string().describe("The fact or preference to remember"),
         category: z

@@ -33,6 +33,8 @@ type TimerState = {
   cycleCount: number;
   tabAwayCount: number;
   tabAwaySeconds: number;
+  tabAwaySeconds: number;
+  useFullscreen?: boolean;
 };
 
 type StartOptions = {
@@ -41,10 +43,12 @@ type StartOptions = {
   intention?: string | undefined;
   sessionType?: "single" | "pomodoro" | undefined;
   itemId?: string | null | undefined;
+  useFullscreen?: boolean;
 };
 
 type Ctx = {
   state: TimerState | null;
+  pausedForVisibility: boolean;
   start: (optsOrMinutes: number | StartOptions, title?: string, itemId?: string | null) => void;
   toggle: () => void;
   reset: () => void;
@@ -75,20 +79,35 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const [stayedOnTask, setStayedOnTask] = useState<boolean | null>(null);
   const [reflectionNote, setReflectionNote] = useState("");
+  const [partialSessionNote, setPartialSessionNote] = useState<string | null>(null);
+  const [completedCountedMinutes, setCompletedCountedMinutes] = useState<number>(0);
+
+  const [pausedForVisibility, setPausedForVisibility] = useState(false);
+  const pausedRef = useRef(false);
+  pausedRef.current = pausedForVisibility;
 
   // Tab away detection
   const tabAwayStart = useRef<number | null>(null);
 
   useEffect(() => {
-    function handleVisibilityChange() {
+    function handleVisibilityOrFullscreen() {
       if (!state?.running) return;
 
-      if (document.hidden) {
-        tabAwayStart.current = Date.now();
+      // Also don't pause during breaks in pomodoro mode
+      if (state.isBreak) return;
+
+      const isAway = document.hidden || (state.useFullscreen && !document.fullscreenElement);
+
+      if (isAway) {
+        if (!tabAwayStart.current) {
+          tabAwayStart.current = Date.now();
+          setPausedForVisibility(true);
+        }
       } else if (tabAwayStart.current) {
         const awayMs = Date.now() - tabAwayStart.current;
         const awaySec = Math.round(awayMs / 1000);
         tabAwayStart.current = null;
+        setPausedForVisibility(false);
 
         setState((prev) => {
           if (!prev) return null;
@@ -101,9 +120,13 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [state?.running]);
+    document.addEventListener("visibilitychange", handleVisibilityOrFullscreen);
+    document.addEventListener("fullscreenchange", handleVisibilityOrFullscreen);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityOrFullscreen);
+      document.removeEventListener("fullscreenchange", handleVisibilityOrFullscreen);
+    };
+  }, [state?.running, state?.useFullscreen, state?.isBreak]);
 
   // Restore timer
   useEffect(() => {
@@ -141,6 +164,8 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!state?.running) return;
     const id = window.setInterval(() => {
+      if (pausedRef.current) return;
+
       setState((prev) => {
         if (!prev?.running) return prev;
         if (prev.secondsLeft <= 1) {
@@ -203,6 +228,23 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
       info.intention = state.intention;
     }
 
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    setPausedForVisibility(false);
+
+    const awayRatio = state.tabAwaySeconds / (state.minutes * 60);
+    const MAX_AWAY_PERCENTAGE = 0.2;
+
+    let c_mins = state.minutes;
+    if (awayRatio > MAX_AWAY_PERCENTAGE) {
+      c_mins = 0;
+      setPartialSessionNote("This one had a few detours — still counts, just noted.");
+    } else {
+      setPartialSessionNote(null);
+    }
+    setCompletedCountedMinutes(c_mins);
+
     setCompletedSessionInfo(info);
     setStayedOnTask(null);
     setReflectionNote("");
@@ -216,6 +258,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
       let intention: string | undefined;
       let sessionType: "single" | "pomodoro" = "single";
       let itemId: string | null = null;
+      let useFullscreen = true;
 
       if (typeof optsOrMinutes === "object") {
         minutes = optsOrMinutes.minutes;
@@ -223,10 +266,17 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
         intention = optsOrMinutes.intention?.trim() || undefined;
         sessionType = optsOrMinutes.sessionType ?? "single";
         itemId = optsOrMinutes.itemId ?? null;
+        useFullscreen = optsOrMinutes.useFullscreen ?? true;
       } else {
         minutes = optsOrMinutes;
         label = (titleParam ?? "").trim() || "Focus session";
         itemId = itemIdParam ?? null;
+      }
+
+      if (useFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {
+          // Gracefully degrade if rejected
+        });
       }
 
       const newState: TimerState = {
@@ -240,6 +290,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
         cycleCount: 0,
         tabAwayCount: 0,
         tabAwaySeconds: 0,
+        useFullscreen,
       };
       if (intention) {
         newState.intention = intention;
@@ -274,20 +325,26 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const reset = useCallback(
-    () =>
-      setState((prev) =>
-        prev ? { ...prev, secondsLeft: prev.minutes * 60, running: false } : prev,
-      ),
-    [],
-  );
+  const reset = useCallback(() => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setPausedForVisibility(false);
+    setState((prev) => (prev ? { ...prev, secondsLeft: prev.minutes * 60, running: false } : prev));
+  }, []);
 
   const remove = useCallback(() => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setPausedForVisibility(false);
     setState((prev) => {
       if (prev?.sessionId) {
         const spent = Math.max(0, Math.round((prev.minutes * 60 - prev.secondsLeft) / 60));
+
+        const awayRatio = prev.tabAwaySeconds / (prev.minutes * 60);
+        const MAX_AWAY_PERCENTAGE = 0.2;
+        const c_mins = awayRatio > MAX_AWAY_PERCENTAGE ? 0 : spent;
+
         void finishFocusSession(prev.sessionId, {
           minutes: spent,
+          counted_minutes: c_mins,
           tab_away_count: prev.tabAwayCount,
           tab_away_seconds: prev.tabAwaySeconds,
         }).then(() => void qc.invalidateQueries({ queryKey: ["focus"] }));
@@ -300,6 +357,7 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
     if (completedSessionInfo?.id) {
       void finishFocusSession(completedSessionInfo.id, {
         minutes: completedSessionInfo.minutes,
+        counted_minutes: completedCountedMinutes,
         reflection: reflectionNote.trim() || null,
         stayed_on_task: stayedOnTask,
         tab_away_count: completedSessionInfo.tabAwayCount,
@@ -311,8 +369,8 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ state, start, toggle, reset, remove }),
-    [state, start, toggle, reset, remove],
+    () => ({ state, pausedForVisibility, start, toggle, reset, remove }),
+    [state, pausedForVisibility, start, toggle, reset, remove],
   );
 
   return (
@@ -332,6 +390,9 @@ export function FocusTimerProvider({ children }: { children: ReactNode }) {
               <strong className="text-foreground">{completedSessionInfo?.minutes} minutes</strong>{" "}
               on &quot;{completedSessionInfo?.title}&quot;.
             </p>
+            {partialSessionNote && (
+              <p className="text-sm text-muted-foreground">{partialSessionNote}</p>
+            )}
 
             {completedSessionInfo?.intention && (
               <div className="rounded-xl bg-muted/60 p-3 text-xs">
@@ -392,12 +453,13 @@ function clock(seconds: number): string {
 }
 
 export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string }) {
-  const { state, start, toggle, reset, remove } = useFocusTimer();
+  const { state, pausedForVisibility, start, toggle, reset, remove } = useFocusTimer();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(defaultTitle);
   const [intention, setIntention] = useState("");
   const [custom, setCustom] = useState("");
   const [isPomodoro, setIsPomodoro] = useState(false);
+  const [useFullscreen, setUseFullscreen] = useState(true);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -412,7 +474,11 @@ export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string 
             <Timer className="size-4" />
           )}
           <span className="text-sm tabular-nums">
-            {state ? `${state.isBreak ? "Break " : ""}${clock(state.secondsLeft)}` : "Focus"}
+            {state
+              ? pausedForVisibility
+                ? "Paused"
+                : `${state.isBreak ? "Break " : ""}${clock(state.secondsLeft)}`
+              : "Focus"}
           </span>
         </Button>
       </PopoverTrigger>
@@ -441,8 +507,14 @@ export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string 
             )}
 
             <p className="mt-2 font-display text-3xl font-bold tabular-nums">
-              {clock(state.secondsLeft)}
+              {pausedForVisibility ? "Paused — come back to continue" : clock(state.secondsLeft)}
             </p>
+
+            {state.tabAwayCount > 0 && !pausedForVisibility && !state.isBreak && (
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {state.tabAwayCount} tabs away · {state.tabAwaySeconds}s total
+              </p>
+            )}
 
             <div className="mt-3 flex gap-2">
               <Button
@@ -507,6 +579,15 @@ export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string 
               <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={useFullscreen}
+                  onChange={(e) => setUseFullscreen(e.target.checked)}
+                  className="rounded border-border"
+                />
+                Fullscreen mode
+              </label>
+              <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                <input
+                  type="checkbox"
                   checked={isPomodoro}
                   onChange={(e) => setIsPomodoro(e.target.checked)}
                   className="rounded border-border"
@@ -528,6 +609,7 @@ export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string 
                       title,
                       intention,
                       sessionType: isPomodoro ? "pomodoro" : "single",
+                      useFullscreen,
                     });
                     setOpen(false);
                   }}
@@ -548,6 +630,7 @@ export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string 
                   title,
                   intention,
                   sessionType: isPomodoro ? "pomodoro" : "single",
+                  useFullscreen,
                 });
                 setCustom("");
                 setOpen(false);
@@ -572,7 +655,7 @@ export function FocusTimerButton({ defaultTitle = "" }: { defaultTitle?: string 
 }
 
 export function FocusTimerChip() {
-  const { state, toggle, remove } = useFocusTimer();
+  const { state, pausedForVisibility, toggle, remove } = useFocusTimer();
   if (!state) return null;
 
   return (
@@ -585,7 +668,14 @@ export function FocusTimerChip() {
       <span className="max-w-[9rem] truncate text-xs text-muted-foreground">
         {state.isBreak ? "Break" : state.title}
       </span>
-      <span className="text-sm font-semibold tabular-nums">{clock(state.secondsLeft)}</span>
+      <span className="text-sm font-semibold tabular-nums">
+        {pausedForVisibility ? "Paused" : clock(state.secondsLeft)}
+      </span>
+      {state.tabAwayCount > 0 && !pausedForVisibility && !state.isBreak && (
+        <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">
+          {state.tabAwayCount} aways · {state.tabAwaySeconds}s
+        </span>
+      )}
       <button
         type="button"
         onClick={toggle}

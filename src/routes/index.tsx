@@ -1,6 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { BookHeart, CalendarHeart, Compass, Leaf, Sparkle } from "lucide-react";
-import { useEffect } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import {
+  ArrowRight, BookOpen, Brain, Check, ChevronRight, CircleHelp, Clock3, FileText,
+  Focus, GraduationCap, Leaf, Menu, MessageCircle, Play, Search, Sparkles, X,
+} from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import remiLogo from "@/assets/remi.png";
 import { Button } from "@/components/ui/button";
@@ -9,140 +13,86 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Remispace — a warm notebook with an AI learning coach" },
-      {
-        name: "description",
-        content:
-          "Track your days, build habits, and let Remi turn any topic into a study roadmap you actually finish — all inside one calm workspace.",
-      },
-      { property: "og:title", content: "Remispace — a warm notebook with an AI learning coach" },
-      {
-        property: "og:description",
-        content:
-          "Notes, habits, goals and focused learning sessions, with an encouraging AI coach called Remi.",
-      },
+      { title: "Remispace — Your Gentle Guide & AI Learning Companion" },
+      { name: "description", content: "Remispace brings AI-powered learning, notes, goals, habits, focus, and personal growth into one calm workspace. Learn deeply. Live deliberately." },
+      { property: "og:title", content: "Remispace — Your Gentle Guide & AI Learning Companion" },
+      { property: "og:description", content: "Learn deeply. Live deliberately. A calm workspace for learning and meaningful progress." },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Landing,
 });
 
-const features = [
-  {
-    icon: BookHeart,
-    title: "A notebook that bends",
-    body: "Nested pages, checklists, toggles and little databases — structure only where you want it.",
-  },
-  {
-    icon: CalendarHeart,
-    title: "Days you can see",
-    body: "Habit streaks, mood check-ins and progress rings that make small effort feel visible.",
-  },
-  {
-    icon: Compass,
-    title: "Roadmaps, not rabbit holes",
-    body: "Remi breaks any topic into phases and drops the steps straight into your tracker.",
-  },
-  {
-    icon: Leaf,
-    title: "Focus that stays put",
-    body: "Open resources inside Remispace, jot notes beside them, and finish with a gentle summary.",
-  },
-];
+const fade = { hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0 } };
+
+function Reveal({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const reduced = useReducedMotion();
+  return <motion.div className={className} variants={fade} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.18 }} transition={{ duration: reduced ? 0 : 0.55, ease: "easeOut" }}>{children}</motion.div>;
+}
+
+function Brand() {
+  return <div className="flex items-center gap-2.5"><span className="grid size-9 place-items-center rounded-xl bg-[#dbe8df] text-[#315846]"><Leaf className="size-[18px]" strokeWidth={2.3} /></span><span className="text-[17px] font-semibold tracking-[-.04em]">Remispace</span></div>;
+}
+
+function PrimaryLink({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <Link to="/auth" search={{ mode: "signup" }} className={`group inline-flex items-center gap-2 rounded-full bg-[#26483b] px-5 py-3 text-sm font-medium text-white shadow-[0_8px_20px_rgba(38,72,59,.16)] transition hover:-translate-y-0.5 hover:bg-[#1f3e32] ${className}`}>{children}<ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" /></Link>;
+}
+
+function SectionTitle({ eyebrow, title, body, center = false, inverse = false }: { eyebrow?: string; title: ReactNode; body?: string; center?: boolean; inverse?: boolean }) {
+  const tones = inverse ? { eyebrow: "text-[#9dc4a3]", title: "text-[#f4f7f1]", body: "text-[#b8c6ba]" } : { eyebrow: "text-[#658170]", title: "text-[#202720]", body: "text-[#657069]" };
+  return <Reveal className={center ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>{eyebrow && <p className={`mb-4 text-xs font-semibold uppercase tracking-[.16em] ${tones.eyebrow}`}>{eyebrow}</p>}<h2 className={`text-balance text-4xl font-semibold leading-[1.08] tracking-[-.055em] md:text-5xl ${tones.title}`}>{title}</h2>{body && <p className={`mt-5 text-pretty text-base leading-7 md:text-lg ${tones.body}`}>{body}</p>}</Reveal>
+}
+
+function WorkspacePreview() {
+  const reduced = useReducedMotion();
+  const nav = ["Home", "Learn", "Notes", "Goals", "Habits", "Focus", "Reflections"];
+  return <motion.div initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : .8, delay: .18 }} className="remi-window relative mt-14 overflow-hidden rounded-[26px] border border-[#dfe4de] bg-[#fbfcfa] p-2 shadow-[0_28px_70px_rgba(42,55,45,.15)] md:p-3">
+    <div className="flex min-h-[440px] overflow-hidden rounded-[18px] border border-[#e6eae5] bg-white text-left md:min-h-[500px]">
+      <aside className="hidden w-[164px] shrink-0 border-r border-[#edf0ed] bg-[#f8faf7] p-4 md:block"><Brand /><div className="mt-8 space-y-1">{nav.map((item, i) => <div key={item} className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs ${i === 0 ? "bg-[#e8f0e9] font-medium text-[#345b47]" : "text-[#79837c]"}`}><span className="size-1.5 rounded-full bg-current opacity-55" />{item}</div>)}</div><div className="mt-10 rounded-xl bg-[#eff4ed] p-3"><p className="text-[10px] font-medium text-[#5e7565]">Your steady week</p><p className="mt-1 text-xl font-semibold tracking-tight text-[#315846]">4h 28m</p><div className="mt-2 h-1 overflow-hidden rounded-full bg-[#d9e7dc]"><div className="h-full w-[72%] rounded-full bg-[#769b80]" /></div></div></aside>
+      <div className="min-w-0 flex-1 p-5 md:p-7"><p className="text-xs text-[#89928c]">Tuesday, August 11</p><h3 className="mt-2 text-xl font-semibold tracking-[-.04em] text-[#263129] md:text-2xl">Good evening, Prabhash.</h3><p className="mt-1 text-sm text-[#7d867f]">A little progress is still progress.</p><div className="mt-6 rounded-2xl border border-[#e3e9e2] bg-[#f8faf7] p-4 md:p-5"><div className="flex items-start justify-between"><div><p className="text-xs font-medium text-[#718078]">TODAY'S FOCUS</p><p className="mt-2 font-semibold text-[#27352d]">Learn Transformers</p><p className="mt-1 text-xs text-[#808a83]">Attention mechanisms · Lesson 04</p></div><div className="grid size-11 place-items-center rounded-full border-[4px] border-[#d9e8dc] border-t-[#6e9978] text-xs font-semibold text-[#456952]">42%</div></div><div className="mt-5 h-1.5 overflow-hidden rounded-full bg-[#e7ece6]"><motion.div className="h-full rounded-full bg-[#779d7f]" initial={{ width: 0 }} whileInView={{ width: "42%" }} viewport={{ once: true }} transition={{ duration: 1.2 }} /></div><button className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#3f7050]">Continue lesson <ChevronRight className="size-3.5" /></button></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><MiniTask icon={<BookOpen />} label="Review flashcards" detail="12 cards ready" /><MiniTask icon={<Focus />} label="45 min focus session" detail="A quieter room awaits" /></div></div>
+      <div className="hidden w-[220px] shrink-0 border-l border-[#edf0ed] bg-[#fbfcfb] p-4 lg:block"><div className="flex items-center gap-2"><img src={remiLogo} alt="" className="size-7 rounded-full bg-[#e7f0e7] object-cover" /><p className="text-sm font-semibold text-[#314337]">Remi</p><span className="ml-auto size-2 rounded-full bg-[#83ae8d]" /></div><div className="mt-5 rounded-2xl bg-[#edf4ec] p-3 text-xs leading-5 text-[#46634e]">You're making steady progress through Transformers. Want to continue with attention mechanisms today?</div><button className="mt-3 w-full rounded-lg bg-[#315943] py-2 text-xs font-medium text-white">Continue learning</button><button className="mt-2 w-full py-1 text-xs text-[#77837b]">Not today</button></div>
+    </div>
+  </motion.div>;
+}
+function MiniTask({ icon, label, detail }: { icon: ReactNode; label: string; detail: string }) { return <div className="rounded-xl border border-[#e7ebe7] p-3"><span className="text-[#70977a] [&>svg]:size-4">{icon}</span><p className="mt-2 text-xs font-medium text-[#3b483f]">{label}</p><p className="mt-1 text-[11px] text-[#8a938d]">{detail}</p></div>; }
 
 function Landing() {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); const [menu, setMenu] = useState(false); const [tab, setTab] = useState("Plan");
+  useEffect(() => { void supabase.auth.getSession().then(({ data }) => { if (data.session) navigate({ to: "/dashboard", replace: true }); }); }, [navigate]);
+  const tabContent: Record<string, { heading: string; text: string; items: string[] }> = {
+    Plan: { heading: "Turn any goal into a path.", text: "Remi gently turns your ambition into a sequence you can actually begin.", items: ["Foundations", "Supervised Learning", "Neural Networks", "Deep Learning", "Projects"] },
+    Learn: { heading: "Lessons with room to think.", text: "Explanations, examples, key concepts, and practice—paced for understanding.", items: ["Clear explanation", "Worked examples", "Key concepts", "Practice questions", "Review"] },
+    Understand: { heading: "Bring your materials along.", text: "Ask questions of papers, PDFs, and lectures with context kept close.", items: ["Pre-reading brief", "Key claims", "Important concepts", "Questions", "Source references"] },
+    Practice: { heading: "Remember what matters.", text: "Let Remi shape light review sessions from the work you've already done.", items: ["Flashcards", "Adaptive quizzes", "Exercises", "Revision session", "Gentle recap"] },
+  };
+  return <main className="min-h-screen overflow-hidden bg-[#fbfbf7] text-[#253027] selection:bg-[#d8eadb]">
+    <header className="sticky top-0 z-30 border-b border-transparent bg-[#fbfbf7]/80 backdrop-blur-xl"><div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-5 md:px-8"><Brand /><nav className="hidden items-center gap-7 text-sm text-[#667169] md:flex"><a href="#product">Product</a><a href="#how-it-works">How it works</a><a href="#remi">AI Learning</a><a href="#workspace">Workspace</a><a href="#philosophy">Philosophy</a></nav><div className="hidden items-center gap-2 md:flex"><Link to="/auth" search={{ mode: "signin" }} className="px-4 py-2 text-sm font-medium">Log in</Link><PrimaryLink className="px-4 py-2">Start learning</PrimaryLink></div><button aria-label="Toggle navigation" onClick={() => setMenu(!menu)} className="grid size-10 place-items-center rounded-full bg-[#eef2ed] md:hidden">{menu ? <X className="size-4" /> : <Menu className="size-4" />}</button></div>{menu && <div className="border-t border-[#e7ebe6] bg-[#fbfbf7] px-6 py-5 md:hidden"><nav className="grid gap-4 text-sm"><a href="#product" onClick={() => setMenu(false)}>Product</a><a href="#remi" onClick={() => setMenu(false)}>AI Learning</a><a href="#pricing" onClick={() => setMenu(false)}>Pricing</a><PrimaryLink>Start learning</PrimaryLink></nav></div>}</header>
 
-  useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
-        navigate({ to: "/dashboard", replace: true });
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+    <section className="relative px-5 pb-20 pt-20 md:px-8 md:pt-28"><div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(224,238,224,.72),transparent_65%)]" /><div className="relative mx-auto max-w-5xl text-center"><Reveal><p className="inline-flex items-center gap-2 rounded-full border border-[#dce7dc] bg-white/70 px-3 py-1.5 text-xs font-medium text-[#53725d]"><Sparkles className="size-3.5" /> A calmer way to learn and grow</p><h1 className="mx-auto mt-7 max-w-4xl text-balance text-5xl font-semibold leading-[.99] tracking-[-.068em] text-[#202920] sm:text-6xl md:text-8xl">Learn deeply.<br /><span className="text-[#5f8069]">Live deliberately.</span></h1><p className="mx-auto mt-7 max-w-2xl text-pretty text-base leading-7 text-[#657068] md:text-lg">Your learning, goals, habits, notes, and AI companion—together in one peaceful workspace.</p><div className="mt-8 flex flex-wrap justify-center gap-3"><PrimaryLink>Start with Remi</PrimaryLink><a href="#how-it-works" className="inline-flex items-center gap-2 rounded-full border border-[#dfe5de] bg-white px-5 py-3 text-sm font-medium text-[#3e4b42] transition hover:bg-[#f4f7f3]"><Play className="size-3.5 fill-current" /> See how it works</a></div></Reveal><WorkspacePreview /></div></section>
+    <section className="border-y border-[#e7ebe5] bg-white/55 py-7 text-center"><p className="text-sm text-[#5e6961]">Built for people who want to learn more without feeling overwhelmed.</p><p className="mt-2 text-xs font-medium tracking-[.14em] text-[#92a098]">STUDENTS · DEVELOPERS · RESEARCHERS · LIFELONG LEARNERS · CREATORS</p></section>
 
-  return (
-    <main className="min-h-screen bg-background">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2.5">
-          <img
-            src={remiLogo}
-            alt="Remi, the Remispace coach"
-            width={40}
-            height={40}
-            className="size-10"
-          />
-          <span className="font-display text-xl font-bold">Remispace</span>
-        </div>
-        <Button asChild variant="ghost" className="rounded-2xl">
-          <Link to="/auth" search={{ mode: "signin" }}>
-            Sign in
-          </Link>
-        </Button>
-      </header>
+    <section id="product" className="mx-auto grid max-w-7xl gap-12 px-5 py-28 md:px-8 lg:grid-cols-[.8fr_1.2fr] lg:items-center"><SectionTitle eyebrow="A less fragmented day" title={<>Productivity shouldn't feel like another thing to manage.</>} body="Your materials, tasks, notes, and thinking deserve to live in the same room." /><Reveal className="rounded-[28px] border border-[#e2e7e0] bg-white p-5 shadow-sm"><div className="grid gap-4 sm:grid-cols-2"><Comparison title="The old way" muted items={["PDFs here", "YouTube there", "Notes somewhere else", "AI chat disconnected"]} /><Comparison title="The Remispace way" items={["Learning", "Notes", "Goals", "Focus"]} /></div><div className="mt-5 flex flex-wrap items-center justify-center gap-2 rounded-2xl bg-[#f3f7f2] px-4 py-4 text-xs font-medium text-[#55705c]"><span>Learning</span><ArrowRight className="size-3" /><span>Notes</span><ArrowRight className="size-3" /><span>Tasks</span><ArrowRight className="size-3" /><span>Focus</span><ArrowRight className="size-3" /><span>Reflection</span></div></Reveal></section>
 
-      <section className="mx-auto grid max-w-6xl gap-12 px-6 pt-10 pb-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-foreground">
-            <Sparkle className="size-3.5" /> Calm productivity, gently coached
-          </span>
-          <h1 className="mt-6 text-balance text-5xl font-bold leading-[1.08] md:text-6xl">
-            Everything you're learning, in one warm place.
-          </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Remispace is part notebook, part daily tracker, part learning coach. Write freely, keep
-            your streaks, and let Remi turn "I want to learn this" into a plan that fits your week.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="rounded-2xl px-7 shadow-soft press">
-              <Link to="/auth" search={{ mode: "signup" }}>
-                Start your notebook
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="secondary" className="rounded-2xl px-7 press">
-              <Link to="/auth" search={{ mode: "signin" }}>
-                I already have one
-              </Link>
-            </Button>
-          </div>
-        </div>
+    <section id="philosophy" className="bg-[#e7eee5] px-5 py-28 md:px-8"><div className="mx-auto max-w-4xl text-center"><SectionTitle center eyebrow="A humane philosophy" title={<>Slow is not the opposite<br />of ambitious.</>} body="Remispace is designed around sustainable progress—helping you build momentum without turning your life into a scoreboard." /><Reveal className="mt-12 rounded-2xl border border-[#d6e1d4] bg-[#f8faf6]/70 p-5"><div className="flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-[#607266]"><Timeline label="Day 1" active /><Timeline label="Day 2" active /><Timeline label="Day 3" active /><Timeline label="Missed day" /><Timeline label="Restart" active /><Timeline label="Continue" active /></div><p className="mt-5 text-sm font-medium text-[#4d6554]">No punishment. Just another beginning.</p></Reveal></div></section>
 
-        <div className="panel-soft relative overflow-hidden p-8">
-          <img
-            src={remiLogo}
-            alt="Remi mascot illustration"
-            width={1024}
-            height={1024}
-            className="mx-auto size-52 drop-shadow-sm"
-          />
-          <div className="mt-6 rounded-3xl bg-surface p-5">
-            <p className="font-display text-sm font-semibold">Remi</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              "Twelve minutes today is still momentum. Want me to shrink tomorrow's step so the
-              streak survives?"
-            </p>
-          </div>
-        </div>
-      </section>
+    <section id="remi" className="mx-auto max-w-7xl px-5 py-28 md:px-8"><SectionTitle eyebrow="Meet Remi" title="An AI companion that learns how you learn." body="Remi isn't another chatbot waiting for your next prompt. It coordinates helpful capabilities to help you understand, organize, practice, and apply what you're learning." /><Reveal className="mt-12 overflow-hidden rounded-[28px] border border-[#dfe6dd] bg-white shadow-[0_20px_45px_rgba(51,70,54,.08)]"><div className="flex overflow-x-auto border-b border-[#e8ede7] px-4 pt-3 md:px-8">{Object.keys(tabContent).map(name => <button key={name} onClick={() => setTab(name)} className={`relative px-4 py-3 text-sm font-medium ${tab === name ? "text-[#315b42]" : "text-[#87918a]"}`}>{name}{tab === name && <motion.span layoutId="tab" className="absolute inset-x-3 bottom-0 h-0.5 bg-[#5f8d6b]" />}</button>)}</div><div className="grid gap-8 p-6 md:grid-cols-2 md:p-10"><div><p className="text-xs font-semibold uppercase tracking-[.14em] text-[#75917b]">Remi · {tab}</p><h3 className="mt-4 text-3xl font-semibold tracking-[-.045em] text-[#273229]">{tabContent[tab].heading}</h3><p className="mt-4 max-w-md leading-7 text-[#69746d]">{tabContent[tab].text}</p><PrimaryLink className="mt-7">Explore Remi</PrimaryLink></div><div className="rounded-2xl bg-[#f4f7f3] p-5"><div className="flex items-center gap-2"><img src={remiLogo} alt="" className="size-8 rounded-full bg-[#e2ede1] object-cover" /><div><p className="text-xs font-semibold">Remi is preparing your space</p><p className="text-[11px] text-[#7d8980]">Built around your goal</p></div></div><div className="mt-5 space-y-2">{tabContent[tab].items.map((item, i) => <motion.div key={item} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * .06 }} className="flex items-center gap-3 rounded-xl bg-white px-3.5 py-3 text-sm text-[#455148]"><span className={`grid size-5 place-items-center rounded-full text-[10px] ${i < 2 ? "bg-[#dff0e1] text-[#4b8157]" : "bg-[#eef1ed] text-[#8b968d]"}`}>{i < 2 ? <Check className="size-3" /> : i + 1}</span>{item}<ChevronRight className="ml-auto size-4 text-[#a2aaa4]" /></motion.div>)}</div></div></div></Reveal></section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature) => (
-            <article key={feature.title} className="card-soft p-6">
-              <feature.icon className="size-6 text-primary" />
-              <h2 className="mt-4 font-display text-base font-semibold">{feature.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+    <section className="border-y border-[#e1e6df] bg-[#f4f7f2] px-5 py-28 md:px-8"><div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center"><SectionTitle eyebrow="Source-aware assistance" title="AI that knows when it needs to look things up." body="When a question requires current or niche information, Remi can search before answering—so the response stays grounded in useful sources." /><Reveal className="rounded-3xl border border-[#dbe5d9] bg-white p-6"><div className="space-y-2">{["User question", "Understand intent", "Evaluate confidence", "Search the web", "Retrieve sources", "Grounded response"].map((step, i) => <div key={step} className="flex items-center gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#e9f2e8] text-xs font-semibold text-[#54775d]">{i + 1}</span><div className="flex-1 rounded-lg bg-[#f7f9f6] px-3 py-2.5 text-sm text-[#526057]">{step}</div>{i < 5 && <ArrowRight className="size-3 rotate-90 text-[#a8b5aa]" />}</div>)}</div></Reveal></div></section>
 
-      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        Remispace — made for slow, steady progress.
-      </footer>
-    </main>
-  );
+    <section id="workspace" className="mx-auto max-w-7xl px-5 py-28 md:px-8"><SectionTitle eyebrow="One connected workspace" title="Your entire learning journey, in one place." body="A clear path for the bigger picture, and a gentle plan for the next hour." /><Reveal className="mt-12 grid overflow-hidden rounded-[28px] border border-[#dfe6dd] bg-white md:grid-cols-[1.25fr_.75fr]"><div className="p-7"><p className="text-xs font-semibold uppercase tracking-[.14em] text-[#78917c]">Learning roadmap</p><h3 className="mt-2 text-xl font-semibold tracking-[-.035em]">Machine Learning <span className="ml-2 text-sm font-normal text-[#7d8981]">68%</span></h3><div className="mt-7 space-y-3">{["Python Foundations", "Linear Algebra", "Statistics", "Classical ML", "Neural Networks", "Transformers", "LLMs & MLOps"].map((x, i) => <div key={x} className="flex items-center gap-3 text-sm"><span className={`grid size-5 place-items-center rounded-full ${i < 4 ? "bg-[#dceedd] text-[#4e8759]" : i === 4 ? "border-2 border-[#729d7c]" : "border border-[#d9dfd8]"}`}>{i < 4 && <Check className="size-3" />}</span><span className={i === 4 ? "font-medium" : "text-[#6c766f]"}>{x}</span>{i === 4 && <span className="ml-auto rounded-full bg-[#ecf4ea] px-2 py-1 text-[10px] text-[#5e8466]">Current</span>}</div>)}</div></div><div className="border-t border-[#e6ebe5] bg-[#f7f9f6] p-7 md:border-l md:border-t-0"><p className="text-xs font-semibold uppercase tracking-[.14em] text-[#78917c]">Today's plan</p>{[["45 min", "Neural Networks"], ["30 min", "Practice"], ["20 min", "Flashcards"], ["10 min", "Reflection"]].map(([time, task]) => <div key={task} className="mt-4 rounded-xl border border-[#e4eae3] bg-white p-3"><p className="text-xs font-medium text-[#709079]">{time}</p><p className="mt-1 text-sm font-medium">{task}</p></div>)}</div></Reveal></section>
+
+    <section className="mx-auto grid max-w-7xl gap-12 px-5 py-20 md:px-8 lg:grid-cols-2 lg:items-center"><Reveal className="order-2 rounded-[28px] border border-[#e1e6df] bg-[#f7f9f6] p-5 lg:order-1"><div className="grid grid-cols-[.75fr_1.25fr] gap-4"><div className="rounded-xl border border-[#dfe5df] bg-white p-3"><div className="h-2 w-16 rounded bg-[#dfe6df]" />{[1,2,3,4,5,6].map(x => <div key={x} className={`mt-2 h-2 rounded bg-[#edf0ec] ${x === 4 ? "w-4/5 bg-[#d7ebd7]" : "w-full"}`} />)}</div><div className="rounded-xl bg-white p-4"><p className="text-xs text-[#859087]">What is the main idea behind this section?</p><div className="mt-4 rounded-xl bg-[#edf5eb] p-3 text-xs leading-5 text-[#4d6653]">Attention lets a model decide which parts of a sequence matter most for the next prediction.<p className="mt-2 font-medium text-[#63826a]">Source · page 14</p></div></div></div></Reveal><SectionTitle eyebrow="Document tutor" title="Don't just read. Understand." body="Keep the original source in view while Remi helps you make sense of it, with context you can return to." /></section>
+
+    <section id="how-it-works" className="bg-[#24362d] px-5 py-28 text-[#f4f7f1] md:px-8"><div className="mx-auto max-w-7xl"><SectionTitle inverse eyebrow="How it works" title="A place to begin, and a reason to return." body="The path is simple. The care is in how it adapts to you." /><div className="mt-14 grid gap-4 md:grid-cols-3">{[["01", "Tell Remi what you're trying to accomplish.", "I want to become a machine learning engineer."], ["02", "Remi creates your path.", "Roadmap → Lessons → Materials → Practice → Goals"], ["03", "Show up and make progress.", "Focus → Learn → Practice → Reflect → Continue"]].map(([num, title, desc]) => <Reveal key={num} className="rounded-2xl border border-white/12 bg-white/[.05] p-6"><p className="text-xs font-semibold tracking-[.16em] text-[#9dc4a3]">{num}</p><h3 className="mt-8 text-xl font-medium leading-7 tracking-[-.035em]">{title}</h3><p className="mt-4 text-sm leading-6 text-[#b8c6ba]">{desc}</p></Reveal>)}</div><div className="mt-10"><PrimaryLink>Start your journey</PrimaryLink></div></div></section>
+
+    <section className="mx-auto max-w-7xl px-5 py-28 md:px-8"><SectionTitle center eyebrow="Made for the work that matters" title="Small steps. Deep work. Real progress." /><div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[[GraduationCap,"Learn a new skill","Build a structured path from beginner to advanced."],[FileText,"Master academic material","Make papers, PDFs, and lectures interactive."],[CircleHelp,"Prepare for interviews","Practice questions with a clear, useful plan."],[Leaf,"Build better habits","Create sustainable routines without guilt."]].map(([Icon, title, body]) => { const I = Icon as typeof Leaf; return <Reveal key={title as string} className="group rounded-2xl border border-[#e2e7e0] bg-white p-6 transition hover:-translate-y-1 hover:shadow-lg"><I className="size-5 text-[#6f9878]" /><h3 className="mt-6 font-semibold tracking-[-.025em]">{title as string}</h3><p className="mt-2 text-sm leading-6 text-[#6b756e]">{body as string}</p></Reveal>; })}</div></section>
+
+    <section id="pricing" className="border-y border-[#dce4da] bg-[#edf3e9] px-5 py-28 md:px-8"><div className="mx-auto max-w-5xl"><SectionTitle center eyebrow="Pricing" title="Start building your space." body="We're keeping the first version intentionally simple. Join early access and we'll share the right plan when Remispace is ready for you." /><div className="mt-12 grid gap-4 md:grid-cols-2"><Reveal className="rounded-3xl border border-[#d6e2d4] bg-[#f9fbf7] p-7"><p className="text-sm font-semibold">Early access</p><p className="mt-3 text-sm leading-6 text-[#69766d]">Be among the first to shape a calmer home for your learning.</p><ul className="mt-7 space-y-3 text-sm text-[#506058]"><li className="flex gap-2"><Check className="size-4 text-[#609069]" /> Full workspace preview</li><li className="flex gap-2"><Check className="size-4 text-[#609069]" /> Product updates</li><li className="flex gap-2"><Check className="size-4 text-[#609069]" /> Early member benefits</li></ul><PrimaryLink className="mt-8">Get early access</PrimaryLink></Reveal><Reveal className="rounded-3xl bg-[#294b3b] p-7 text-white"><p className="text-sm font-semibold text-[#d7ead8]">Your journey starts with one small step.</p><p className="mt-7 text-3xl font-semibold leading-tight tracking-[-.05em]">No pressure.<br />Just a thoughtful place to begin.</p><p className="mt-5 max-w-sm text-sm leading-6 text-[#b8ccba]">Final pricing will be shared before any commitment. Until then, come see what a quieter workspace can feel like.</p></Reveal></div></div></section>
+
+    <section className="bg-[#34463a] px-5 py-28 text-center text-white md:px-8"><Reveal><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#b8d4bd]">Remispace</p><h2 className="mx-auto mt-5 max-w-3xl text-balance text-5xl font-semibold leading-[1.04] tracking-[-.065em] md:text-7xl">You don't need to do everything today.<br /><span className="text-[#c5ddc6]">You just need a place to begin.</span></h2><p className="mx-auto mt-7 max-w-xl text-base leading-7 text-[#c5d0c7]">Remispace helps you turn ambitious goals into small, meaningful steps—and keeps you moving without the pressure.</p><PrimaryLink className="mt-8 bg-white text-[#284438] hover:bg-[#edf5ed]">Start with Remi</PrimaryLink></Reveal></section>
+    <footer className="bg-[#fbfbf7] px-5 py-12 md:px-8"><div className="mx-auto max-w-7xl"><div className="flex flex-col justify-between gap-10 md:flex-row"><div><Brand /><p className="mt-4 text-sm text-[#748078]">Learn deeply. Live deliberately.</p></div><div className="grid grid-cols-3 gap-10 text-sm"><FooterCol title="Product" links={["Remi", "Learning", "Workspace", "Focus"]} /><FooterCol title="Resources" links={["Documentation", "Blog", "Help"]} /><FooterCol title="Company" links={["About", "Philosophy", "Contact"]} /></div></div><div className="mt-10 border-t border-[#e6eae4] pt-6 text-xs text-[#8a948d]">© 2026 Remispace</div></div></footer>
+  </main>;
 }
+function Comparison({ title, items, muted = false }: { title: string; items: string[]; muted?: boolean }) { return <div className={`rounded-2xl p-4 ${muted ? "bg-[#fafafa]" : "bg-[#eef5ed]"}`}><p className={`text-sm font-semibold ${muted ? "text-[#6d756f]" : "text-[#42684d]"}`}>{title}</p><div className="mt-4 space-y-2">{items.map(x => <p key={x} className="flex items-center gap-2 text-xs text-[#77817a]"><span className={`size-1.5 rounded-full ${muted ? "bg-[#c9ceca]" : "bg-[#78a083]"}`} />{x}</p>)}</div></div>; }
+function Timeline({ label, active = false }: { label: string; active?: boolean }) { return <span className="inline-flex items-center gap-2"><span className={`size-2.5 rounded-full ${active ? "bg-[#729e7b]" : "bg-[#c8d1c7]"}`} />{label}</span>; }
+function FooterCol({ title, links }: { title: string; links: string[] }) { return <div><p className="font-medium text-[#354039]">{title}</p><div className="mt-3 grid gap-2 text-[#778179]">{links.map(x => <a key={x} href="#">{x}</a>)}</div></div>; }

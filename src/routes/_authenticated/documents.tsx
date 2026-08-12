@@ -390,7 +390,7 @@ function DocumentCard({ resource, onDelete }: { resource: StudyResource; onDelet
           <Button
             asChild
             size="sm"
-            className="press h-9 gap-1.5 rounded-2xl bg-white/90 text-foreground shadow-md hover:bg-white"
+            className="press h-9 gap-1.5 rounded-2xl bg-white/90 text-neutral-900 shadow-md hover:bg-white"
           >
             <Link to="/material/$resourceId" params={{ resourceId: resource.id }}>
               Open
@@ -466,7 +466,7 @@ function DownloadButton({ storagePath, title }: { storagePath: string; title: st
         void handleDownload();
       }}
       disabled={loading}
-      className="size-9 rounded-xl bg-white/90 text-foreground shadow-md hover:bg-white"
+      className="size-9 rounded-xl bg-white/90 text-neutral-900 shadow-md hover:bg-white"
     >
       {loading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
     </Button>

@@ -310,8 +310,19 @@ export async function updateRoadmapItem(id: string, patch: Tables["roadmap_items
 }
 
 export async function deleteRoadmap(id: string) {
+  const { data: roadmap } = await supabase.from("roadmaps").select("goal_id").eq("id", id).maybeSingle();
+
+  // Cascade delete associated tasks
+  await supabase.from("tasks").delete().eq("roadmap_id", id);
+
+  // Delete the roadmap itself
   const { error } = await supabase.from("roadmaps").delete().eq("id", id);
   if (error) throw new Error(error.message);
+
+  // Cascade delete associated goal
+  if (roadmap?.goal_id) {
+    await supabase.from("goals").delete().eq("id", roadmap.goal_id);
+  }
 }
 
 /* ---------- journal ---------- */
@@ -372,6 +383,7 @@ export async function finishFocusSession(
   id: string,
   patch: {
     minutes: number;
+    counted_minutes?: number | null;
     notes?: string | null;
     reflection?: string | null;
     stayed_on_task?: boolean | null;
@@ -436,6 +448,18 @@ export async function clearMemories(): Promise<void> {
   const userId = await requireUserId();
   const { error } = await supabase.from("agent_memories").delete().eq("user_id", userId);
   if (error) throw new Error(error.message);
+}
+
+export async function deleteMemory(id: string): Promise<void> {
+  const { error } = await supabase.from("agent_memories").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function createMemory(content: string, category: string = "preference", importance = 3): Promise<AgentMemory> {
+  const user_id = await requireUserId();
+  return unwrap(
+    await supabase.from("agent_memories").insert({ user_id, content, category, importance }).select("*").single()
+  );
 }
 
 /* ---------- roadmap resources ---------- */

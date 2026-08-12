@@ -66,7 +66,7 @@ Tool Delegation:
 - writeLessonForSubtopic: Use when asked to write or expand a specific roadmap subtopic lesson.
 - generateNotebook: Use when the user asks to generate, create, or build a structured notebook or notes page.
 - editNotebook: Use when asked to edit a notebook page, append content, or add visual diagrams to a notebook.
-- saveMemory: Use to remember durable facts or preferences about the user.
+- saveMemory: ALWAYS use this tool proactively whenever the user mentions ANY preference, working style, career goal, life aspiration, or shares a durable fact about themselves (e.g., "I want to build a startup"). Do NOT wait for them to explicitly ask you to save it; save it quietly in the background.
 - getCurrentTime: Use whenever the user asks for the current time or date, either locally or in a specific timezone.
 
 Workspace Context Usage:

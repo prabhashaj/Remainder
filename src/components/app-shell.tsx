@@ -93,7 +93,6 @@ const navItems = [
   { title: "Habits", to: "/habits", icon: CalendarHeart },
   { title: "Goals", to: "/goals", icon: Target },
   { title: "Roadmaps", to: "/roadmaps", icon: Compass },
-  { title: "Study Place", to: "/study", icon: BookOpen },
   { title: "Documents", to: "/documents", icon: FolderOpen },
 ] as const;
 
@@ -145,6 +144,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <span className="hidden text-base sm:inline">Search</span>
                 </Button>
                 <div className="flex-1" />
+                <Button
+                  variant="secondary"
+                  asChild
+                  className="h-10 gap-2 rounded-2xl px-3.5 text-muted-foreground"
+                >
+                  <Link to="/study">
+                    <BookOpen className="size-5" />
+                    <span className="hidden text-base sm:inline">Study Place</span>
+                  </Link>
+                </Button>
                 <FocusTimerButton />
                 <AccountMenu />
               </header>

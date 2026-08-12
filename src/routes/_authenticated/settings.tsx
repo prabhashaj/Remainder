@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { clearMemories, fetchMemories, fetchProfile, updateProfile } from "@/lib/db";
+import { clearMemories, fetchMemories, fetchProfile, updateProfile, createMemory, deleteMemory } from "@/lib/db";
 import { THEMES, type ThemeId } from "@/lib/themes";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -43,6 +43,7 @@ function SettingsPage() {
   const { theme, font, setTheme, setFont, previewTheme, previewFont } = useTheme();
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: fetchProfile });
   const [name, setName] = useState("");
+  const [newMemoryContent, setNewMemoryContent] = useState("");
 
   useEffect(() => setName(profile?.display_name ?? ""), [profile?.display_name]);
 
@@ -63,6 +64,25 @@ function SettingsPage() {
       toast.success("Agent's memory has been reset.");
     },
     onError: (err: Error) => toast.error(err.message || "Failed to reset memory."),
+  });
+
+  const addMemory = useMutation({
+    mutationFn: (content: string) => createMemory(content),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["memories"] });
+      setNewMemoryContent("");
+      toast.success("Preference added.");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to add preference."),
+  });
+
+  const removeMemory = useMutation({
+    mutationFn: (id: string) => deleteMemory(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["memories"] });
+      toast.success("Memory removed.");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to remove memory."),
   });
 
   const lightThemes = THEMES.filter((t) => !t.isDark);
@@ -252,11 +272,59 @@ function SettingsPage() {
           clear this saved memory at any time.
         </p>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-          <span className="text-sm font-medium text-foreground">
+        <div className="mt-5">
+          <h3 className="text-sm font-medium text-foreground">
             Saved memories ({memories.length})
-          </span>
+          </h3>
 
+          {memories.length > 0 && (
+            <ul className="mt-4 space-y-2">
+              {memories.map((m) => (
+                <li key={m.id} className="flex items-center justify-between rounded-2xl border border-border/50 bg-background/50 px-4 py-3 shadow-sm">
+                  <span className="text-sm text-foreground pr-4 break-words">{m.content}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="press shrink-0 text-muted-foreground hover:text-destructive h-8 w-8 rounded-full p-0"
+                    onClick={() => removeMemory.mutate(m.id)}
+                    aria-label="Remove memory"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <form 
+            className="mt-4 flex flex-wrap gap-2 items-center"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (newMemoryContent.trim()) {
+                addMemory.mutate(newMemoryContent.trim());
+              }
+            }}
+          >
+            <Input
+              value={newMemoryContent}
+              onChange={(e) => setNewMemoryContent(e.target.value)}
+              placeholder="Tell Remi a preference or fact (e.g. 'I prefer concise answers')"
+              className="min-w-48 flex-1 rounded-2xl"
+            />
+            <Button
+              type="submit"
+              disabled={!newMemoryContent.trim() || addMemory.isPending}
+              className="press rounded-2xl"
+            >
+              Add Preference
+            </Button>
+          </form>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6">
+          <span className="text-sm text-muted-foreground">
+            Want to start fresh? This cannot be undone.
+          </span>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button

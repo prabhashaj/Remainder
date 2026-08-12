@@ -271,6 +271,7 @@ export type Database = {
           id: string;
           intention: string | null;
           minutes: number;
+          counted_minutes: number | null;
           notes: string | null;
           reflection: string | null;
           resource_kind: string;
@@ -292,6 +293,7 @@ export type Database = {
           id?: string;
           intention?: string | null;
           minutes?: number;
+          counted_minutes?: number | null;
           notes?: string | null;
           reflection?: string | null;
           resource_kind?: string;
@@ -313,6 +315,7 @@ export type Database = {
           id?: string;
           intention?: string | null;
           minutes?: number;
+          counted_minutes?: number | null;
           notes?: string | null;
           reflection?: string | null;
           resource_kind?: string;

@@ -15,7 +15,7 @@ import {
   CodeBlockHeader,
   CodeBlockTitle,
 } from "./code-block";
-import { PlayableCodeBlock } from "./python-run-button";
+
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
@@ -380,10 +380,6 @@ export const MessageResponse = memo(
           if (match && match[1]) {
             const lang = match[1];
             const codeText = String(children).replace(/\n$/, "");
-
-            if (lang.toLowerCase() === "python") {
-              return <PlayableCodeBlock code={codeText} language={lang} />;
-            }
 
             return (
               <CodeBlock

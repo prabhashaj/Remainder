@@ -65,6 +65,17 @@ function getToolLabel(part: any, isRunning: boolean): string {
       inst.includes("learning plan") ||
       inst.includes("learn")
     ) {
+      if (
+        inst.includes("update") ||
+        inst.includes("modify") ||
+        inst.includes("remove") ||
+        inst.includes("replace") ||
+        inst.includes("change") ||
+        inst.includes("adjust") ||
+        inst.includes("restructure")
+      ) {
+        return isRunning ? "Updating and modifying..." : "Updated roadmap";
+      }
       return isRunning ? "Creating roadmap" : "Created roadmap";
     }
     if (inst.includes("goal") || inst.includes("milestone")) {
@@ -89,6 +100,7 @@ function getToolLabel(part: any, isRunning: boolean): string {
     createHabit: { active: "Creating habit", done: "Created habit" },
     updateHabit: { active: "Updating habit", done: "Updated habit" },
     createRoadmap: { active: "Creating roadmap", done: "Created roadmap" },
+    updateRoadmap: { active: "Updating and modifying...", done: "Updated roadmap" },
     readRoadmap: { active: "Reading roadmap", done: "Read roadmap" },
     researchResources: { active: "Finding video tutorials", done: "Found video tutorials" },
     webSearch: { active: "Searching the web", done: "Searched the web" },

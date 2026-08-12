@@ -45,6 +45,7 @@ const getToolName = (toolName: string, isRunning: boolean) => {
     createHabit: { active: "Creating habit", done: "Created habit" },
     updateHabit: { active: "Updating habit", done: "Updated habit" },
     createRoadmap: { active: "Creating roadmap", done: "Created roadmap" },
+    updateRoadmap: { active: "Updating and modifying...", done: "Updated roadmap" },
     readRoadmap: { active: "Reading roadmap", done: "Read roadmap" },
     researchResources: { active: "Finding video tutorials", done: "Found video tutorials" },
     webSearch: { active: "Searching the web", done: "Searched the web" },
