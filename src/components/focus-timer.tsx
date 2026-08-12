@@ -33,7 +33,6 @@ type TimerState = {
   cycleCount: number;
   tabAwayCount: number;
   tabAwaySeconds: number;
-  tabAwaySeconds: number;
   useFullscreen?: boolean;
 };
 

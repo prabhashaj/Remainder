@@ -315,8 +315,18 @@ function VoiceInputButton({
     // Inject the accumulated transcript exactly once here.
     recognition.onend = () => {
       setListening(false);
-      const transcript = accumulated.trim();
+      let transcript = accumulated.trim();
       if (!transcript) return;
+
+      // Ensure the transcribed text ends like a question ('?') after speech finishes
+      if (!transcript.endsWith("?")) {
+        if (transcript.endsWith(".")) {
+          transcript = transcript.slice(0, -1) + "?";
+        } else if (!transcript.endsWith("!")) {
+          transcript = transcript + "?";
+        }
+      }
+
       const el = textareaRef.current;
       if (!el) return;
       const nativeSetter = Object.getOwnPropertyDescriptor(
