@@ -470,9 +470,11 @@ export function RemiChat({
       if (message.role === "assistant" && !seenLimitMessages.current.has(message.id)) {
         // Robustly check for the limitReached signal inside the structured tool invocations/parts
         // to avoid any Vercel AI SDK version inconsistencies with nested object structures.
-        const hitLimit = 
-          (message.toolInvocations && JSON.stringify(message.toolInvocations).includes('"limitReached":true')) ||
-          (message.parts && JSON.stringify(message.parts).includes('"limitReached":true'));
+        const msgAny = message as unknown as { toolInvocations?: unknown; parts?: unknown };
+        const hitLimit =
+          (msgAny.toolInvocations &&
+            JSON.stringify(msgAny.toolInvocations).includes('"limitReached":true')) ||
+          (msgAny.parts && JSON.stringify(msgAny.parts).includes('"limitReached":true'));
 
         if (hitLimit) {
           seenLimitMessages.current.add(message.id);
@@ -708,11 +710,9 @@ export function RemiChat({
               Upgrade to Pro
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center">
-              {limitType === "chat" ? (
-                "You've used your 20 daily messages limit. Upgrade to Pro to get unlimited messages."
-              ) : (
-                "You've reached your free limit this week. Upgrade to Pro to create up to 10 roadmaps and 15 notebooks per week, unlock premium features, and more."
-              )}
+              {limitType === "chat"
+                ? "You've used your 20 daily messages limit. Upgrade to Pro to get unlimited messages."
+                : "You've reached your free limit this week. Upgrade to Pro to create up to 10 roadmaps and 15 notebooks per week, unlock premium features, and more."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 flex flex-col gap-2 sm:flex-col">
