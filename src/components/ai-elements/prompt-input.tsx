@@ -63,20 +63,21 @@ import {
 // Helpers
 // ============================================================================
 
+const convertFileToDataUrl = (file: Blob): Promise<string | null> =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    // oxlint-disable-next-line eslint-plugin-unicorn(prefer-add-event-listener)
+    reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+    // oxlint-disable-next-line eslint-plugin-unicorn(prefer-add-event-listener)
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+
 const convertBlobUrlToDataUrl = async (url: string): Promise<string | null> => {
   try {
     const response = await fetch(url);
     const blob = await response.blob();
-    // FileReader uses callback-based API, wrapping in Promise is necessary
-    // oxlint-disable-next-line eslint-plugin-promise(avoid-new)
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      // oxlint-disable-next-line eslint-plugin-unicorn(prefer-add-event-listener)
-      reader.onloadend = () => resolve(reader.result as string);
-      // oxlint-disable-next-line eslint-plugin-unicorn(prefer-add-event-listener)
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
+    return convertFileToDataUrl(blob);
   } catch {
     return null;
   }
@@ -160,8 +161,10 @@ const captureScreenshot = async (): Promise<File | null> => {
 // Provider Context & Types
 // ============================================================================
 
+type AttachmentFile = FileUIPart & { id: string; sourceFile?: File };
+
 export interface AttachmentsContext {
-  files: (FileUIPart & { id: string })[];
+  files: AttachmentFile[];
   add: (files: File[] | FileList) => void;
   remove: (id: string) => void;
   clear: () => void;
@@ -227,7 +230,7 @@ export const PromptInputProvider = ({
   const clearInput = useCallback(() => setTextInput(""), []);
 
   // ----- attachments state (global when wrapped)
-  const [attachmentFiles, setAttachmentFiles] = useState<(FileUIPart & { id: string })[]>([]);
+  const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // oxlint-disable-next-line eslint(no-empty-function)
   const openRef = useRef<() => void>(() => {});
@@ -240,12 +243,13 @@ export const PromptInputProvider = ({
 
     setAttachmentFiles((prev) => [
       ...prev,
-      ...incoming.map((file) => ({
-        filename: file.name,
-        id: nanoid(),
-        mediaType: file.type,
-        type: "file" as const,
-        url: URL.createObjectURL(file),
+        ...incoming.map((file) => ({
+          filename: file.name,
+          id: nanoid(),
+          mediaType: file.type,
+          sourceFile: file,
+          type: "file" as const,
+          url: URL.createObjectURL(file),
       })),
     ]);
   }, []);
@@ -493,7 +497,7 @@ export const PromptInput = ({
   const formRef = useRef<HTMLFormElement | null>(null);
 
   // ----- Local attachments (only used when no provider)
-  const [items, setItems] = useState<(FileUIPart & { id: string })[]>([]);
+  const [items, setItems] = useState<AttachmentFile[]>([]);
   const files = usingProvider ? controller.attachments.files : items;
 
   // ----- Local referenced sources (always local to PromptInput)
@@ -566,12 +570,13 @@ export const PromptInput = ({
             message: "Too many files. Some were not added.",
           });
         }
-        const next: (FileUIPart & { id: string })[] = [];
+        const next: AttachmentFile[] = [];
         for (const file of capped) {
           next.push({
             filename: file.name,
             id: nanoid(),
             mediaType: file.type,
+            sourceFile: file,
             type: "file",
             url: URL.createObjectURL(file),
           });
@@ -808,7 +813,11 @@ export const PromptInput = ({
       try {
         // Convert blob URLs to data URLs asynchronously
         const convertedFiles: FileUIPart[] = await Promise.all(
-          files.map(async ({ id: _id, ...item }) => {
+          files.map(async ({ id: _id, sourceFile, ...item }) => {
+            if (sourceFile) {
+              const dataUrl = await convertFileToDataUrl(sourceFile);
+              if (dataUrl) return { ...item, url: dataUrl };
+            }
             if (item.url?.startsWith("blob:")) {
               const dataUrl = await convertBlobUrlToDataUrl(item.url);
               // If conversion failed, keep the original blob URL

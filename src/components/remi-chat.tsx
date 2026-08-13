@@ -530,6 +530,10 @@ async function blobUrlToDataUrl(url: string): Promise<string | null> {
         }),
     );
 
+    if (attachments.some((attachment) => !attachment.dataUrl.startsWith("data:"))) {
+      throw new Error("Could not prepare the attachment for upload. Please try attaching the file again.");
+    }
+
     await sendMessage(
       { text: trimmed || "(attached files)", files },
       {
@@ -698,7 +702,7 @@ async function blobUrlToDataUrl(url: string): Promise<string | null> {
           </p>
         )}
         <PromptInput
-          onSubmit={(message) => void submit(message.text ?? "", message.files)}
+          onSubmit={(message) => submit(message.text ?? "", message.files)}
           maxFileSize={10 * 1024 * 1024}
         >
           <AttachmentPreviews />
