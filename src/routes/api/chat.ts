@@ -365,13 +365,27 @@ export const Route = createFileRoute("/api/chat")({
             if (typeof att.dataUrl !== "string" || typeof att.filename !== "string") continue;
 
             // Decode base64 data URL → Buffer
-            const match = att.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-            if (!match || !match[2]) continue;
-            const buffer = Buffer.from(match[2], "base64");
+            let base64Data = "";
+            let dataUrlMime = "application/octet-stream";
+            if (att.dataUrl.startsWith("data:")) {
+              const commaIdx = att.dataUrl.indexOf(",");
+              if (commaIdx !== -1) {
+                base64Data = att.dataUrl.slice(commaIdx + 1);
+                const meta = att.dataUrl.slice(5, commaIdx);
+                if (meta && !meta.includes("base64")) {
+                  dataUrlMime = meta.split(";")[0] || dataUrlMime;
+                } else if (meta && meta.includes(";") && !meta.startsWith(";")) {
+                  dataUrlMime = meta.split(";")[0] || dataUrlMime;
+                }
+              }
+            }
+            if (!base64Data) continue;
+            
+            const buffer = Buffer.from(base64Data, "base64");
             const rawMime =
-              typeof att.mimeType === "string" && att.mimeType
+              typeof att.mimeType === "string" && att.mimeType && att.mimeType !== "application/octet-stream"
                 ? att.mimeType
-                : (match[1] ?? "application/octet-stream");
+                : dataUrlMime;
 
             const lowerFilename = att.filename.toLowerCase();
 
