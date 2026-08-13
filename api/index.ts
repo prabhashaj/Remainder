@@ -49,7 +49,7 @@ export default async function handler(req: Request | IncomingMessage, res?: Serv
 
   if (res) {
     res.statusCode = webResponse.status;
-    webResponse.headers.forEach((val, key) => {
+    webResponse.headers.forEach((val: string, key: string) => {
       res.setHeader(key, val);
     });
 
