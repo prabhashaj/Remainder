@@ -486,6 +486,22 @@ export function RemiChat({
     }
   }, [messages, stop]);
 
+async function blobUrlToDataUrl(url: string): Promise<string | null> {
+  if (url.startsWith("data:")) return url;
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
   async function submit(text: string, files: FileUIPart[] = []) {
     const trimmed = text.trim();
     if (!trimmed && files.length === 0) return;
@@ -500,14 +516,19 @@ export function RemiChat({
     const pageMatch = pathname.match(/\/page\/([^/]+)/);
     const activePageId = pageMatch ? pageMatch[1] : undefined;
 
-    // Serialize file attachments as {filename, mimeType, dataUrl} for the API
-    const attachments = files
-      .filter((f) => f.url)
-      .map((f) => ({
-        filename: f.filename ?? "file",
-        mimeType: f.mediaType ?? "application/octet-stream",
-        dataUrl: f.url,
-      }));
+    // Serialize file attachments as {filename, mimeType, dataUrl} for the API, converting blob URLs to base64
+    const attachments = await Promise.all(
+      files
+        .filter((f) => f.url)
+        .map(async (f) => {
+          const convertedUrl = await blobUrlToDataUrl(f.url);
+          return {
+            filename: f.filename ?? "file",
+            mimeType: f.mediaType ?? "application/octet-stream",
+            dataUrl: convertedUrl || f.url,
+          };
+        }),
+    );
 
     await sendMessage(
       { text: trimmed || "(attached files)", files },
@@ -520,6 +541,10 @@ export function RemiChat({
         },
       },
     );
+
+    if (attachments.length > 0) {
+      void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
+    }
   }
 
   useEffect(() => {

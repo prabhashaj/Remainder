@@ -97,11 +97,6 @@ export function getDocumentTools(
                 });
               }
 
-              // Fallback to first available document if only 1 document exists
-              if (!bestDoc && allDocs.length === 1) {
-                bestDoc = allDocs[0];
-              }
-
               if (!bestDoc) {
                 return {
                   success: false,
