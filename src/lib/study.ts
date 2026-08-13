@@ -84,36 +84,19 @@ export async function uploadMaterial(file: File): Promise<string> {
     throw new Error(`File type ${file.type || "unknown"} is not allowed.`);
   }
 
-  const { getRemainingLimits } = await import("@/lib/limits");
-  const limits = await getRemainingLimits();
-  const maxMb = limits.maxFileSizeMb;
-  const maxBytes = maxMb * 1024 * 1024;
-  
-  if (file.size > maxBytes) {
-    throw new Error(`File exceeds the ${maxMb}MB size limit. Please upgrade to premium for larger uploads.`);
-  }
-
-  const userId = await requireUserId();
-  const safe = file.name.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/\.+/g, ".");
-  const path = `${userId}/${Date.now()}-${safe}`;
+  const { getUploadTokenFn } = await import("@/lib/study.functions");
+  const { path, token } = await getUploadTokenFn({
+    data: {
+      filename: file.name,
+      fileSize: file.size,
+    },
+  });
 
   const { error } = await supabase.storage
     .from(MATERIALS_BUCKET)
-    .upload(path, file, { contentType: file.type || "application/pdf", upsert: true });
+    .uploadToSignedUrl(path, token, file);
 
-  if (
-    error &&
-    (error.message.includes("not found") ||
-      error.message.includes("Bucket") ||
-      error.message.includes("does not exist"))
-  ) {
-    // Attempt auto-creation if bucket doesn't exist
-    await supabase.storage.createBucket(MATERIALS_BUCKET, { public: true });
-    const retry = await supabase.storage
-      .from(MATERIALS_BUCKET)
-      .upload(path, file, { contentType: file.type || "application/pdf", upsert: true });
-    if (retry.error) throw new Error(retry.error.message);
-  } else if (error) {
+  if (error) {
     throw new Error(error.message);
   }
   return path;

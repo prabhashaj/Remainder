@@ -12,7 +12,7 @@ export function getRoadmapTools(
   userId: string,
   traceId: string,
   threadId: string | null,
-  key: string
+  key: string,
 ) {
   return {
     delegateToPlanner: tool({
@@ -27,12 +27,6 @@ export function getRoadmapTools(
         wrapTool(
           "delegateToPlanner",
           async () => {
-            // Wait, we need to import getRemainingLimits!
-            const { getRemainingLimitsServer } = await import("@/lib/limits");
-            const limits = await getRemainingLimitsServer(supabase, userId);
-            if (instruction.toLowerCase().includes("roadmap") && !limits.roadmaps.canCreate) {
-              return { summary: `Upgrade Required! You have reached your limit of ${limits.roadmaps.limit} roadmaps this week. Tell the user to upgrade to premium.` };
-            }
             return runPlanner({ instruction, apiKey: key, supabase, userId, traceId });
           },
           supabase,

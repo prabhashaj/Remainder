@@ -358,7 +358,11 @@ export async function updateRoadmapItem(id: string, patch: Tables["roadmap_items
 }
 
 export async function deleteRoadmap(id: string) {
-  const { data: roadmap } = await supabase.from("roadmaps").select("goal_id").eq("id", id).maybeSingle();
+  const { data: roadmap } = await supabase
+    .from("roadmaps")
+    .select("goal_id")
+    .eq("id", id)
+    .maybeSingle();
 
   // Cascade delete associated tasks
   await supabase.from("tasks").delete().eq("roadmap_id", id);
@@ -503,10 +507,18 @@ export async function deleteMemory(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export async function createMemory(content: string, category: string = "preference", importance = 3): Promise<AgentMemory> {
+export async function createMemory(
+  content: string,
+  category: string = "preference",
+  importance = 3,
+): Promise<AgentMemory> {
   const user_id = await requireUserId();
   return unwrap(
-    await supabase.from("agent_memories").insert({ user_id, content, category, importance }).select("*").single()
+    await supabase
+      .from("agent_memories")
+      .insert({ user_id, content, category, importance })
+      .select("*")
+      .single(),
   );
 }
 
@@ -574,10 +586,7 @@ export async function recordUsage(patch: Partial<UsageLog> & { week_start_date: 
   const user_id = await requireUserId();
   const { data, error } = await supabase
     .from("usage_logs")
-    .upsert(
-      { user_id, ...patch },
-      { onConflict: "user_id,week_start_date" }
-    )
+    .upsert({ user_id, ...patch }, { onConflict: "user_id,week_start_date" })
     .select("*")
     .single();
   if (error) throw new Error(error.message);

@@ -198,7 +198,10 @@ function WorkspaceSidebar() {
       return sub;
     },
   });
-  const isPremium = subscription && subscription.status === "active" && (subscription.tier === "weekly" || subscription.tier === "monthly");
+  const isPremium =
+    subscription &&
+    subscription.status === "active" &&
+    (subscription.tier === "weekly" || subscription.tier === "monthly");
 
   return (
     <Sidebar collapsible="icon" className="border-border/70">
@@ -206,13 +209,18 @@ function WorkspaceSidebar() {
         <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1.5">
           <img src={remiLogo} alt="" width={36} height={36} className="size-9 shrink-0" />
           <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-            <span className="font-display text-xl font-bold">
-              Remispace
-            </span>
-            {isPremium && (
+            <span className="font-display text-xl font-bold">Remispace</span>
+            {isPremium ? (
               <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-sm">
                 Pro
               </span>
+            ) : (
+              <Link 
+                to="/pricing" 
+                className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary shadow-sm hover:bg-primary/20 transition-colors"
+              >
+                Upgrade
+              </Link>
             )}
           </div>
         </Link>

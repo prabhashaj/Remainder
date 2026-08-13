@@ -20,6 +20,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 
 import remiLogo from "@/assets/remi.png";
+import heroImage from "@/assets/hero-study.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -238,7 +239,8 @@ function WorkspacePreview() {
             <span className="ml-auto size-2 rounded-full bg-emerald-500" />
           </div>
           <div className="mt-4 rounded-2xl bg-card border border-border/70 p-3 text-xs leading-relaxed text-muted-foreground">
-            "Twelve minutes today is still momentum. Want me to shrink tomorrow's step so the streak survives?"
+            "Twelve minutes today is still momentum. Want me to shrink tomorrow's step so the streak
+            survives?"
           </div>
           <button className="mt-3 w-full rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground shadow-xs press">
             Continue learning
@@ -274,12 +276,24 @@ function Landing() {
     Learn: {
       heading: "Lessons with room to think.",
       text: "Explanations, examples, key concepts, and practice—paced for understanding.",
-      items: ["Clear explanation", "Worked examples", "Key concepts", "Practice questions", "Review"],
+      items: [
+        "Clear explanation",
+        "Worked examples",
+        "Key concepts",
+        "Practice questions",
+        "Review",
+      ],
     },
     Understand: {
       heading: "Bring your materials along.",
       text: "Ask questions of papers, PDFs, and lectures with context kept close.",
-      items: ["Pre-reading brief", "Key claims", "Important concepts", "Questions", "Source references"],
+      items: [
+        "Pre-reading brief",
+        "Key claims",
+        "Important concepts",
+        "Questions",
+        "Source references",
+      ],
     },
     Practice: {
       heading: "Remember what matters.",
@@ -368,7 +382,7 @@ function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="mx-auto grid max-w-6xl gap-12 px-6 pt-12 pb-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+      <section className="mx-auto grid max-w-7xl gap-12 px-6 pt-12 pb-20 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <Reveal>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground border border-border/60">
             <Sparkles className="size-3.5 text-primary" /> Calm productivity, gently coached
@@ -396,24 +410,12 @@ function Landing() {
         </Reveal>
 
         <Reveal>
-          <div className="panel-soft relative overflow-hidden p-8 border border-border bg-card/70 shadow-lift">
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 shadow-2xl ring-1 ring-white/10 dark:ring-white/10">
             <img
-              src={remiLogo}
-              alt="Remi mascot illustration"
-              width={1024}
-              height={1024}
-              className="mx-auto size-52 drop-shadow-md rounded-3xl object-cover"
+              src={heroImage}
+              alt="Remispace Study Place interface"
+              className="w-full h-auto object-cover"
             />
-            <div className="mt-6 rounded-2xl bg-muted/50 border border-border/80 p-5">
-              <div className="flex items-center gap-2">
-                <span className="size-2 rounded-full bg-emerald-500" />
-                <p className="font-display text-sm font-bold text-foreground">Remi AI Coach</p>
-              </div>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground italic">
-                "Twelve minutes today is still momentum. Want me to shrink tomorrow's step so the
-                streak survives?"
-              </p>
-            </div>
           </div>
         </Reveal>
       </section>
@@ -493,7 +495,9 @@ function Landing() {
                   <div className="flex items-center gap-2.5">
                     <img src={remiLogo} alt="" className="size-8 rounded-full object-cover" />
                     <div>
-                      <p className="text-xs font-bold text-foreground">Remi is preparing your space</p>
+                      <p className="text-xs font-bold text-foreground">
+                        Remi is preparing your space
+                      </p>
                       <p className="text-[11px] text-muted-foreground">Built around your goal</p>
                     </div>
                   </div>
@@ -542,16 +546,8 @@ function Landing() {
                 "Tell Remi what you're trying to accomplish.",
                 "I want to learn machine learning & system design.",
               ],
-              [
-                "02",
-                "Remi creates your path.",
-                "Roadmap → Lessons → Materials → Practice → Goals",
-              ],
-              [
-                "03",
-                "Show up and make progress.",
-                "Focus → Learn → Practice → Reflect → Continue",
-              ],
+              ["02", "Remi creates your path.", "Roadmap → Lessons → Materials → Practice → Goals"],
+              ["03", "Show up and make progress.", "Focus → Learn → Practice → Reflect → Continue"],
             ].map(([num, title, desc]) => (
               <Reveal key={num} className="rounded-2xl border border-border bg-card p-6 shadow-xs">
                 <p className="text-xs font-bold tracking-widest text-primary">{num}</p>
@@ -580,16 +576,8 @@ function Landing() {
               "Learn a new skill",
               "Build a structured path from beginner to advanced.",
             ],
-            [
-              FileText,
-              "Master academic material",
-              "Make papers, PDFs, and lectures interactive.",
-            ],
-            [
-              CircleHelp,
-              "Prepare for interviews",
-              "Practice questions with a clear, useful plan.",
-            ],
+            [FileText, "Master academic material", "Make papers, PDFs, and lectures interactive."],
+            [CircleHelp, "Prepare for interviews", "Practice questions with a clear, useful plan."],
             [Leaf, "Build better habits", "Create sustainable routines without guilt."],
           ].map(([Icon, title, body]) => {
             const I = Icon as typeof Leaf;
@@ -626,6 +614,9 @@ function Landing() {
             </div>
             <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
               <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> 20 daily messages with Remi
+              </li>
+              <li className="flex items-center">
                 <Check className="mr-3 size-4 text-primary" /> 2 Roadmaps per week
               </li>
               <li className="flex items-center">
@@ -637,7 +628,9 @@ function Landing() {
             </ul>
             <div className="mt-8">
               <Button asChild variant="outline" className="w-full rounded-xl border-border">
-                <Link to="/auth" search={{ mode: "signup" }}>Get Started</Link>
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Get Started
+                </Link>
               </Button>
             </div>
           </Reveal>
@@ -653,6 +646,9 @@ function Landing() {
             </div>
             <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
               <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> Unlimited messages with Remi
+              </li>
+              <li className="flex items-center">
                 <Check className="mr-3 size-4 text-primary" /> 10 Roadmaps per week
               </li>
               <li className="flex items-center">
@@ -664,7 +660,9 @@ function Landing() {
             </ul>
             <div className="mt-8">
               <Button asChild className="w-full rounded-xl">
-                <Link to="/auth" search={{ mode: "signup" }}>Upgrade Now</Link>
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Upgrade Now
+                </Link>
               </Button>
             </div>
           </Reveal>
@@ -687,21 +685,27 @@ function Landing() {
               </li>
             </ul>
             <div className="mt-8">
-              <Button asChild variant="outline" className="w-full rounded-xl border-border bg-background">
-                <Link to="/auth" search={{ mode: "signup" }}>Subscribe Monthly</Link>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full rounded-xl border-border bg-background"
+              >
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Subscribe Monthly
+                </Link>
               </Button>
             </div>
           </Reveal>
         </div>
-        <Reveal className="mt-12 rounded-2xl bg-gradient-to-br from-indigo-950 to-indigo-900 p-8 text-white max-w-5xl mx-auto shadow-sm">
+        <Reveal className="mt-12 rounded-2xl bg-primary p-8 text-primary-foreground max-w-5xl mx-auto shadow-xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h2 className="text-2xl font-bold">Enterprise & Teams</h2>
-              <p className="mt-2 text-indigo-200">
+              <p className="mt-2 text-primary-foreground/80">
                 Need BYOK (Bring Your Own Key) or dedicated enterprise rate limits?
               </p>
             </div>
-            <button className="whitespace-nowrap rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-900 shadow-sm hover:bg-indigo-50">
+            <button className="whitespace-nowrap rounded-xl bg-background px-6 py-3 text-sm font-semibold text-foreground shadow-sm hover:bg-muted transition-colors">
               Contact Sales
             </button>
           </div>

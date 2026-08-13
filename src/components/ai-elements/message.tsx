@@ -301,7 +301,7 @@ function preprocessMarkdown(children?: React.ReactNode): string {
   text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, p1) => `\n$$\n${p1}\n$$\n`);
 
   // 5. Clean up $$ blocks. We iterate through all $$ pairs.
-  let parts = text.split('$$');
+  const parts = text.split("$$");
   for (let i = 1; i < parts.length; i += 2) {
     if (i + 1 >= parts.length) break;
 
@@ -309,26 +309,26 @@ function preprocessMarkdown(children?: React.ReactNode): string {
     const mathContent = parts[i]!;
     const after = parts[i + 1]!;
 
-    const isInline = !mathContent.includes('\n') && 
-                     (/[^\s\r\n]$/.test(before) || /^[^\s\r\n]/.test(after));
+    const isInline =
+      !mathContent.includes("\n") && (/[^\s\r\n]$/.test(before) || /^[^\s\r\n]/.test(after));
 
     if (isInline) {
-      parts[i - 1] = before + ' $';
+      parts[i - 1] = before + " $";
       parts[i] = mathContent.trim();
-      parts[i + 1] = '$ ' + after;
+      parts[i + 1] = "$ " + after;
     } else {
-      parts[i - 1] = before.replace(/[ \t]*\r?\n?[ \t]*$/, '') + '\n\n$$\n';
+      parts[i - 1] = before.replace(/[ \t]*\r?\n?[ \t]*$/, "") + "\n\n$$\n";
       parts[i] = mathContent.trim();
-      parts[i + 1] = '\n$$\n\n' + after.replace(/^[ \t]*\r?\n?[ \t]*/, '');
+      parts[i + 1] = "\n$$\n\n" + after.replace(/^[ \t]*\r?\n?[ \t]*/, "");
     }
   }
-  
-  text = parts[0] || '';
+
+  text = parts[0] || "";
   for (let i = 1; i < parts.length; i += 2) {
     if (i + 1 < parts.length) {
-      text += (parts[i] || '') + (parts[i + 1] || '');
+      text += (parts[i] || "") + (parts[i + 1] || "");
     } else {
-      text += '$$' + (parts[i] || '');
+      text += "$$" + (parts[i] || "");
     }
   }
 
@@ -349,8 +349,8 @@ function preprocessMarkdown(children?: React.ReactNode): string {
   // Escape any remaining unpaired/rogue $
   text = text.replace(/\$/g, "\\$");
 
-  text = text.replace(/__MATH_INLINE_(\d+)__/g, (_, i) => inlines[Number(i)] || '');
-  text = text.replace(/__MATH_BLOCK_(\d+)__/g, (_, i) => blocks[Number(i)] || '');
+  text = text.replace(/__MATH_INLINE_(\d+)__/g, (_, i) => inlines[Number(i)] || "");
+  text = text.replace(/__MATH_BLOCK_(\d+)__/g, (_, i) => blocks[Number(i)] || "");
 
   return text;
 }

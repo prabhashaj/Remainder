@@ -58,7 +58,7 @@ export async function checkRateLimit(
 export async function checkPlanUsage(
   supabase: SupabaseClient<Database>,
   userId: string,
-  eventType: string
+  eventType: string,
 ) {
   // Fetch active subscription and plan
   const { data: subData } = await supabase
@@ -69,7 +69,7 @@ export async function checkPlanUsage(
 
   let dailyLimit = 20; // Default Free Tier Limit
   let monthlyLimit = 200; // Default Free Tier Monthly Limit
-  
+
   if (subData && subData.status === "active" && subData.plans) {
     const plan = subData.plans as any;
     dailyLimit = plan.daily_message_limit ?? dailyLimit;
@@ -108,10 +108,10 @@ export async function checkPlanUsage(
 
   // We don't record the event here, we rely on checkRateLimit to record it
   // to avoid double-recording in rate_limit_events
-  
+
   return {
-     daily: { used: dailyCount || 0, limit: dailyLimit },
-     monthly: { used: monthlyCount || 0, limit: monthlyLimit }
+    daily: { used: dailyCount || 0, limit: dailyLimit },
+    monthly: { used: monthlyCount || 0, limit: monthlyLimit },
   };
 }
 
@@ -129,15 +129,19 @@ export function handleRateLimitError(error: unknown, windowMinutes = 60) {
         },
       });
     }
-    
+
     if (error.message.includes("403: Plan")) {
-      return new Response(JSON.stringify({ 
-         error: "Plan limit reached", 
-         message: "You've reached your plan's message limit. Upgrade to continue using this feature." 
-      }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Plan limit reached",
+          message:
+            "You've reached your plan's message limit. Upgrade to continue using this feature.",
+        }),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
   }
 

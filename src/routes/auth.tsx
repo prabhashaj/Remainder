@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 
+import { ArrowLeft } from "lucide-react";
+
 type AuthSearch = { mode: "signin" | "signup" };
 
 export const Route = createFileRoute("/auth")({
@@ -89,7 +91,11 @@ function AuthPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
+    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12 relative">
+      <Link to="/" className="absolute left-6 top-6 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft className="size-4" />
+        Back to home
+      </Link>
       <div className="w-full max-w-md">
         <Link to="/" className="mb-8 flex items-center justify-center gap-2.5">
           <img src={remiLogo} alt="Remispace" width={44} height={44} className="size-11" />

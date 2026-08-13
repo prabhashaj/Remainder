@@ -8,7 +8,7 @@ export function getTasksAndGoalsTools(
   supabase: ReturnType<typeof createClient<Database>>,
   userId: string,
   traceId: string,
-  threadId: string | null
+  threadId: string | null,
 ) {
   return {
     createTask: tool({
@@ -21,7 +21,13 @@ export function getTasksAndGoalsTools(
           .optional()
           .describe("Optional due date in YYYY-MM-DD format, or null"),
       }),
-      execute: async ({ title, due_date }: { title: string; due_date?: string | null | undefined }) =>
+      execute: async ({
+        title,
+        due_date,
+      }: {
+        title: string;
+        due_date?: string | null | undefined;
+      }) =>
         wrapTool(
           "createTask",
           async () => {
@@ -50,7 +56,11 @@ export function getTasksAndGoalsTools(
       inputSchema: z.object({
         title: z.string().describe("The goal title"),
         description: z.string().nullable().optional().describe("A short description, or null"),
-        target_date: z.string().nullable().optional().describe("Target date in YYYY-MM-DD format, or null"),
+        target_date: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Target date in YYYY-MM-DD format, or null"),
         milestones: z
           .array(z.object({ title: z.string() }))
           .nullable()
@@ -343,12 +353,13 @@ export function getTasksAndGoalsTools(
     }),
 
     addMilestone: tool({
-      description:
-        "Add one or more new milestones (checkpoints) directly to an existing goal.",
+      description: "Add one or more new milestones (checkpoints) directly to an existing goal.",
       inputSchema: z.object({
         goal_id: z
           .string()
-          .describe("ID or title of the goal to add milestone(s) to (e.g. 'Reach 1M Followers on Instagram')"),
+          .describe(
+            "ID or title of the goal to add milestone(s) to (e.g. 'Reach 1M Followers on Instagram')",
+          ),
         title: z
           .string()
           .optional()
@@ -524,7 +535,8 @@ export function getTasksAndGoalsTools(
               }
             }
 
-            if (titlesToAdd.length === 0) return { success: false, error: "No milestone title provided." };
+            if (titlesToAdd.length === 0)
+              return { success: false, error: "No milestone title provided." };
 
             const { data: existingMs } = await supabase
               .from("milestones")

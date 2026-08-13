@@ -12,6 +12,50 @@ import {
 } from "@/lib/transcript.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit } from "@/lib/rate-limit.server";
+import { getRemainingLimitsServer } from "@/lib/limits";
+
+export const getUploadTokenFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        filename: z.string(),
+        fileSize: z.number(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const limits = await getRemainingLimitsServer(context.supabase, context.userId);
+    const maxMb = limits.maxFileSizeMb;
+    const maxBytes = maxMb * 1024 * 1024;
+    if (data.fileSize > maxBytes) {
+      throw new Error(
+        `File exceeds the ${maxMb}MB size limit. Please upgrade to premium for larger uploads.`,
+      );
+    }
+
+    const safe = data.filename.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/\.+/g, ".");
+    const path = `${context.userId}/${Date.now()}-${safe}`;
+    const { data: uploadData, error } = await context.supabase.storage
+      .from("materials")
+      .createSignedUploadUrl(path);
+
+    if (error) {
+      // Attempt to auto-create bucket if it doesn't exist
+      if (
+        error.message.includes("not found") ||
+        error.message.includes("Bucket") ||
+        error.message.includes("does not exist")
+      ) {
+        await context.supabase.storage.createBucket("materials", { public: true });
+        const retry = await context.supabase.storage.from("materials").createSignedUploadUrl(path);
+        if (retry.error) throw new Error(retry.error.message);
+        return { path, token: retry.data.token };
+      }
+      throw new Error(error.message);
+    }
+    return { path, token: uploadData.token };
+  });
 
 export const summarizeMaterial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

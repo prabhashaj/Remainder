@@ -14,10 +14,7 @@ import { Shimmer } from "./shimmer";
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
-  <Collapsible
-    className={cn("group not-prose mb-4 w-full", className)}
-    {...props}
-  />
+  <Collapsible className={cn("group not-prose mb-4 w-full", className)} {...props} />
 );
 
 export type ToolPart = ToolUIPart | DynamicToolUIPart;
@@ -65,8 +62,11 @@ const getToolName = (toolName: string, isRunning: boolean) => {
   if (mapping[toolName]) {
     return isRunning ? mapping[toolName].active : mapping[toolName].done;
   }
-  
-  const defaultName = toolName.replace(/([A-Z])/g, " $1").trim().toLowerCase();
+
+  const defaultName = toolName
+    .replace(/([A-Z])/g, " $1")
+    .trim()
+    .toLowerCase();
   const formattedDefault = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
   return isRunning ? `Creating ${formattedDefault}` : `Created ${formattedDefault}`;
 };
@@ -85,7 +85,10 @@ export const ToolHeader = ({
 
   return (
     <CollapsibleTrigger
-      className={cn("flex w-full items-center gap-2 py-2 text-base text-muted-foreground hover:text-foreground transition-colors", className)}
+      className={cn(
+        "flex w-full items-center gap-2 py-2 text-base text-muted-foreground hover:text-foreground transition-colors",
+        className,
+      )}
       {...props}
     >
       {isRunning ? (

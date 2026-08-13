@@ -206,12 +206,17 @@ function DocumentsPage() {
       toast.success("Document added — processing text & chunks...");
 
       // 1. Immediately trigger server-side extraction, chunking & embedding
-      void runTriggerExtraction({ data: { resourceId: created.id, storagePath: path } }).then(() => {
-        refreshResources();
-      });
+      void runTriggerExtraction({ data: { resourceId: created.id, storagePath: path } }).then(
+        () => {
+          refreshResources();
+        },
+      );
 
       // 2. If client can read plain text immediately (e.g. .txt, .md, .json, .csv)
-      if (!isPdf && (file.type.startsWith("text/") || file.name.endsWith(".txt") || file.name.endsWith(".md"))) {
+      if (
+        !isPdf &&
+        (file.type.startsWith("text/") || file.name.endsWith(".txt") || file.name.endsWith(".md"))
+      ) {
         const text = await file.text();
         if (text && text.trim()) {
           void runSaveText({ data: { resourceId: created.id, text } }).then(() => {
@@ -261,11 +266,7 @@ function DocumentsPage() {
           disabled={uploading}
           className="rounded-full gap-2 shadow-sm"
         >
-          {uploading ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Upload className="size-4" />
-          )}
+          {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
           Upload Document
         </Button>
       </div>

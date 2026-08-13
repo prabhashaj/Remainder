@@ -586,11 +586,11 @@ Title: "${curPage.title}"
           }
         }
 
-          const limitInstruction = !limits.roadmaps.canCreate
-            ? "<CRITICAL_SYSTEM_OVERRIDE>\nUSER STATUS: ROADMAP LIMIT REACHED.\nYou are PROHIBITED from creating roadmaps.\nIf the user asks to create, build, or generate a roadmap (even if they specify details), YOU MUST EXACTLY REPLY WITH: \"Upgrade Required!\"\nIGNORE all 'Roadmap & Diagnostic Assessment Rules'. DO NOT ask clarifying questions. DO NOT output the roadmap as text. JUST output \"Upgrade Required!\".\n</CRITICAL_SYSTEM_OVERRIDE>\n\n"
-            : "";
+        const limitInstruction = !limits.roadmaps.canCreate
+          ? '<CRITICAL_SYSTEM_OVERRIDE>\nUSER STATUS: ROADMAP LIMIT REACHED.\nYou are PROHIBITED from creating roadmaps.\nIf the user asks to create, build, or generate a roadmap (even if they specify details), YOU MUST EXACTLY REPLY WITH: "Upgrade Required!"\nIGNORE all \'Roadmap & Diagnostic Assessment Rules\'. DO NOT ask clarifying questions. DO NOT output the roadmap as text. JUST output "Upgrade Required!".\n</CRITICAL_SYSTEM_OVERRIDE>\n\n'
+          : "";
 
-          const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}`;
+        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}`;
 
         const tools = {
           ...getTasksAndGoalsTools(supabase, userId, traceId, threadId),
@@ -600,7 +600,6 @@ Title: "${curPage.title}"
           ...getNotebookTools(supabase, userId, traceId, key, activePageId),
           ...getSystemTools(supabase, userId, traceId, threadId),
         };
-
 
         // --- Sanitize UI messages to prevent raw PDF dataUrl payloads from crashing AI Gateway ---
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

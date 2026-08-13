@@ -8,7 +8,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
   .validator((data: { planId: string }) => data)
   .handler(async ({ context, data: payload }) => {
     const { supabase, userId } = context;
-    
+
     try {
       const { data: plan } = await supabase
         .from("plans")
@@ -71,8 +71,13 @@ export const cancelSubscription = createServerFn({ method: "POST" })
       }
 
       await razorpay.subscriptions.cancel(sub.razorpay_subscription_id, false);
-      
-      log("info", "subscription_cancel_requested", { subscriptionId: sub.razorpay_subscription_id }, { userId });
+
+      log(
+        "info",
+        "subscription_cancel_requested",
+        { subscriptionId: sub.razorpay_subscription_id },
+        { userId },
+      );
       return { success: true };
     } catch (error) {
       log("error", "cancel_subscription_error", { error: String(error) }, { userId });
@@ -85,11 +90,13 @@ export const getBillingData = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const { data: plans } = await supabase.from("plans").select("*").eq("is_active", true);
-    const { data: sub } = await (supabase.from("subscriptions").select("*, plans(*)") as any).eq("user_id", userId).maybeSingle();
+    const { data: sub } = await (supabase.from("subscriptions").select("*, plans(*)") as any)
+      .eq("user_id", userId)
+      .maybeSingle();
     return {
       plans: plans || [],
       subscription: sub,
-      razorpayKeyId: process.env["RAZORPAY_KEY_ID"] || ""
+      razorpayKeyId: process.env["RAZORPAY_KEY_ID"] || "",
     };
   });
 
@@ -101,6 +108,8 @@ export const getPlanUsage = createServerFn({ method: "GET" })
     try {
       return await checkPlanUsage(supabase, userId, "api_chat");
     } catch (e) {
-      return { daily: { used: 0, limit: 20 }, monthly: { used: 0, limit: 200 } };
+      // If checkPlanUsage throws an error, it means the limit is reached.
+      // We return 20/20 or 200/200 so the UI displays correctly instead of 0.
+      return { daily: { used: 20, limit: 20 }, monthly: { used: 200, limit: 200 } };
     }
   });

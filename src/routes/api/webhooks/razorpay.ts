@@ -30,7 +30,18 @@ export const Route = createFileRoute("/api/webhooks/razorpay")({
             .update(bodyText)
             .digest("hex");
 
-          if (expectedSignature !== signature) {
+          let isValid = false;
+          try {
+            const expectedBuffer = Buffer.from(expectedSignature);
+            const signatureBuffer = Buffer.from(signature);
+            if (expectedBuffer.length === signatureBuffer.length) {
+              isValid = crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
+            }
+          } catch (e) {
+            // Buffer creation failed or other error
+          }
+
+          if (!isValid) {
             log("warn", "razorpay_webhook_invalid_signature");
             return new Response("Invalid signature", { status: 400 });
           }
@@ -39,7 +50,7 @@ export const Route = createFileRoute("/api/webhooks/razorpay")({
           const eventId = event.id; // Razorpay event ID for idempotency
 
           if (!eventId) {
-             return new Response("Invalid event format", { status: 400 });
+            return new Response("Invalid event format", { status: 400 });
           }
 
           const supabase = createClient<Database>(
@@ -55,8 +66,11 @@ export const Route = createFileRoute("/api/webhooks/razorpay")({
             .maybeSingle();
 
           if (existingEvent) {
-             log("info", "razorpay_webhook_already_processed", { eventId });
-             return new Response(JSON.stringify({ ok: true, note: "already processed" }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            log("info", "razorpay_webhook_already_processed", { eventId });
+            return new Response(JSON.stringify({ ok: true, note: "already processed" }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
           }
 
           log("info", "razorpay_webhook_received", { event: event.event, eventId });
@@ -69,32 +83,33 @@ export const Route = createFileRoute("/api/webhooks/razorpay")({
             if (subscription) {
               const userId = subscription.notes?.user_id;
               const planId = subscription.notes?.plan_id;
-              
+
               if (userId) {
                 const currentPeriodEnd = new Date(subscription.current_end * 1000).toISOString();
-                
-                await supabase
-                  .from("subscriptions")
-                  .upsert(
-                    {
-                      user_id: userId,
-                      razorpay_subscription_id: subscription.id,
-                      razorpay_customer_id: subscription.customer_id,
-                      plan_id: planId,
-                      tier: "active", // generic active tier flag, rely on plan_id for limits
-                      status: "active",
-                      current_period_end: currentPeriodEnd,
-                      updated_at: new Date().toISOString(),
-                    },
-                    { onConflict: "user_id" },
-                  );
+
+                await supabase.from("subscriptions").upsert(
+                  {
+                    user_id: userId,
+                    razorpay_subscription_id: subscription.id,
+                    razorpay_customer_id: subscription.customer_id,
+                    plan_id: planId,
+                    tier: "active", // generic active tier flag, rely on plan_id for limits
+                    status: "active",
+                    current_period_end: currentPeriodEnd,
+                    updated_at: new Date().toISOString(),
+                  },
+                  { onConflict: "user_id" },
+                );
               }
             }
-          } else if (event.event === "subscription.cancelled" || event.event === "subscription.halted") {
+          } else if (
+            event.event === "subscription.cancelled" ||
+            event.event === "subscription.halted"
+          ) {
             if (subscription) {
               const userId = subscription.notes?.user_id;
               if (userId) {
-                 await supabase
+                await supabase
                   .from("subscriptions")
                   .update({
                     status: event.event === "subscription.cancelled" ? "canceled" : "past_due",
@@ -105,17 +120,21 @@ export const Route = createFileRoute("/api/webhooks/razorpay")({
             }
           } else if (event.event === "payment.failed") {
             if (payment && payment.notes?.user_id) {
-               log("warn", "razorpay_payment_failed", { paymentId: payment.id, userId: payment.notes.user_id });
-               // Usually handled by subscription.halted, but good to log
+              log("warn", "razorpay_payment_failed", {
+                paymentId: payment.id,
+                userId: payment.notes.user_id,
+              });
+              // Usually handled by subscription.halted, but good to log
             }
           }
 
           // 3. Mark event as processed
-          await supabase
-            .from("processed_webhook_events")
-            .insert({ razorpay_event_id: eventId });
+          await supabase.from("processed_webhook_events").insert({ razorpay_event_id: eventId });
 
-          return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
         } catch (error) {
           log("error", "razorpay_webhook_error", { error: String(error) });
           return new Response("Internal Server Error", { status: 500 });

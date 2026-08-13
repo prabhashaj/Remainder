@@ -59,7 +59,10 @@ export const generateNudge = createServerFn({ method: "GET" })
         .select("mood,day")
         .order("day", { ascending: false })
         .limit(7),
-      supabase.from("focus_sessions").select("minutes,counted_minutes").gte("created_at", weekAgo.toISOString()),
+      supabase
+        .from("focus_sessions")
+        .select("minutes,counted_minutes")
+        .gte("created_at", weekAgo.toISOString()),
     ]);
 
     const openTasks = (tasks ?? []).map(
@@ -79,7 +82,10 @@ export const generateNudge = createServerFn({ method: "GET" })
     });
     const goalsList = (goals ?? []).map((g) => `${g.title} (${g.progress}%)`);
     const moodStr = (moods ?? []).map((m) => m.mood ?? "—").join(" ");
-    const focusMin = (focusSessions ?? []).reduce((sum, s) => sum + (s.counted_minutes ?? s.minutes ?? 0), 0);
+    const focusMin = (focusSessions ?? []).reduce(
+      (sum, s) => sum + (s.counted_minutes ?? s.minutes ?? 0),
+      0,
+    );
 
     let stateSummary = "";
     if (openTasks.length)

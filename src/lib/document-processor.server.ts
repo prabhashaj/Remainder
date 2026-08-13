@@ -1,5 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { waitUntil } from '@vercel/functions';
+import { SupabaseClient } from "@supabase/supabase-js";
+import { waitUntil } from "@vercel/functions";
 import { chunkText } from "./chunking.server";
 import { generateEmbeddings } from "./embeddings.server";
 import { log } from "./logger.server";
@@ -50,90 +50,89 @@ export async function saveDocumentTextAndEmbed(
 
   // 3. Generate chunks and embeddings asynchronously in the background
   // Fire and forget so we don't block the request or hit Vercel timeouts
-  waitUntil((async () => {
-    try {
-      const chunks = chunkText(text);
-      if (chunks.length > 0) {
-        // Clear existing chunks for this document if any
-        await supabase.from("document_chunks").delete().eq("document_id", resourceId);
+  waitUntil(
+    (async () => {
+      try {
+        const chunks = chunkText(text);
+        if (chunks.length > 0) {
+          // Clear existing chunks for this document if any
+          await supabase.from("document_chunks").delete().eq("document_id", resourceId);
 
-        // Batch process to avoid hitting API limits
-        for (let i = 0; i < chunks.length; i += 50) {
-          const batchChunks = chunks.slice(i, i + 50);
-          let batchEmbeddings: number[][] = [];
-          try {
-            batchEmbeddings = await generateEmbeddings(batchChunks);
-          } catch (embErr) {
-            log("warn", "embed_generation_failed_fallback", {
-              error: embErr instanceof Error ? embErr.message : String(embErr),
+          // Batch process to avoid hitting API limits
+          for (let i = 0; i < chunks.length; i += 50) {
+            const batchChunks = chunks.slice(i, i + 50);
+            let batchEmbeddings: number[][] = [];
+            try {
+              batchEmbeddings = await generateEmbeddings(batchChunks);
+            } catch (embErr) {
+              log("warn", "embed_generation_failed_fallback", {
+                error: embErr instanceof Error ? embErr.message : String(embErr),
+              });
+            }
+
+            const chunkRows = batchChunks.map((content, idx) => {
+              const emb = batchEmbeddings[idx];
+              return {
+                document_id: resourceId,
+                content,
+                ...(emb && emb.length > 0 ? { embedding: `[${emb.join(",")}]` } : {}),
+              };
             });
+
+            const { error: chunkErr } = await supabase.from("document_chunks").insert(chunkRows);
+            if (chunkErr) {
+              log(
+                "error",
+                "embed_document_chunk_insert_failed",
+                {
+                  resourceId,
+                  batch: Math.floor(i / 50),
+                  error: chunkErr.message,
+                },
+                { userId: userId ?? undefined },
+              );
+            }
           }
 
-          const chunkRows = batchChunks.map((content, idx) => {
-            const emb = batchEmbeddings[idx];
-            return {
-              document_id: resourceId,
-              content,
-              ...(emb && emb.length > 0 ? { embedding: `[${emb.join(",")}]` } : {}),
-            };
-          });
-
-          const { error: chunkErr } = await supabase.from("document_chunks").insert(chunkRows);
-          if (chunkErr) {
-            log(
-              "error",
-              "embed_document_chunk_insert_failed",
-              {
-                resourceId,
-                batch: Math.floor(i / 50),
-                error: chunkErr.message,
-              },
-              { userId: userId ?? undefined },
-            );
-          }
+          log(
+            "info",
+            "embed_document_done",
+            {
+              resourceId,
+              chunkCount: chunks.length,
+            },
+            { userId: userId ?? undefined },
+          );
         }
 
+        // Mark job as done
+        if (jobId) {
+          await supabase
+            .from("background_jobs")
+            .update({ status: "done", completed_at: new Date().toISOString() })
+            .eq("id", jobId);
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
         log(
-          "info",
-          "embed_document_done",
-          {
-            resourceId,
-            chunkCount: chunks.length,
-          },
+          "error",
+          "embed_document_failed",
+          { resourceId, error: msg },
           { userId: userId ?? undefined },
         );
-      }
 
-      // Mark job as done
-      if (jobId) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await supabase
-          .from("background_jobs")
-          .update({ status: "done", completed_at: new Date().toISOString() })
-          .eq("id", jobId);
+        // Mark job as failed
+        if (jobId) {
+          await supabase
+            .from("background_jobs")
+            .update({
+              status: "failed",
+              error_message: msg,
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", jobId);
+        }
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      log(
-        "error",
-        "embed_document_failed",
-        { resourceId, error: msg },
-        { userId: userId ?? undefined },
-      );
-
-      // Mark job as failed
-      if (jobId) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await supabase
-          .from("background_jobs")
-          .update({
-            status: "failed",
-            error_message: msg,
-            completed_at: new Date().toISOString(),
-          })
-          .eq("id", jobId);
-      }
-    }
-  })());
+    })(),
+  );
 }
-

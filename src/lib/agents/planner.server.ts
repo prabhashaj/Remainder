@@ -33,7 +33,11 @@ type Supabase = SupabaseClient<Database>;
 const subtopicSchema = z.object({
   title: z.string().describe("The specific concept to learn"),
   detail: z.string().nullable().optional().describe("One-line explanation, or null"),
-  estimated_minutes: z.number().nullable().optional().describe("Rough time estimate in minutes, or null"),
+  estimated_minutes: z
+    .number()
+    .nullable()
+    .optional()
+    .describe("Rough time estimate in minutes, or null"),
 });
 
 function createPlannerTools(supabase: Supabase, userId: string) {
@@ -66,7 +70,13 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           .optional()
           .describe("Due date in YYYY-MM-DD format, or null for no specific date"),
       }),
-      execute: async ({ title, due_date }: { title: string; due_date?: string | null | undefined }) => {
+      execute: async ({
+        title,
+        due_date,
+      }: {
+        title: string;
+        due_date?: string | null | undefined;
+      }) => {
         const { data, error } = await supabase
           .from("tasks")
           .insert({ user_id: userId, title, due_date: due_date ?? null, source: "remi" })
@@ -138,7 +148,11 @@ function createPlannerTools(supabase: Supabase, userId: string) {
       inputSchema: z.object({
         title: z.string().describe("The goal title"),
         description: z.string().nullable().optional().describe("A short description, or null"),
-        target_date: z.string().nullable().optional().describe("Target date in YYYY-MM-DD format, or null"),
+        target_date: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Target date in YYYY-MM-DD format, or null"),
         milestones: z
           .array(z.object({ title: z.string() }))
           .nullable()
@@ -158,7 +172,12 @@ function createPlannerTools(supabase: Supabase, userId: string) {
       }) => {
         const { data: goal, error: gErr } = await supabase
           .from("goals")
-          .insert({ user_id: userId, title, description: description ?? null, target_date: target_date ?? null })
+          .insert({
+            user_id: userId,
+            title,
+            description: description ?? null,
+            target_date: target_date ?? null,
+          })
           .select("id")
           .single();
         if (gErr) return { success: false, error: gErr.message };
@@ -179,7 +198,8 @@ function createPlannerTools(supabase: Supabase, userId: string) {
     }),
 
     updateGoal: tool({
-      description: "Update an existing goal's title, description, target date, progress percentage, or status.",
+      description:
+        "Update an existing goal's title, description, target date, progress percentage, or status.",
       inputSchema: z.object({
         goal_id: z.string().describe("ID or title of the goal to update"),
         title: z.string().optional().describe("New title"),
@@ -204,14 +224,25 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         status?: "active" | "done" | "archived" | undefined;
       }) => {
         let targetId = goal_id;
-        const { data: byId } = await supabase.from("goals").select("id").eq("id", goal_id).eq("user_id", userId).maybeSingle();
+        const { data: byId } = await supabase
+          .from("goals")
+          .select("id")
+          .eq("id", goal_id)
+          .eq("user_id", userId)
+          .maybeSingle();
         if (byId) {
           targetId = byId.id;
         } else {
-          const { data: allGoals } = await supabase.from("goals").select("id, title").eq("user_id", userId);
+          const { data: allGoals } = await supabase
+            .from("goals")
+            .select("id, title")
+            .eq("user_id", userId);
           const norm = goal_id.toLowerCase().trim();
           const match = (allGoals ?? []).find(
-            (g) => g.id === goal_id || g.title.toLowerCase().trim() === norm || g.title.toLowerCase().includes(norm),
+            (g) =>
+              g.id === goal_id ||
+              g.title.toLowerCase().trim() === norm ||
+              g.title.toLowerCase().includes(norm),
           );
           if (match) {
             targetId = match.id;
@@ -242,7 +273,10 @@ function createPlannerTools(supabase: Supabase, userId: string) {
       inputSchema: z.object({
         goal_id: z.string().describe("ID or title of the goal to add milestone(s) to"),
         title: z.string().optional().describe("Single milestone title to add"),
-        milestones: z.array(z.object({ title: z.string() })).optional().describe("List of milestone titles to add"),
+        milestones: z
+          .array(z.object({ title: z.string() }))
+          .optional()
+          .describe("List of milestone titles to add"),
       }),
       execute: async ({
         goal_id,
@@ -255,15 +289,26 @@ function createPlannerTools(supabase: Supabase, userId: string) {
       }) => {
         let targetId = goal_id;
         let targetGoalTitle = goal_id;
-        const { data: byId } = await supabase.from("goals").select("id, title").eq("id", goal_id).eq("user_id", userId).maybeSingle();
+        const { data: byId } = await supabase
+          .from("goals")
+          .select("id, title")
+          .eq("id", goal_id)
+          .eq("user_id", userId)
+          .maybeSingle();
         if (byId) {
           targetId = byId.id;
           targetGoalTitle = byId.title;
         } else {
-          const { data: allGoals } = await supabase.from("goals").select("id, title").eq("user_id", userId);
+          const { data: allGoals } = await supabase
+            .from("goals")
+            .select("id, title")
+            .eq("user_id", userId);
           const norm = goal_id.toLowerCase().trim();
           const match = (allGoals ?? []).find(
-            (g) => g.id === goal_id || g.title.toLowerCase().trim() === norm || g.title.toLowerCase().includes(norm),
+            (g) =>
+              g.id === goal_id ||
+              g.title.toLowerCase().trim() === norm ||
+              g.title.toLowerCase().includes(norm),
           );
           if (match) {
             targetId = match.id;
@@ -280,7 +325,8 @@ function createPlannerTools(supabase: Supabase, userId: string) {
             if (m.title && m.title.trim()) titlesToAdd.push(m.title.trim());
           }
         }
-        if (titlesToAdd.length === 0) return { success: false, error: "No milestone title provided." };
+        if (titlesToAdd.length === 0)
+          return { success: false, error: "No milestone title provided." };
 
         const { data: existingMs } = await supabase
           .from("milestones")
@@ -313,7 +359,12 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           .update({ progress: newProgress, status: newProgress === 100 ? "done" : "active" })
           .eq("id", targetId);
 
-        return { success: true, goal_id: targetId, goal_title: targetGoalTitle, added: (inserted ?? []).map((m) => m.title) };
+        return {
+          success: true,
+          goal_id: targetId,
+          goal_title: targetGoalTitle,
+          added: (inserted ?? []).map((m) => m.title),
+        };
       },
     }),
 
@@ -376,12 +427,41 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           }[];
         }[];
       }) => {
+        const { getRemainingLimitsServer, getCurrentWeekStart } = await import("@/lib/limits");
+        const limits = await getRemainingLimitsServer(supabase, userId);
+        if (!limits.roadmaps.canCreate) {
+          return {
+            limitReached: true,
+            resource: "roadmaps",
+            limit: limits.roadmaps.limit,
+            summary: `Upgrade Required! You have reached your limit of ${limits.roadmaps.limit} roadmaps this week. Tell the user to upgrade to premium.`,
+          };
+        }
+
         const { data: roadmap, error: rErr } = await supabase
           .from("roadmaps")
           .insert({ user_id: userId, topic, summary: summary ?? null })
           .select("id")
           .single();
         if (rErr) return { success: false, error: rErr.message };
+
+        // Record usage
+        const weekStart = getCurrentWeekStart();
+        const { data: usage } = await supabase
+          .from("usage_logs")
+          .select("roadmaps_generated")
+          .eq("user_id", userId)
+          .eq("week_start_date", weekStart)
+          .maybeSingle();
+
+        await supabase.from("usage_logs").upsert(
+          {
+            user_id: userId,
+            week_start_date: weekStart,
+            roadmaps_generated: (usage?.roadmaps_generated || 0) + 1,
+          },
+          { onConflict: "user_id,week_start_date" },
+        );
 
         let topicCount = 0;
         let subCount = 0;
@@ -498,7 +578,7 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         const patch: Database["public"]["Tables"]["roadmaps"]["Update"] = {};
         if (topic !== undefined) patch.topic = topic;
         if (summary !== undefined) patch.summary = summary;
-        
+
         if (Object.keys(patch).length > 0) {
           const { error: rErr } = await supabase
             .from("roadmaps")
@@ -515,7 +595,9 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           .eq("roadmap_id", roadmap_id)
           .eq("user_id", userId);
 
-        const itemsByTitle = new Map(existingItems?.map((item) => [item.title.toLowerCase().trim(), item]));
+        const itemsByTitle = new Map(
+          existingItems?.map((item) => [item.title.toLowerCase().trim(), item]),
+        );
 
         // 3. Delete existing items
         await supabase
@@ -566,7 +648,7 @@ function createPlannerTools(supabase: Supabase, userId: string) {
                 content_status: oldSub?.content_status ?? "not_started",
               };
             });
-            
+
             if (subs.length > 0) {
               const { error: sErr } = await supabase.from("roadmap_items").insert(subs);
               if (!sErr) subCount += subs.length;
@@ -611,6 +693,28 @@ export async function runPlanner(params: {
       maxRetries: 5,
       stopWhen: stepCountIs(5),
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let limitReached = false;
+    
+    // Check final step tool results
+    if (result.toolResults?.some((tr: any) => tr.result && typeof tr.result === 'object' && 'limitReached' in tr.result && tr.result.limitReached === true)) {
+      limitReached = true;
+    }
+    
+    // Check all intermediate steps in multi-step execution
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!limitReached && (result as any).steps) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      limitReached = (result as any).steps.some((step: any) => 
+        step.toolResults?.some((tr: any) => 
+          tr.result && typeof tr.result === 'object' && 'limitReached' in tr.result && tr.result.limitReached === true
+        )
+      );
+    }
+
+    if (limitReached) {
+      return { limitReached: true, summary: result.text };
+    }
     return { summary: result.text };
   } catch (err) {
     log(

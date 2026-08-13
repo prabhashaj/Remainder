@@ -20,7 +20,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { clearMemories, fetchMemories, fetchProfile, updateProfile, createMemory, deleteMemory } from "@/lib/db";
+import {
+  clearMemories,
+  fetchMemories,
+  fetchProfile,
+  updateProfile,
+  createMemory,
+  deleteMemory,
+} from "@/lib/db";
 import { THEMES, type ThemeId } from "@/lib/themes";
 import { BillingSection } from "@/components/billing-section";
 
@@ -195,7 +202,7 @@ function SettingsPage() {
             </button>
           ))}
         </div>
-    </section>
+      </section>
 
       {/* Typography */}
       <section className="card-soft p-6">
@@ -255,7 +262,9 @@ function SettingsPage() {
             }`}
           >
             <span className="block font-merienda text-2xl font-medium leading-none">Merienda</span>
-            <span className="text-xs text-muted-foreground block mt-2">Soft, friendly and flowing.</span>
+            <span className="text-xs text-muted-foreground block mt-2">
+              Soft, friendly and flowing.
+            </span>
             {font === "merienda" && (
               <Check className="absolute right-4 top-4 size-4 text-primary" aria-hidden />
             )}
@@ -281,7 +290,10 @@ function SettingsPage() {
           {memories.length > 0 && (
             <ul className="mt-4 space-y-2">
               {memories.map((m) => (
-                <li key={m.id} className="flex items-center justify-between rounded-2xl border border-border/50 bg-background/50 px-4 py-3 shadow-sm">
+                <li
+                  key={m.id}
+                  className="flex items-center justify-between rounded-2xl border border-border/50 bg-background/50 px-4 py-3 shadow-sm"
+                >
                   <span className="text-sm text-foreground pr-4 break-words">{m.content}</span>
                   <Button
                     variant="ghost"
@@ -297,7 +309,7 @@ function SettingsPage() {
             </ul>
           )}
 
-          <form 
+          <form
             className="mt-4 flex flex-wrap gap-2 items-center"
             onSubmit={(e) => {
               e.preventDefault();

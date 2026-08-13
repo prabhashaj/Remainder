@@ -26,7 +26,11 @@ export async function getRemainingLimits() {
     fetchUsage(getCurrentWeekStart()).catch(() => null),
   ]);
 
-  const isPremium = sub?.tier === "weekly" || sub?.tier === "monthly" || sub?.tier === "enterprise" || sub?.status === "trialing";
+  const isPremium =
+    sub?.status === "active" ||
+    (sub?.status === "trialing" &&
+      sub.trial_ends_at != null &&
+      new Date(sub.trial_ends_at) > new Date());
   const limits = isPremium ? LIMITS.PREMIUM : LIMITS.FREE;
 
   const roadmapsUsed = usage?.roadmaps_generated || 0;
@@ -55,13 +59,22 @@ export async function getRemainingLimitsServer(supabase: SupabaseClient<Database
   const weekStart = getCurrentWeekStart();
   const [subRes, usageRes] = await Promise.all([
     supabase.from("subscriptions").select("*").eq("user_id", userId).maybeSingle(),
-    supabase.from("usage_logs").select("*").eq("user_id", userId).eq("week_start_date", weekStart).maybeSingle(),
+    supabase
+      .from("usage_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("week_start_date", weekStart)
+      .maybeSingle(),
   ]);
 
   const sub = subRes.data;
   const usage = usageRes.data;
 
-  const isPremium = sub?.tier === "weekly" || sub?.tier === "monthly" || sub?.tier === "enterprise" || sub?.status === "trialing";
+  const isPremium =
+    sub?.status === "active" ||
+    (sub?.status === "trialing" &&
+      sub.trial_ends_at != null &&
+      new Date(sub.trial_ends_at) > new Date());
   const limits = isPremium ? LIMITS.PREMIUM : LIMITS.FREE;
 
   const roadmapsUsed = usage?.roadmaps_generated || 0;

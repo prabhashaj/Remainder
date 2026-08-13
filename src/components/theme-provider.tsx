@@ -1,7 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { applyThemeClass, isThemeId, THEME_STORAGE_KEY, type ThemeId, applyFontClass, isFontId, FONT_STORAGE_KEY, type FontId } from "@/lib/themes";
+import {
+  applyThemeClass,
+  isThemeId,
+  THEME_STORAGE_KEY,
+  type ThemeId,
+  applyFontClass,
+  isFontId,
+  FONT_STORAGE_KEY,
+  type FontId,
+} from "@/lib/themes";
 
 type ThemeContextValue = {
   theme: ThemeId;
@@ -54,13 +63,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         .eq("id", userId)
         .maybeSingle();
       if (cancelled || !profile) return;
-      
+
       if (isThemeId(profile.theme)) {
         setThemeState(profile.theme);
         applyThemeClass(profile.theme);
         window.localStorage.setItem(THEME_STORAGE_KEY, profile.theme);
       }
-      
+
       if (isFontId(profile.font)) {
         setFontState(profile.font);
         applyFontClass(profile.font);
@@ -112,8 +121,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ theme, font, previewTheme, previewFont, setTheme, setFont }), 
-    [theme, font, previewTheme, previewFont, setTheme, setFont]
+    () => ({ theme, font, previewTheme, previewFont, setTheme, setFont }),
+    [theme, font, previewTheme, previewFont, setTheme, setFont],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

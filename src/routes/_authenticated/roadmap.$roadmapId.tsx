@@ -65,9 +65,12 @@ function RoadmapDetail() {
       if (done && roadmapId) {
         const newlyMastered = await checkAndRecordRoadmapCompletion(roadmapId);
         if (newlyMastered) {
-          toast.success(`🎉 Skill Mastered! Remi saved "${roadmap?.topic ?? "this roadmap"}" as a completed skill in your memory!`, {
-            duration: 6000,
-          });
+          toast.success(
+            `🎉 Skill Mastered! Remi saved "${roadmap?.topic ?? "this roadmap"}" as a completed skill in your memory!`,
+            {
+              duration: 6000,
+            },
+          );
         }
       }
       return updated;

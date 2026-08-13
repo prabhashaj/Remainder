@@ -67,9 +67,12 @@ export async function searchArxivServer(query: string): Promise<ArxivPaper[]> {
       }
 
       const arxivId = idMatch && idMatch[1] ? idMatch[1].trim() : "";
-      const rawTitle = titleMatch && titleMatch[1] ? titleMatch[1].replace(/\s+/g, " ").trim() : "Untitled";
-      const rawSummary = summaryMatch && summaryMatch[1] ? summaryMatch[1].replace(/\s+/g, " ").trim() : "";
-      const published = publishedMatch && publishedMatch[1] ? publishedMatch[1].trim().split("T")[0] ?? "" : "";
+      const rawTitle =
+        titleMatch && titleMatch[1] ? titleMatch[1].replace(/\s+/g, " ").trim() : "Untitled";
+      const rawSummary =
+        summaryMatch && summaryMatch[1] ? summaryMatch[1].replace(/\s+/g, " ").trim() : "";
+      const published =
+        publishedMatch && publishedMatch[1] ? (publishedMatch[1].trim().split("T")[0] ?? "") : "";
 
       const pdfUrl = arxivId ? arxivId.replace("/abs/", "/pdf/") + ".pdf" : "";
 
@@ -135,8 +138,10 @@ export async function searchPapersServer(query: string): Promise<AcademicPaper[]
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return oaData.results.map((w: any) => ({
           title: w.title || "Untitled",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          authors: Array.isArray(w.authorships) ? w.authorships.map((a: any) => a.author?.display_name).filter(Boolean) : [],
+
+          authors: Array.isArray(w.authorships)
+            ? w.authorships.map((a: any) => a.author?.display_name).filter(Boolean)
+            : [],
           abstract: "Abstract available at source link.",
           year: w.publication_year,
           url: w.doi || w.id || `https://openalex.org/${w.id}`,
@@ -146,7 +151,10 @@ export async function searchPapersServer(query: string): Promise<AcademicPaper[]
     }
 
     // Secondary Fallback: Web search targeting Google Scholar / ResearchGate / ArXiv via Tavily
-    const webResults = await tavilySearch(`site:arxiv.org OR site:semanticscholar.org OR site:researchgate.net ${cleanQuery}`, { maxResults: 5 });
+    const webResults = await tavilySearch(
+      `site:arxiv.org OR site:semanticscholar.org OR site:researchgate.net ${cleanQuery}`,
+      { maxResults: 5 },
+    );
     return (webResults.results || []).map((r: WebResult) => ({
       title: r.title,
       authors: [],

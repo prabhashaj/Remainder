@@ -12,7 +12,7 @@ export function getDocumentTools(
   supabase: ReturnType<typeof createClient<Database>>,
   userId: string,
   traceId: string,
-  threadId: string | null
+  threadId: string | null,
 ) {
   return {
     readDocument: tool({
@@ -36,10 +36,9 @@ export function getDocumentTools(
           "readDocument",
           async () => {
             const cleanInput = document_id.trim();
-            const isUuid =
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-                cleanInput,
-              );
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+              cleanInput,
+            );
 
             let bestDoc: any = null;
 
@@ -47,7 +46,9 @@ export function getDocumentTools(
             if (isUuid) {
               const { data: exactDoc } = await supabase
                 .from("study_resources")
-                .select("id, title, kind, status, summary, key_points, extracted_text, storage_path")
+                .select(
+                  "id, title, kind, status, summary, key_points, extracted_text, storage_path",
+                )
                 .eq("id", cleanInput)
                 .single();
 
@@ -60,7 +61,9 @@ export function getDocumentTools(
             if (!bestDoc) {
               const { data: allDocs } = await supabase
                 .from("study_resources")
-                .select("id, title, kind, status, summary, key_points, extracted_text, storage_path")
+                .select(
+                  "id, title, kind, status, summary, key_points, extracted_text, storage_path",
+                )
                 .order("created_at", { ascending: false })
                 .limit(50);
 
@@ -112,7 +115,10 @@ export function getDocumentTools(
             const doc = bestDoc;
 
             // 3. On-demand text extraction & chunking if document text was not extracted yet
-            if ((!doc.extracted_text || doc.extracted_text.trim().length === 0) && doc.storage_path) {
+            if (
+              (!doc.extracted_text || doc.extracted_text.trim().length === 0) &&
+              doc.storage_path
+            ) {
               try {
                 const { data: fileData, error: dlErr } = await supabase.storage
                   .from("materials")
@@ -121,7 +127,8 @@ export function getDocumentTools(
                 if (fileData && !dlErr) {
                   const buffer = Buffer.from(await fileData.arrayBuffer());
                   let text = "";
-                  const isPdf = doc.storage_path.toLowerCase().endsWith(".pdf") || doc.kind === "pdf";
+                  const isPdf =
+                    doc.storage_path.toLowerCase().endsWith(".pdf") || doc.kind === "pdf";
                   if (isPdf) {
                     const { extractPdfTextServer } = await import("@/lib/pdf-parser.server");
                     text = await extractPdfTextServer(buffer);
@@ -182,8 +189,7 @@ export function getDocumentTools(
             let returnedText = "";
 
             if (semanticContext) {
-              returnedText +=
-                "--- RELEVANT CHUNKS FOR YOUR QUERY ---\n" + semanticContext + "\n\n";
+              returnedText += "--- RELEVANT CHUNKS FOR YOUR QUERY ---\n" + semanticContext + "\n\n";
             }
 
             if (doc.extracted_text) {
@@ -203,8 +209,9 @@ export function getDocumentTools(
               if (dbChunks && dbChunks.length > 0) {
                 returnedText +=
                   "--- STORED DOCUMENT CHUNKS ---\n" +
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  dbChunks.map((c: any, i: number) => `--- CHUNK ${i + 1} ---\n${c.content}`).join("\n\n");
+                  dbChunks
+                    .map((c: any, i: number) => `--- CHUNK ${i + 1} ---\n${c.content}`)
+                    .join("\n\n");
               }
             }
 

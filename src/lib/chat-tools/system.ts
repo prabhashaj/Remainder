@@ -8,7 +8,7 @@ export function getSystemTools(
   supabase: ReturnType<typeof createClient<Database>>,
   userId: string,
   traceId: string,
-  threadId: string | null
+  threadId: string | null,
 ) {
   return {
     saveMemory: tool({

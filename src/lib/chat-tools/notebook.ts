@@ -12,7 +12,7 @@ export function getNotebookTools(
   userId: string,
   traceId: string,
   key: string,
-  activePageId: string | null
+  activePageId: string | null,
 ) {
   return {
     generateNotebook: tool({
@@ -34,7 +34,12 @@ export function getNotebookTools(
         const { getRemainingLimitsServer } = await import("@/lib/limits");
         const limits = await getRemainingLimitsServer(supabase, userId);
         if (!limits.notebooks.canCreate) {
-          return `Upgrade Required! You have reached your limit of ${limits.notebooks.limit} notebooks this week. Please tell the user to upgrade their subscription.`;
+          return {
+            limitReached: true,
+            resource: "notebooks",
+            limit: limits.notebooks.limit,
+            summary: `Upgrade Required! You have reached your limit of ${limits.notebooks.limit} notebooks this week. Please tell the user to upgrade their subscription.`,
+          };
         }
 
         const raw = topicOrUrl.trim();
@@ -112,6 +117,16 @@ export function getNotebookTools(
           includeImages: Boolean(include_images),
           traceId,
         });
+
+        const { getCurrentWeekStart } = await import("@/lib/limits");
+        await supabase.from("usage_logs").upsert(
+          {
+            user_id: userId,
+            week_start_date: getCurrentWeekStart(),
+            notebooks_created: limits.notebooks.used + 1,
+          },
+          { onConflict: "user_id, week_start_date" },
+        );
 
         return {
           success: true,
@@ -215,9 +230,7 @@ export function getNotebookTools(
           .limit(1);
 
         const lastPos =
-          existingBlocks && existingBlocks.length > 0
-            ? (existingBlocks[0]?.position ?? -1)
-            : -1;
+          existingBlocks && existingBlocks.length > 0 ? (existingBlocks[0]?.position ?? -1) : -1;
         let nextPos = lastPos + 1;
         let addedCount = 0;
         let imageCount = 0;

@@ -6,14 +6,18 @@ import type { Database } from "@/integrations/supabase/types";
 
 import { runResearch } from "@/lib/agents/research.server";
 import { searchTopicPhotos, tavilySearch } from "@/lib/tavily.server";
-import { searchArxivServer, searchPapersServer, searchDocsServer } from "@/lib/academic-tools.server";
+import {
+  searchArxivServer,
+  searchPapersServer,
+  searchDocsServer,
+} from "@/lib/academic-tools.server";
 
 export function getResearchTools(
   supabase: ReturnType<typeof createClient<Database>>,
   userId: string,
   traceId: string,
   threadId: string | null,
-  key: string
+  key: string,
 ) {
   return {
     researchResources: tool({
@@ -144,10 +148,7 @@ export function getResearchTools(
         "Search for high-quality photos, illustrations, visual diagrams, and images for a topic. Use ONLY when the user explicitly asks for an image, photo, or diagram in their prompt.",
       inputSchema: z.object({
         query: z.string().describe("The visual topic or image search query"),
-        limit: z
-          .number()
-          .optional()
-          .describe("Maximum number of images to return (default: 1)"),
+        limit: z.number().optional().describe("Maximum number of images to return (default: 1)"),
       }),
       execute: async ({ query, limit }) =>
         wrapTool(

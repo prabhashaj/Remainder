@@ -130,7 +130,10 @@ function getToolLabel(part: any, isRunning: boolean): string {
     return isRunning ? found.active : found.done;
   }
 
-  const formattedName = name.replace(/([A-Z])/g, " $1").trim().toLowerCase();
+  const formattedName = name
+    .replace(/([A-Z])/g, " $1")
+    .trim()
+    .toLowerCase();
   const capitalized = formattedName.charAt(0).toUpperCase() + formattedName.slice(1);
   return isRunning ? `Creating ${formattedName}` : `Created ${formattedName}`;
 }
@@ -143,9 +146,7 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
   const anyError = parts.some((p) => p.state === "output-error");
   const isRunning = !allDone && !anyError;
 
-  const names = Array.from(
-    new Set(parts.map((p) => getToolLabel(p, isRunning)))
-  );
+  const names = Array.from(new Set(parts.map((p) => getToolLabel(p, isRunning))));
 
   const summaryText = isRunning
     ? `${names.join(", ")}…`
@@ -412,12 +413,13 @@ export function RemiChat({
   const seedSent = useRef(false);
 
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [limitType, setLimitType] = useState<"chat" | "features">("features");
   const [lastCheckedMessageId, setLastCheckedMessageId] = useState<string | null>(null);
 
   const { data: usageData } = useQuery({
     queryKey: ["planUsage"],
     queryFn: () => getPlanUsage(),
-    refetchInterval: 30000 // refresh every 30s
+    refetchInterval: 30000, // refresh every 30s
   });
 
   const { messages, sendMessage, status } = useChat({
@@ -433,22 +435,23 @@ export function RemiChat({
       },
     }),
     onError: (error) => {
-        if (error.message.includes("Plan limit reached") || error.message.includes("403")) {
-          setUpgradeModalOpen(true);
-          return;
-        }
-        toast.error(error.message || "Remi couldn't reply just now.");
-        if (error.message.includes("Thread not found") && typeof window !== "undefined") {
-          window.localStorage.removeItem("remispace.dock.thread");
-          setTimeout(() => {
-            if (window.location.pathname.startsWith("/conversation/")) {
-              window.location.href = "/conversation";
-            } else {
-              window.location.reload();
-            }
-          }, 1000);
-        }
-      },
+      if (error.message.includes("Plan limit reached") || error.message.includes("403")) {
+        setLimitType("chat");
+        setUpgradeModalOpen(true);
+        return;
+      }
+      toast.error(error.message || "Remi couldn't reply just now.");
+      if (error.message.includes("Thread not found") && typeof window !== "undefined") {
+        window.localStorage.removeItem("remispace.dock.thread");
+        setTimeout(() => {
+          if (window.location.pathname.startsWith("/conversation/")) {
+            window.location.href = "/conversation";
+          } else {
+            window.location.reload();
+          }
+        }, 1000);
+      }
+    },
     onFinish: () => {
       void queryClient.invalidateQueries({ queryKey: ["roadmaps"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -460,19 +463,26 @@ export function RemiChat({
     },
   });
 
+  const seenLimitMessages = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    if (
-      lastMessage &&
-      lastMessage.role === "assistant" &&
-      lastMessage.id !== lastCheckedMessageId
-    ) {
-      if (lastMessage.parts.some(p => p.type === "text" && p.text.includes("Upgrade Required!"))) {
-        setUpgradeModalOpen(true);
+    for (const message of messages) {
+      if (message.role === "assistant" && !seenLimitMessages.current.has(message.id)) {
+        // Robustly check for the limitReached signal inside the structured tool invocations/parts
+        // to avoid any Vercel AI SDK version inconsistencies with nested object structures.
+        const hitLimit = 
+          (message.toolInvocations && JSON.stringify(message.toolInvocations).includes('"limitReached":true')) ||
+          (message.parts && JSON.stringify(message.parts).includes('"limitReached":true'));
+
+        if (hitLimit) {
+          seenLimitMessages.current.add(message.id);
+          stop(); // Force stop streaming so the send button reverts to normal
+          setLimitType("features");
+          setUpgradeModalOpen(true);
+        }
       }
-      setLastCheckedMessageId(lastMessage.id);
     }
-  }, [messages, lastCheckedMessageId]);
+  }, [messages, stop]);
 
   async function submit(text: string, files: FileUIPart[] = []) {
     const trimmed = text.trim();
@@ -660,7 +670,7 @@ export function RemiChat({
             </span>
           </p>
         )}
-        <PromptInput 
+        <PromptInput
           onSubmit={(message) => void submit(message.text ?? "", message.files)}
           maxFileSize={10 * 1024 * 1024}
         >
@@ -682,23 +692,27 @@ export function RemiChat({
           </PromptInputFooter>
         </PromptInput>
         {usageData && usageData.daily && (
-           <div className="text-center mt-2 text-xs text-muted-foreground">
-             {usageData.daily.used} / {usageData.daily.limit} daily messages used.
-           </div>
+          <div className="text-center mt-2 text-xs text-muted-foreground">
+            {usageData.daily.used} / {usageData.daily.limit} daily messages used.
+          </div>
         )}
       </div>
 
       <AlertDialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
         <AlertDialogContent className="rounded-3xl border-border/70 p-6 sm:max-w-sm">
           <AlertDialogHeader>
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Sparkles className="h-6 w-6 text-primary" />
+            <div className="mx-auto mb-2 flex items-center justify-center">
+              <img src={remiLogo} alt="Remi" className="h-16 w-16" />
             </div>
             <AlertDialogTitle className="text-center font-display text-xl">
               Upgrade to Pro
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center">
-              You've reached your free limit for roadmaps this week. Upgrade to Pro to create unlimited roadmaps, unlock all premium models, and more.
+              {limitType === "chat" ? (
+                "You've used your 20 daily messages limit. Upgrade to Pro to get unlimited messages."
+              ) : (
+                "You've reached your free limit this week. Upgrade to Pro to create up to 10 roadmaps and 15 notebooks per week, unlock premium features, and more."
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 flex flex-col gap-2 sm:flex-col">
@@ -717,4 +731,3 @@ export function RemiChat({
     </div>
   );
 }
-
