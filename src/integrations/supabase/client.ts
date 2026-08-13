@@ -30,6 +30,9 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 function createSupabaseClient() {
+  if (typeof process !== 'undefined' && process.env['DATABASE_URL'] && process.env['DATABASE_URL'].includes(':5432/')) {
+    console.warn('\n======================================================\n[Supabase Warning] Vercel deployments MUST use the transaction-pooled Supabase connection (port 6543, pgbouncer). You are using port 5432 in DATABASE_URL which will exhaust connections.\n======================================================\n');
+  }
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
   const SUPABASE_URL = import.meta.env["VITE_SUPABASE_URL"] || process.env["SUPABASE_URL"];
@@ -68,3 +71,4 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
     return Reflect.get(_supabase, prop, receiver);
   },
 });
+

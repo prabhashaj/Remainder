@@ -16,7 +16,7 @@ import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-g
 import { tavilySearch } from "@/lib/tavily.server";
 import { extractPdfTextServer } from "@/lib/pdf-parser.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
-import { checkRateLimit, handleRateLimitError } from "@/lib/rate-limit.server";
+import { checkRateLimit, checkPlanUsage, handleRateLimitError } from "@/lib/rate-limit.server";
 import { log } from "@/lib/logger.server";
 import { getRemainingLimitsServer } from "@/lib/limits";
 import type { Database } from "@/integrations/supabase/types";
@@ -310,6 +310,7 @@ export const Route = createFileRoute("/api/chat")({
         );
 
         try {
+          await checkPlanUsage(supabase, userId, "api_chat");
           await checkRateLimit(supabase, userId, "api_chat", 50, 60);
         } catch (error) {
           return handleRateLimitError(error, 60);

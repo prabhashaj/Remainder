@@ -978,39 +978,57 @@ export type Database = {
           },
         ];
       };
-      subscriptions: {
-        Row: {
-          id: string;
-          user_id: string;
-          razorpay_subscription_id: string | null;
-          tier: string;
-          status: string;
-          current_period_end: string | null;
-          created_at: string;
-          updated_at: string;
+        mcp_servers: { Row: { id: string; user_id: string; name: string; url: string; created_at: string; updated_at: string; }; Insert: { id?: string; user_id: string; name: string; url: string; created_at?: string; updated_at?: string; }; Update: { id?: string; user_id?: string; name?: string; url?: string; created_at?: string; updated_at?: string; }; Relationships: []; };
+        plans: { Row: { id: string; name: string; razorpay_plan_id: string; price_inr: number; billing_interval: string; daily_message_limit: number; monthly_message_limit: number; features: any; is_active: boolean; created_at: string; updated_at: string; }; Insert: { id?: string; name: string; razorpay_plan_id: string; price_inr: number; billing_interval: string; daily_message_limit: number; monthly_message_limit: number; features?: any; is_active?: boolean; created_at?: string; updated_at?: string; }; Update: { id?: string; name?: string; razorpay_plan_id?: string; price_inr?: number; billing_interval?: string; daily_message_limit?: number; monthly_message_limit?: number; features?: any; is_active?: boolean; created_at?: string; updated_at?: string; }; Relationships: []; };
+        processed_webhook_events: { Row: { razorpay_event_id: string; processed_at: string; }; Insert: { razorpay_event_id: string; processed_at?: string; }; Update: { razorpay_event_id?: string; processed_at?: string; }; Relationships: []; };
+        rate_limit_events: { Row: { id: string; user_id: string; event_type: string; created_at: string; }; Insert: { id?: string; user_id: string; event_type: string; created_at?: string; }; Update: { id?: string; user_id?: string; event_type?: string; created_at?: string; }; Relationships: []; };
+        subscriptions: {
+          Row: {
+            id: string;
+            user_id: string;
+            razorpay_subscription_id: string | null;
+            plan_id: string | null;
+            razorpay_customer_id: string | null;
+            tier: string;
+            status: string;
+            current_period_end: string | null;
+            created_at: string;
+            updated_at: string;
+          };
+          Insert: {
+            id?: string;
+            user_id: string;
+            razorpay_subscription_id?: string | null;
+            plan_id?: string | null;
+            razorpay_customer_id?: string | null;
+            tier?: string;
+            status?: string;
+            current_period_end?: string | null;
+            created_at?: string;
+            updated_at?: string;
+          };
+          Update: {
+            id?: string;
+            user_id?: string;
+            razorpay_subscription_id?: string | null;
+            plan_id?: string | null;
+            razorpay_customer_id?: string | null;
+            tier?: string;
+            status?: string;
+            current_period_end?: string | null;
+            created_at?: string;
+            updated_at?: string;
+          };
+          Relationships: [
+            {
+              foreignKeyName: "subscriptions_plan_id_fkey";
+              columns: ["plan_id"];
+              isOneToOne: false;
+              referencedRelation: "plans";
+              referencedColumns: ["id"];
+            }
+          ];
         };
-        Insert: {
-          id?: string;
-          user_id: string;
-          razorpay_subscription_id?: string | null;
-          tier?: string;
-          status?: string;
-          current_period_end?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          razorpay_subscription_id?: string | null;
-          tier?: string;
-          status?: string;
-          current_period_end?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
       usage_logs: {
         Row: {
           id: string;

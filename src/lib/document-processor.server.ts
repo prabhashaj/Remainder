@@ -1,4 +1,5 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from '@supabase/supabase-js';
+import { waitUntil } from '@vercel/functions';
 import { chunkText } from "./chunking.server";
 import { generateEmbeddings } from "./embeddings.server";
 import { log } from "./logger.server";
@@ -34,8 +35,7 @@ export async function saveDocumentTextAndEmbed(
   // 2. Create background_jobs row so we can track embedding progress
   let jobId: string | null = null;
   if (userId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: jobRow } = await (supabase as any)
+    const { data: jobRow } = await supabase
       .from("background_jobs")
       .insert({
         user_id: userId,
@@ -50,7 +50,7 @@ export async function saveDocumentTextAndEmbed(
 
   // 3. Generate chunks and embeddings asynchronously in the background
   // Fire and forget so we don't block the request or hit Vercel timeouts
-  (async () => {
+  waitUntil((async () => {
     try {
       const chunks = chunkText(text);
       if (chunks.length > 0) {
@@ -107,7 +107,7 @@ export async function saveDocumentTextAndEmbed(
       // Mark job as done
       if (jobId) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
+        await supabase
           .from("background_jobs")
           .update({ status: "done", completed_at: new Date().toISOString() })
           .eq("id", jobId);
@@ -124,7 +124,7 @@ export async function saveDocumentTextAndEmbed(
       // Mark job as failed
       if (jobId) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
+        await supabase
           .from("background_jobs")
           .update({
             status: "failed",
@@ -134,5 +134,6 @@ export async function saveDocumentTextAndEmbed(
           .eq("id", jobId);
       }
     }
-  })();
+  })());
 }
+

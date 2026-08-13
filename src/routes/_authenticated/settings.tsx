@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { clearMemories, fetchMemories, fetchProfile, updateProfile, createMemory, deleteMemory } from "@/lib/db";
 import { THEMES, type ThemeId } from "@/lib/themes";
+import { BillingSection } from "@/components/billing-section";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -356,6 +357,8 @@ function SettingsPage() {
           </AlertDialog>
         </div>
       </section>
+
+      <BillingSection />
 
       <section className="card-soft p-6">
         <h2 className="font-display text-lg font-semibold">Nudges</h2>

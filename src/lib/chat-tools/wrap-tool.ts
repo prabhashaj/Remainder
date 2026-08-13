@@ -17,7 +17,7 @@ export async function wrapTool<T>(
   input: Record<string, any>,
 ): Promise<T> {
   const start = Date.now();
-  let output: unknown = null;
+  let output: any = null;
   let status: "success" | "error" = "success";
   let errorMessage: string | undefined;
 
@@ -38,18 +38,15 @@ export async function wrapTool<T>(
   } finally {
     const durationMs = Date.now() - start;
     // Fire-and-forget audit write — never blocks the streaming response
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    void (supabase as any)
+    void supabase
       .from("agent_actions")
       .insert({
         user_id: userId,
         trace_id: traceId,
         thread_id: threadId,
         tool_name: toolName,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        input: input as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        output: output as any,
+        input: input,
+        output: output,
         status,
         error_message: errorMessage ?? null,
         duration_ms: durationMs,
@@ -66,3 +63,4 @@ export async function wrapTool<T>(
       });
   }
 }
+

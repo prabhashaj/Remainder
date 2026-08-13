@@ -25,6 +25,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedStudyRouteImport } from './routes/_authenticated/study'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLogErrorRouteImport } from './routes/api/log-error'
 import { Route as ApiMaterialChatRouteImport } from './routes/api/material-chat'
 import { Route as AuthenticatedConversationIndexRouteImport } from './routes/_authenticated/conversation.index'
@@ -115,6 +116,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLogErrorRoute = ApiLogErrorRouteImport.update({
   id: '/api/log-error',
   path: '/api/log-error',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/study': typeof AuthenticatedStudyRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/study': typeof AuthenticatedStudyRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/_authenticated/study': typeof AuthenticatedStudyRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/_authenticated/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
@@ -273,6 +282,7 @@ export interface FileRouteTypes {
     | '/study'
     | '/tasks'
     | '/api/chat'
+    | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
     | '/conversation/$threadId'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/study'
     | '/tasks'
     | '/api/chat'
+    | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
     | '/conversation/$threadId'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/_authenticated/study'
     | '/_authenticated/tasks'
     | '/api/chat'
+    | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
     | '/_authenticated/conversation/$threadId'
@@ -345,6 +357,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiLogErrorRoute: typeof ApiLogErrorRoute
   ApiMaterialChatRoute: typeof ApiMaterialChatRoute
   ApiWebhooksRazorpayRoute: typeof ApiWebhooksRazorpayRoute
@@ -462,6 +475,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/log-error': {
@@ -590,6 +610,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiLogErrorRoute: ApiLogErrorRoute,
   ApiMaterialChatRoute: ApiMaterialChatRoute,
   ApiWebhooksRazorpayRoute: ApiWebhooksRazorpayRoute,

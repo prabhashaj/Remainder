@@ -14,6 +14,7 @@ export const Route = createFileRoute("/api/webhooks/razorpay")({
           const signature = request.headers.get("x-razorpay-signature");
 
           if (!signature) {
+            log("warn", "razorpay_webhook_missing_signature");
             return new Response("Missing signature", { status: 400 });
           }
 
@@ -23,61 +24,96 @@ export const Route = createFileRoute("/api/webhooks/razorpay")({
             return new Response("Internal Server Error", { status: 500 });
           }
 
-          // Verify signature
+          // Verify signature - SECURITY CRITICAL
           const expectedSignature = crypto
             .createHmac("sha256", webhookSecret)
             .update(bodyText)
             .digest("hex");
 
           if (expectedSignature !== signature) {
+            log("warn", "razorpay_webhook_invalid_signature");
             return new Response("Invalid signature", { status: 400 });
           }
 
           const event = JSON.parse(bodyText);
+          const eventId = event.id; // Razorpay event ID for idempotency
+
+          if (!eventId) {
+             return new Response("Invalid event format", { status: 400 });
+          }
+
           const supabase = createClient<Database>(
             env["SUPABASE_URL"]!,
             env["SUPABASE_SERVICE_ROLE_KEY"]!, // Use service role for webhooks
           );
 
-          log("info", "razorpay_webhook_received", { event: event.event });
+          // 1. Check idempotency
+          const { data: existingEvent } = await supabase
+            .from("processed_webhook_events")
+            .select("razorpay_event_id")
+            .eq("razorpay_event_id", eventId)
+            .maybeSingle();
 
-          if (event.event === "subscription.charged") {
-            const subscription = event.payload.subscription.entity;
-            // The notes object could contain the user_id
-            const userId = subscription.notes?.user_id;
+          if (existingEvent) {
+             log("info", "razorpay_webhook_already_processed", { eventId });
+             return new Response(JSON.stringify({ ok: true, note: "already processed" }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          }
 
-            if (userId) {
-              const currentPeriodEnd = new Date(subscription.current_end * 1000).toISOString();
+          log("info", "razorpay_webhook_received", { event: event.event, eventId });
+
+          // 2. Process event based on type
+          const subscription = event.payload?.subscription?.entity;
+          const payment = event.payload?.payment?.entity;
+
+          if (event.event === "subscription.activated" || event.event === "subscription.charged") {
+            if (subscription) {
+              const userId = subscription.notes?.user_id;
+              const planId = subscription.notes?.plan_id;
               
-              // update or upsert subscription
-              await supabase
-                .from("subscriptions")
-                .upsert(
-                  {
-                    user_id: userId,
-                    razorpay_subscription_id: subscription.id,
-                    tier: subscription.plan_id === env["RAZORPAY_WEEKLY_PLAN_ID"] ? "weekly" : "monthly", // You may need a better map
-                    status: "active",
-                    current_period_end: currentPeriodEnd,
-                    updated_at: new Date().toISOString(),
-                  },
-                  { onConflict: "user_id" },
-                );
+              if (userId) {
+                const currentPeriodEnd = new Date(subscription.current_end * 1000).toISOString();
+                
+                await supabase
+                  .from("subscriptions")
+                  .upsert(
+                    {
+                      user_id: userId,
+                      razorpay_subscription_id: subscription.id,
+                      razorpay_customer_id: subscription.customer_id,
+                      plan_id: planId,
+                      tier: "active", // generic active tier flag, rely on plan_id for limits
+                      status: "active",
+                      current_period_end: currentPeriodEnd,
+                      updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: "user_id" },
+                  );
+              }
             }
           } else if (event.event === "subscription.cancelled" || event.event === "subscription.halted") {
-            const subscription = event.payload.subscription.entity;
-            const userId = subscription.notes?.user_id;
-
-            if (userId) {
-               await supabase
-                .from("subscriptions")
-                .update({
-                  status: event.event === "subscription.cancelled" ? "canceled" : "past_due",
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("razorpay_subscription_id", subscription.id);
+            if (subscription) {
+              const userId = subscription.notes?.user_id;
+              if (userId) {
+                 await supabase
+                  .from("subscriptions")
+                  .update({
+                    status: event.event === "subscription.cancelled" ? "canceled" : "past_due",
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("razorpay_subscription_id", subscription.id);
+              }
+            }
+          } else if (event.event === "payment.failed") {
+            if (payment && payment.notes?.user_id) {
+               log("warn", "razorpay_payment_failed", { paymentId: payment.id, userId: payment.notes.user_id });
+               // Usually handled by subscription.halted, but good to log
             }
           }
+
+          // 3. Mark event as processed
+          await supabase
+            .from("processed_webhook_events")
+            .insert({ razorpay_event_id: eventId });
 
           return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         } catch (error) {

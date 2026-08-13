@@ -1,6 +1,6 @@
 import React from "react";
 import { useChat } from "@ai-sdk/react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
 import {
@@ -54,6 +54,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 import { supabase } from "@/integrations/supabase/client";
 import { renameThread } from "@/lib/db";
+import { getPlanUsage } from "@/lib/billing.functions";
 import { cn } from "@/lib/utils";
 
 function getToolLabel(part: any, isRunning: boolean): string {
@@ -413,6 +414,12 @@ export function RemiChat({
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [lastCheckedMessageId, setLastCheckedMessageId] = useState<string | null>(null);
 
+  const { data: usageData } = useQuery({
+    queryKey: ["planUsage"],
+    queryFn: () => getPlanUsage(),
+    refetchInterval: 30000 // refresh every 30s
+  });
+
   const { messages, sendMessage, status } = useChat({
     id: threadId,
     messages: initialMessages,
@@ -426,6 +433,10 @@ export function RemiChat({
       },
     }),
     onError: (error) => {
+        if (error.message.includes("Plan limit reached") || error.message.includes("403")) {
+          setUpgradeModalOpen(true);
+          return;
+        }
         toast.error(error.message || "Remi couldn't reply just now.");
         if (error.message.includes("Thread not found") && typeof window !== "undefined") {
           window.localStorage.removeItem("remispace.dock.thread");
@@ -670,6 +681,11 @@ export function RemiChat({
             <PromptInputSubmit status={status} disabled={busy} />
           </PromptInputFooter>
         </PromptInput>
+        {usageData && usageData.daily && (
+           <div className="text-center mt-2 text-xs text-muted-foreground">
+             {usageData.daily.used} / {usageData.daily.limit} daily messages used.
+           </div>
+        )}
       </div>
 
       <AlertDialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
@@ -701,3 +717,4 @@ export function RemiChat({
     </div>
   );
 }
+
