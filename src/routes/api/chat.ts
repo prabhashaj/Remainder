@@ -468,8 +468,10 @@ export const Route = createFileRoute("/api/chat")({
             const safeName = att.filename.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/\.+/g, ".");
             const storagePath = `${userId}/${Date.now()}-${safeName}`;
             
-            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            let { error: uploadErr } = await supabaseAdmin.storage
+            // Use the request-scoped client for the normal upload path. It carries the
+            // signed-in user's JWT, so it works with the Storage/RLS policies even when
+            // a Vercel deployment does not have the service-role secret configured.
+            let { error: uploadErr } = await supabase.storage
               .from("materials")
               .upload(storagePath, buffer, {
                 contentType: mime,
@@ -477,8 +479,11 @@ export const Route = createFileRoute("/api/chat")({
               });
 
             if (uploadErr && (uploadErr.message.includes("not found") || uploadErr.message.includes("does not exist") || uploadErr.message.includes("Bucket"))) {
-              await supabaseAdmin.storage.createBucket("materials", { public: true });
-              const retry = await supabaseAdmin.storage
+              // This is only a compatibility fallback for projects created before the
+              // materials-bucket migration. New deployments provision it in Supabase.
+              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+              await supabaseAdmin.storage.createBucket("materials", { public: false });
+              const retry = await supabase.storage
                 .from("materials")
                 .upload(storagePath, buffer, {
                   contentType: mime,
@@ -518,7 +523,7 @@ export const Route = createFileRoute("/api/chat")({
 
             // Insert study_resources row
             const title = att.filename.replace(/\.[^.]+$/, "");
-            const { data: insertedResource, error: insertErr } = await supabaseAdmin
+            const { data: insertedResource, error: insertErr } = await supabase
               .from("study_resources")
               .insert({
                 user_id: userId,
@@ -543,7 +548,7 @@ export const Route = createFileRoute("/api/chat")({
             } else if (insertedResource && extractedText && extractedText.length > 0) {
               // Trigger background chunking and embedding
               saveDocumentTextAndEmbed(
-                supabaseAdmin,
+                supabase,
                 insertedResource.id,
                 extractedText,
                 undefined,
