@@ -465,10 +465,11 @@ export const Route = createFileRoute("/api/chat")({
               continue;
             }
 
-            // Upload to storage with sanitized name (prevent path traversal)
             const safeName = att.filename.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/\.+/g, ".");
             const storagePath = `${userId}/${Date.now()}-${safeName}`;
-            const { error: uploadErr } = await supabase.storage
+            
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { error: uploadErr } = await supabaseAdmin.storage
               .from("materials")
               .upload(storagePath, buffer, {
                 contentType: mime,
@@ -487,14 +488,25 @@ export const Route = createFileRoute("/api/chat")({
             // Server-side text extraction for PDFs and text documents
             let extractedText: string | null = null;
             if (kind === "pdf" || lowerFilename.endsWith(".pdf")) {
+              const { extractPdfTextServer } = await import("@/lib/pdf-parser.server");
               extractedText = await extractPdfTextServer(buffer);
             } else if (kind === "note" || mime.startsWith("text/")) {
               extractedText = buffer.toString("utf-8");
             }
 
+            // Fallback for real PDFs that failed extraction or text files with .pdf extension
+            if ((!extractedText || extractedText.trim().length === 0) && buffer.length > 0) {
+              const raw = buffer.toString("utf-8");
+              if (!/\0/.test(raw.slice(0, 1000))) {
+                extractedText = raw;
+              } else {
+                extractedText = "(Error: Could not extract readable text from this PDF. It might be a scanned image or corrupted.)";
+              }
+            }
+
             // Insert study_resources row
             const title = att.filename.replace(/\.[^.]+$/, "");
-            const { data: insertedResource, error: insertErr } = await supabase
+            const { data: insertedResource, error: insertErr } = await supabaseAdmin
               .from("study_resources")
               .insert({
                 user_id: userId,
@@ -519,7 +531,7 @@ export const Route = createFileRoute("/api/chat")({
             } else if (insertedResource && extractedText && extractedText.length > 0) {
               // Trigger background chunking and embedding
               saveDocumentTextAndEmbed(
-                supabase,
+                supabaseAdmin,
                 insertedResource.id,
                 extractedText,
                 undefined,

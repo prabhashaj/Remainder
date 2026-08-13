@@ -34,6 +34,9 @@ export async function extractPdfTextServer(buffer: Buffer): Promise<string> {
     return fullText.trim();
   } catch (err) {
     console.error("Failed to extract PDF text on server:", err);
+    if (err instanceof Error) {
+      console.error("Error Stack:", err.stack);
+    }
     return "";
   }
 }

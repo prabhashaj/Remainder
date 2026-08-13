@@ -47,7 +47,8 @@ export const getUploadTokenFn = createServerFn({ method: "POST" })
         error.message.includes("Bucket") ||
         error.message.includes("does not exist")
       ) {
-        await context.supabase.storage.createBucket("materials", { public: true });
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.storage.createBucket("materials", { public: true });
         const retry = await context.supabase.storage.from("materials").createSignedUploadUrl(path);
         if (retry.error) throw new Error(retry.error.message);
         return { path, token: retry.data.token };
