@@ -206,11 +206,14 @@ function DocumentsPage() {
       toast.success("Document added — processing text & chunks...");
 
       // 1. Immediately trigger server-side extraction, chunking & embedding
-      void runTriggerExtraction({ data: { resourceId: created.id, storagePath: path } }).then(
-        () => {
-          refreshResources();
-        },
-      );
+      const extRes = await runTriggerExtraction({ data: { resourceId: created.id, storagePath: path } });
+      refreshResources();
+
+      if (extRes.success && (extRes.textLength ?? 0) > 0) {
+        toast.success(`Text extracted successfully (${extRes.textLength} characters ready)!`);
+      } else {
+        toast.success("Document added to workspace!");
+      }
 
       // 2. If client can read plain text immediately (e.g. .txt, .md, .json, .csv)
       if (

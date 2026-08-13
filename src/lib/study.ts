@@ -68,20 +68,12 @@ export async function deleteStudyResource(resource: StudyResource) {
 
 /** Uploads a document to the private materials bucket under the user's folder. */
 export async function uploadMaterial(file: File): Promise<string> {
-  const allowedMimeTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-    "application/pdf",
-    "text/plain",
-    "text/markdown",
-    "text/csv",
-    "application/json",
-  ];
+  const allowedExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".txt", ".md", ".csv", ".json", ".doc", ".docx"];
+  const lowerName = file.name.toLowerCase();
+  const hasAllowedExt = allowedExtensions.some((ext) => lowerName.endsWith(ext));
 
-  if (!file.type || !allowedMimeTypes.includes(file.type)) {
-    throw new Error(`File type ${file.type || "unknown"} is not allowed.`);
+  if (!hasAllowedExt && (!file.type || !allowedMimeTypes.includes(file.type))) {
+    throw new Error(`File "${file.name}" (type: ${file.type || "unknown"}) is not supported.`);
   }
 
   const { getUploadTokenFn } = await import("@/lib/study.functions");

@@ -120,9 +120,26 @@ export function getDocumentTools(
               doc.storage_path
             ) {
               try {
-                const { data: fileData, error: dlErr } = await supabase.storage
+                let fileData: Blob | null = null;
+                let dlErr: Error | null = null;
+
+                const { data: dData, error: dErr } = await supabase.storage
                   .from("materials")
                   .download(doc.storage_path);
+                
+                if (!dErr && dData) {
+                  fileData = dData;
+                } else {
+                  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+                  const { data: adminData, error: adminErr } = await supabaseAdmin.storage
+                    .from("materials")
+                    .download(doc.storage_path);
+                  if (!adminErr && adminData) {
+                    fileData = adminData;
+                  } else {
+                    dlErr = adminErr ? new Error(adminErr.message) : dErr ? new Error(dErr.message) : null;
+                  }
+                }
 
                 if (fileData && !dlErr) {
                   const buffer = Buffer.from(await fileData.arrayBuffer());
@@ -142,7 +159,8 @@ export function getDocumentTools(
 
                   if (text && text.trim().length > 0) {
                     doc.extracted_text = text;
-                    void saveDocumentTextAndEmbed(supabase, doc.id, text, undefined, userId);
+                    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+                    void saveDocumentTextAndEmbed(supabaseAdmin, doc.id, text, undefined, userId);
                   }
                 }
               } catch (extErr) {

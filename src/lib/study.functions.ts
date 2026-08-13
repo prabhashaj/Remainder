@@ -345,50 +345,50 @@ export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
       })
       .parse(data),
   )
-  .handler(async ({ data }) => {
-    // Fire and forget background job
-    (async () => {
-      try {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
-          .from("materials")
-          .download(data.storagePath);
+  .handler(async ({ data, context }) => {
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const targetClient = context.supabase ?? supabaseAdmin;
 
-        if (downloadErr || !fileData) {
-          console.error("Failed to download material for extraction:", downloadErr);
-          return;
-        }
+      const { data: fileData, error: downloadErr } = await targetClient.storage
+        .from("materials")
+        .download(data.storagePath);
 
-        const buffer = Buffer.from(await fileData.arrayBuffer());
-        let text = "";
-
-        const isPdf =
-          data.storagePath.toLowerCase().endsWith(".pdf") || data.storagePath.includes(".pdf");
-        if (isPdf) {
-          const { extractPdfTextServer } = await import("@/lib/pdf-parser.server");
-          text = await extractPdfTextServer(buffer);
-        }
-
-        // Fallback to text reading if PDF extraction yielded no text or file is non-PDF text/markdown
-        if (!text || text.trim().length === 0) {
-          const raw = buffer.toString("utf-8");
-          if (!/\0/.test(raw.slice(0, 1000))) {
-            text = raw;
-          }
-        }
-
-        if (text && text.trim().length > 0) {
-          const { saveDocumentTextAndEmbed } = await import("@/lib/document-processor.server");
-          await saveDocumentTextAndEmbed(supabaseAdmin, data.resourceId, text);
-          console.log(
-            `[DocumentExtraction] Successfully extracted and embedded ${data.resourceId}`,
-          );
-        } else {
-          console.warn(`[DocumentExtraction] Empty text extracted for ${data.resourceId}`);
-        }
-      } catch (e) {
-        console.error("Failed background extraction:", e);
+      if (downloadErr || !fileData) {
+        console.error("Failed to download material for extraction:", downloadErr);
+        return { success: false, error: downloadErr?.message ?? "Download failed" };
       }
-    })();
-    return { success: true };
+
+      const buffer = Buffer.from(await fileData.arrayBuffer());
+      let text = "";
+
+      const lowerPath = data.storagePath.toLowerCase();
+      const isPdf = lowerPath.endsWith(".pdf") || lowerPath.includes(".pdf");
+
+      if (isPdf) {
+        const { extractPdfTextServer } = await import("@/lib/pdf-parser.server");
+        text = await extractPdfTextServer(buffer);
+      }
+
+      // Fallback to text reading if PDF extraction yielded no text or file is non-PDF text/markdown
+      if (!text || text.trim().length === 0) {
+        const raw = buffer.toString("utf-8");
+        if (!/\0/.test(raw.slice(0, 1000))) {
+          text = raw;
+        }
+      }
+
+      if (text && text.trim().length > 0) {
+        const { saveDocumentTextAndEmbed } = await import("@/lib/document-processor.server");
+        await saveDocumentTextAndEmbed(targetClient, data.resourceId, text, undefined, context.userId);
+        console.log(`[DocumentExtraction] Successfully extracted ${text.length} chars for ${data.resourceId}`);
+        return { success: true, textLength: text.length };
+      }
+
+      console.warn(`[DocumentExtraction] No extractable text found for ${data.resourceId}`);
+      return { success: true, textLength: 0, warning: "No text extracted from file." };
+    } catch (e) {
+      console.error("Failed document extraction:", e);
+      return { success: false, error: e instanceof Error ? e.message : String(e) };
+    }
   });

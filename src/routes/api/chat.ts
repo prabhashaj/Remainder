@@ -356,6 +356,7 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         // --- 1. Persist chat attachments as study_resources BEFORE building user context ---
+        const attachedDocBlocks: string[] = [];
         const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
         for (const att of rawAttachments) {
           try {
@@ -365,15 +366,52 @@ export const Route = createFileRoute("/api/chat")({
             const match = att.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
             if (!match || !match[2]) continue;
             const buffer = Buffer.from(match[2], "base64");
-            const mime =
+            const rawMime =
               typeof att.mimeType === "string" && att.mimeType
                 ? att.mimeType
                 : (match[1] ?? "application/octet-stream");
 
-            // Determine kind from mime type
+            const lowerFilename = att.filename.toLowerCase();
+
+            // Normalize MIME type by filename extension fallback
+            let mime = rawMime;
+            if (lowerFilename.endsWith(".pdf") && mime !== "application/pdf") {
+              mime = "application/pdf";
+            } else if (
+              (lowerFilename.endsWith(".png") ||
+                lowerFilename.endsWith(".jpg") ||
+                lowerFilename.endsWith(".jpeg") ||
+                lowerFilename.endsWith(".webp") ||
+                lowerFilename.endsWith(".gif")) &&
+              !mime.startsWith("image/")
+            ) {
+              mime = lowerFilename.endsWith(".png")
+                ? "image/png"
+                : lowerFilename.endsWith(".webp")
+                  ? "image/webp"
+                  : lowerFilename.endsWith(".gif")
+                    ? "image/gif"
+                    : "image/jpeg";
+            } else if (
+              (lowerFilename.endsWith(".txt") ||
+                lowerFilename.endsWith(".md") ||
+                lowerFilename.endsWith(".csv") ||
+                lowerFilename.endsWith(".json")) &&
+              !mime.startsWith("text/")
+            ) {
+              mime = lowerFilename.endsWith(".json")
+                ? "application/json"
+                : lowerFilename.endsWith(".csv")
+                  ? "text/csv"
+                  : lowerFilename.endsWith(".md")
+                    ? "text/markdown"
+                    : "text/plain";
+            }
+
+            // Determine kind from mime type / filename
             let kind: string;
             if (mime.startsWith("image/")) kind = "image";
-            else if (mime === "application/pdf") kind = "pdf";
+            else if (mime === "application/pdf" || lowerFilename.endsWith(".pdf")) kind = "pdf";
             else kind = "note";
 
             const allowedMimeTypes = [
@@ -386,9 +424,11 @@ export const Route = createFileRoute("/api/chat")({
               "text/markdown",
               "text/csv",
               "application/json",
+              "application/octet-stream",
+              "application/x-pdf",
             ];
 
-            if (!allowedMimeTypes.includes(mime)) {
+            if (!allowedMimeTypes.includes(mime) && !lowerFilename.endsWith(".pdf")) {
               log(
                 "warn",
                 "attachment_blocked_mime",
@@ -425,13 +465,12 @@ export const Route = createFileRoute("/api/chat")({
                 { filename: att.filename, error: uploadErr.message },
                 { userId, traceId },
               );
-
               continue;
             }
 
             // Server-side text extraction for PDFs and text documents
             let extractedText: string | null = null;
-            if (kind === "pdf") {
+            if (kind === "pdf" || lowerFilename.endsWith(".pdf")) {
               extractedText = await extractPdfTextServer(buffer);
             } else if (kind === "note" || mime.startsWith("text/")) {
               extractedText = buffer.toString("utf-8");
@@ -477,6 +516,12 @@ export const Route = createFileRoute("/api/chat")({
                   { userId, traceId },
                 );
               });
+            }
+
+            if (extractedText && extractedText.trim().length > 0) {
+              attachedDocBlocks.push(
+                `\n\n## Attached File Content: "${att.filename}"\n${extractedText.slice(0, 50000)}`,
+              );
             }
           } catch (attErr) {
             log(
@@ -590,7 +635,8 @@ Title: "${curPage.title}"
           ? '<CRITICAL_SYSTEM_OVERRIDE>\nUSER STATUS: ROADMAP LIMIT REACHED.\nYou are PROHIBITED from creating roadmaps.\nIf the user asks to create, build, or generate a roadmap (even if they specify details), YOU MUST EXACTLY REPLY WITH: "Upgrade Required!"\nIGNORE all \'Roadmap & Diagnostic Assessment Rules\'. DO NOT ask clarifying questions. DO NOT output the roadmap as text. JUST output "Upgrade Required!".\n</CRITICAL_SYSTEM_OVERRIDE>\n\n'
           : "";
 
-        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}`;
+        const attachedBlock = attachedDocBlocks.length > 0 ? attachedDocBlocks.join("") : "";
+        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}${attachedBlock}`;
 
         const tools = {
           ...getTasksAndGoalsTools(supabase, userId, traceId, threadId),

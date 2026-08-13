@@ -1,8 +1,11 @@
 export async function extractPdfTextServer(buffer: Buffer): Promise<string> {
   try {
-    // Dynamic import legacy build of pdfjs-dist for Node environment compatibility
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+    const loadingTask = pdfjs.getDocument({
+      data: new Uint8Array(buffer),
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
     const pdf = await loadingTask.promise;
 
     let fullText = "";
@@ -10,9 +13,22 @@ export async function extractPdfTextServer(buffer: Buffer): Promise<string> {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pageText = content.items.map((item: any) => item.str ?? "").join(" ");
-      if (pageText.trim()) {
-        fullText += `--- page ${i} ---\n${pageText.trim()}\n\n`;
+      const pageText = content.items
+        .map((item: any) => {
+          if (typeof item.str === "string") {
+            return item.hasEOL ? `${item.str}\n` : item.str;
+          }
+          return "";
+        })
+        .join(" ");
+
+      const cleanedPageText = pageText
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n /g, "\n")
+        .trim();
+
+      if (cleanedPageText) {
+        fullText += `--- Page ${i} ---\n${cleanedPageText}\n\n`;
       }
     }
     return fullText.trim();
