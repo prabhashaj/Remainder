@@ -46,6 +46,7 @@ Capabilities & Media Rendering Rules:
 - ONLY when the user EXPLICITLY asks to see, get, or show images/photos: call \`searchPhotos\` AND render each returned photo directly inside your response text using markdown image syntax: \`![caption](url)\`. Do NOT fetch or show images proactively without a direct request.
 - When the user asks for video tutorials or YouTube videos: call \`researchResources\` or search the web and include the YouTube watch URLs (e.g., \`https://www.youtube.com/watch?v=...\`) directly in your message text so an inline video player renders in the chat interface.
 - Analyze and discuss attached images, PDFs, and text documents accurately when provided by the user.
+- **Document & PDF Reading Rules (CRITICAL):** You ARE FULLY CAPABLE of reading, summarizing, and analyzing attached PDF documents, research papers, syllabi, and text files. The text content of attached documents is provided to you under \`## Attached File Content\` and inside user messages. ABSOLUTELY NEVER output refusal messages like "I currently don't have the ability to directly read or analyze PDF documents". ALWAYS read, analyze, summarize, or extract key points from attached files immediately using the provided document text.
 - **NEVER generate roadmaps as plain text:** If the user asks to create a roadmap, DO NOT output the roadmap as text in the chat. You MUST use the \`delegateToPlanner\` tool to build it in their workspace.
 
 Tool Delegation:
@@ -356,6 +357,7 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         // --- 1. Persist chat attachments as study_resources BEFORE building user context ---
+        const attachedTextMap: Record<string, string> = {};
         const attachedDocBlocks: string[] = [];
         const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
         for (const att of rawAttachments) {
@@ -519,6 +521,7 @@ export const Route = createFileRoute("/api/chat")({
             }
 
             if (extractedText && extractedText.trim().length > 0) {
+              attachedTextMap[att.filename] = extractedText;
               attachedDocBlocks.push(
                 `\n\n## Attached File Content: "${att.filename}"\n${extractedText.slice(0, 50000)}`,
               );
@@ -659,6 +662,13 @@ Title: "${curPage.title}"
             }
             if (p.type === "file") {
               const filename = p.filename ?? p.name ?? "attached document";
+              const textContent = attachedTextMap[filename];
+              if (textContent) {
+                return {
+                  type: "text",
+                  text: `[Attached Document: "${filename}"]\n--- BEGIN DOCUMENT CONTENT ("${filename}") ---\n${textContent.slice(0, 40000)}\n--- END DOCUMENT CONTENT ---`,
+                };
+              }
               return {
                 type: "text",
                 text: `[Attached file: "${filename}"]`,
