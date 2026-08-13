@@ -215,8 +215,8 @@ function WorkspaceSidebar() {
                 Pro
               </span>
             ) : (
-              <Link 
-                to="/pricing" 
+              <Link
+                to="/pricing"
                 className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary shadow-sm hover:bg-primary/20 transition-colors"
               >
                 Upgrade

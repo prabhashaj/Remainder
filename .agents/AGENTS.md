@@ -1,2 +1,1 @@
-
 - Always include the expected output for every code snippet or example provided to the user.

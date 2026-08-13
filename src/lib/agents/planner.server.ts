@@ -695,20 +695,32 @@ export async function runPlanner(params: {
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let limitReached = false;
-    
+
     // Check final step tool results
-    if (result.toolResults?.some((tr: any) => tr.result && typeof tr.result === 'object' && 'limitReached' in tr.result && tr.result.limitReached === true)) {
+    if (
+      result.toolResults?.some(
+        (tr: any) =>
+          tr.result &&
+          typeof tr.result === "object" &&
+          "limitReached" in tr.result &&
+          tr.result.limitReached === true,
+      )
+    ) {
       limitReached = true;
     }
-    
+
     // Check all intermediate steps in multi-step execution
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!limitReached && (result as any).steps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      limitReached = (result as any).steps.some((step: any) => 
-        step.toolResults?.some((tr: any) => 
-          tr.result && typeof tr.result === 'object' && 'limitReached' in tr.result && tr.result.limitReached === true
-        )
+      limitReached = (result as any).steps.some((step: any) =>
+        step.toolResults?.some(
+          (tr: any) =>
+            tr.result &&
+            typeof tr.result === "object" &&
+            "limitReached" in tr.result &&
+            tr.result.limitReached === true,
+        ),
       );
     }
 

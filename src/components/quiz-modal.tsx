@@ -7,9 +7,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MessageResponse } from "@/components/ai-elements/message";
 import { generateQuizForItem, submitQuizAttempt } from "@/lib/quiz.functions";
 import type { QuizQuestion } from "@/lib/agents/quiz-generator.server";
+import { checkMcqCorrect, cleanOptionText, getOptionLetterUpper } from "@/lib/quiz-eval";
 
 type QuestionState = {
   question: QuizQuestion;
@@ -65,7 +65,7 @@ export function QuizModal({
         let isCorrect = false;
 
         if (q.question.type === "mcq") {
-          isCorrect = userAns.trim() === q.question.correct_answer.trim();
+          isCorrect = checkMcqCorrect(userAns, q.question.correct_answer, q.question.options);
         } else {
           const normalizedUser = userAns.toLowerCase().trim();
           const normalizedCorrect = q.question.correct_answer.toLowerCase().trim();
@@ -169,7 +169,7 @@ export function QuizModal({
               let isCorrect = false;
 
               if (question.type === "mcq") {
-                isCorrect = userAns.trim() === question.correct_answer.trim();
+                isCorrect = checkMcqCorrect(userAns, question.correct_answer, question.options);
               } else {
                 const normalizedUser = userAns.toLowerCase().trim();
                 const normalizedCorrect = question.correct_answer.toLowerCase().trim();
@@ -194,9 +194,10 @@ export function QuizModal({
                   </div>
 
                   {question.type === "mcq" && question.options && question.options.length > 0 ? (
-                    <div className="space-y-2 pl-8">
+                    <div className="space-y-2.5 pl-8">
                       {question.options.map((opt, optIdx) => {
                         const selected = userAns === opt;
+                        const optIsCorrect = checkMcqCorrect(opt, question.correct_answer, question.options);
                         let optionStyle =
                           "border border-border/80 bg-muted/40 text-foreground hover:bg-muted/80";
 
@@ -206,9 +207,9 @@ export function QuizModal({
                         }
 
                         if (submitted) {
-                          if (opt === question.correct_answer) {
+                          if (optIsCorrect) {
                             optionStyle =
-                              "border-2 border-green-500 bg-green-500/15 font-semibold text-green-700 dark:text-green-300";
+                              "border-2 border-emerald-500 bg-emerald-500/15 font-semibold text-emerald-700 dark:text-emerald-300";
                           } else if (selected && !isCorrect) {
                             optionStyle =
                               "border-2 border-red-500 bg-red-500/15 font-semibold text-red-700 dark:text-red-300";
@@ -221,12 +222,17 @@ export function QuizModal({
                             type="button"
                             disabled={submitted}
                             onClick={() => setAnswers((prev) => ({ ...prev, [idx]: opt }))}
-                            className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm transition-all ${optionStyle}`}
+                            className={`group flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm transition-all ${optionStyle}`}
                           >
-                            <span className="leading-snug">{opt}</span>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                                {getOptionLetterUpper(optIdx)}
+                              </span>
+                              <span className="leading-relaxed">{cleanOptionText(opt)}</span>
+                            </div>
                             <div className="ml-3 shrink-0">
-                              {submitted && opt === question.correct_answer && (
-                                <CheckCircle2 className="size-4 text-green-600" />
+                              {submitted && optIsCorrect && (
+                                <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
                               )}
                               {submitted && selected && !isCorrect && (
                                 <XCircle className="size-4 text-red-500" />

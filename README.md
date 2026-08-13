@@ -9,45 +9,53 @@ At the heart of Remispace is **Remi** — a supportive, multi-agent AI learning 
 ## Why Remispace is Useful
 
 ### 1. Slow Productivity Over Anxiety
+
 Traditional productivity apps rely on aggressive red badge counters, streak-shaming, and endless notification loops that cause burnout. Remispace is built on the philosophy of **slow, steady progress**. It celebrates incremental effort, provides guilt-free restarts when life gets busy, and offers a quiet, glassmorphic interface that reduces cognitive fatigue.
 
 ### 2. Unified Learning & Execution Hub
+
 Most learners struggle because their learning materials (videos, PDFs, notes) are disconnected from their execution systems (tasks, habits, calendars). Remispace bridges this gap by embedding AI-generated study roadmaps, document tutors, and notes directly alongside your daily habits, goal milestones, and focus timers.
 
 ### 3. Truthful, Confabulation-Free AI Assistance
-Standard AI assistants often hallucinate plausible-sounding answers or guess when faced with novel terms, current events, or niche concepts. Remispace includes an intelligent **Search-Routing & Confabulation-Prevention Policy** that evaluates queries across 7 cognitive dimensions. It senses when information needs real-world verification and automatically searches the web *before* answering, ensuring reliable, grounded guidance.
+
+Standard AI assistants often hallucinate plausible-sounding answers or guess when faced with novel terms, current events, or niche concepts. Remispace includes an intelligent **Search-Routing & Confabulation-Prevention Policy** that evaluates queries across 7 cognitive dimensions. It senses when information needs real-world verification and automatically searches the web _before_ answering, ensuring reliable, grounded guidance.
 
 ---
 
 ## Detailed Feature Guide
 
 ### Remi — Multi-Agent AI Learning Coach
+
 Remi isn't just a generic chatbot; it is a coordinated team of specialized AI agents designed to support every phase of your learning journey:
 
-- **Custom Study Roadmaps**: Give Remi any topic (e.g., *"Quantum Computing Fundamentals"*, *"System Design for Web Developers"*, or *"Automotive Harness Engineering"*), and it builds a multi-phase learning roadmap with structured subtopics and clear objectives.
+- **Custom Study Roadmaps**: Give Remi any topic (e.g., _"Quantum Computing Fundamentals"_, _"System Design for Web Developers"_, or _"Automotive Harness Engineering"_), and it builds a multi-phase learning roadmap with structured subtopics and clear objectives.
 - **Interactive Lesson Generator**: Deep-dive into any subtopic on your roadmap. Remi generates comprehensive, structured lessons with clear explanations, inline and display LaTeX math formulas ($E=mc^2$), syntax-highlighted code blocks (CodeMirror), and key term highlights.
-- **Material Tutor & Pre-Reading Summaries (RAG)**: Upload PDFs or attach YouTube video links. Remi generates instant pre-reading briefs featuring a 1-paragraph summary, key claims, and a *"Worth your time if"* section. Ask questions about your study material, and Remi answers by quoting relevant sentences directly from your content using vector similarity search (`pgvector`).
+- **Material Tutor & Pre-Reading Summaries (RAG)**: Upload PDFs or attach YouTube video links. Remi generates instant pre-reading briefs featuring a 1-paragraph summary, key claims, and a _"Worth your time if"_ section. Ask questions about your study material, and Remi answers by quoting relevant sentences directly from your content using vector similarity search (`pgvector`).
 - **Auto-Generated Study Notebooks**: Transform any concept or YouTube video into a fully structured notebook page complete with native callouts, checklists, summary blocks, and organized notes.
 - **Flashcard & Quiz Generator**: Generate Spaced Repetition System (SRS) flashcards and interactive practice quizzes automatically from your study materials or roadmap topics.
 - **Workspace Planner**: Tell Remi what you want to achieve, and it can automatically build task lists, habit trackers, and goal milestones directly in your workspace.
 - **Web Research Specialist**: Powered by Tavily API, automatically searches the web to discover high-quality tutorials, articles, and video resources to attach to your learning roadmaps.
 
 ### Flexible Personal Workspace & Notebook
+
 - **Block-Based Notebook**: Create nested pages, structured notes, meeting agendas, and knowledge bases inside a clean, distraction-free environment.
 - **Customizable Organization**: Organize pages with custom icons, cover themes, customizable fonts, and intuitive hierarchy.
 
 ### Habits, Streaks & Guilt-Free Tracking
+
 - **Habit Progress Rings**: Track daily habits visually with smooth progress rings.
 - **Streak & Consistency Analytics**: Monitor your consistency over 30-day and 365-day views.
 - **Mood Check-ins**: Record how you feel each day to maintain awareness of your mental well-being alongside your productivity.
 - **Guilt-Free Restarts**: Missed a few days? Remispace encourages you to start small today without penalty or negative reinforcement.
 
 ### Goal & Milestone Management
+
 - **High-Level Goals**: Map out major personal, academic, or professional objectives.
 - **Milestone Breakdown**: Measure progress visually with percentage progress bars and target completion dates.
 - **Integrated Task System**: Manage daily to-dos linked directly to your goals and study roadmaps.
 
 ### Focus Sessions & Weekly Reflections
+
 - **Focus Timer**: Dedicated distraction-free focus timer to track deep-work sessions.
 - **Weekly Reflections & Gentle Nudges**: Supportive weekly summaries of your focus time, habit trends, and goal milestones, accompanied by personalized suggestions from Remi for the week ahead.
 
@@ -79,6 +87,6 @@ Remi isn't just a generic chatbot; it is a coordinated team of specialized AI ag
 
 ## The Remispace Philosophy
 
-> *"Progress isn't measured by how fast you sprint, but by the quiet consistency of showing up."*
+> _"Progress isn't measured by how fast you sprint, but by the quiet consistency of showing up."_
 
 Remispace was crafted to make learning and working feel calm, purposeful, and deeply rewarding. Whether you are mastering a complex discipline or simply organizing your day, Remispace is your gentle guide.

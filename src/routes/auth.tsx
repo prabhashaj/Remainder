@@ -92,7 +92,10 @@ function AuthPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12 relative">
-      <Link to="/" className="absolute left-6 top-6 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+      <Link
+        to="/"
+        className="absolute left-6 top-6 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
         <ArrowLeft className="size-4" />
         Back to home
       </Link>

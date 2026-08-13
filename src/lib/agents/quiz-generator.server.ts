@@ -67,16 +67,18 @@ function questionFromUnknown(value: unknown, checkpoint = false): QuizQuestion {
   };
 }
 
-const QUIZ_PROMPT = `You generate a quiz from a lesson written by Remispace, a calm learning workspace.
+const QUIZ_PROMPT = `You generate a high-quality, clear quiz from a lesson written by Remispace, a calm learning workspace.
 
 Rules:
 - Create exactly 5 questions from the lesson content
 - Mix question types: 3 MCQ + 2 short-answer (approximately)
-- MCQ: always 4 options, one correct. Make distractors plausible but clearly wrong to someone who understands
+- MCQ: always 4 options, one correct answer
+- IMPORTANT FOR CODE FORMATTING: If a question or option contains code snippets (especially Python, JavaScript, C++, SQL, etc.), ALWAYS format code using fenced Markdown code blocks with language tags (e.g. \`\`\`python\nline 1\nline 2\n\`\`\`). NEVER collapse multi-line code onto a single line without linebreaks!
+- Keep option strings clean without leading letter prefixes like "a. " or "A) "
+- Set "correct_answer" to match the EXACT string of the correct choice from the options array
 - Short-answer: expect a 1-2 sentence answer. The correct_answer field should contain the key phrase that must appear
 - Grade difficulty progressively: first 2 questions = recall, middle 2 = application, last 1 = synthesis
 - Test understanding, not memorization of wording
-- Never test trivia, formatting details, or exact quotes
 - Use standard LaTeX for formulas: $inline$ or $$block$$ (never plain-text math or bracket delimiters)
 - Output MUST be JSON format: {"questions": [{"type": "mcq"|"short_answer", "question": "...", "options": ["..."], "correct_answer": "...", "explanation": "..."}]}`;
 
@@ -216,20 +218,23 @@ export async function generateCheckpoint(params: {
   const gateway = createAiGatewayProvider(apiKey);
   const model = gateway(getAiModelName());
 
-  const system = `You generate 2-3 quick self-check questions to verify a learner understood a lesson.
+  const system = `You generate 3 quick self-check questions to verify a learner understood a lesson.
 Rules:
+- Generate exactly 3 self-check questions (MCQ format)
 - Keep it fast — the learner should finish in under 60 seconds
-- Test the core ideas, not edge cases
-- Use only MCQ type for speed
-- 4 options each, one correct
-- Output MUST be JSON: {"questions": [{"type": "mcq", "question": "...", "options": ["a","b","c","d"], "correct_answer": "...", "explanation": "..."}]}`;
+- Test the core ideas and practical application
+- 4 options per question, exactly one correct
+- IMPORTANT FOR CODE FORMATTING: If a question or option includes code snippets (Python, JS, etc.), ALWAYS format multi-line code inside Markdown code blocks (e.g. \`\`\`python\nline 1\nline 2\n\`\`\`). NEVER collapse multi-line code onto a single line without linebreaks!
+- Keep option strings clean without leading letter prefixes like "a. " or "A) "
+- Set "correct_answer" to match the EXACT string of the correct choice from options
+- Output MUST be JSON: {"questions": [{"type": "mcq", "question": "...", "options": ["..."], "correct_answer": "...", "explanation": "..."}]}`;
 
   const prompt = `Lesson title: ${item.title}
 
 Lesson content:
 ${item.content}
 
-Generate 2-3 checkpoint questions now in JSON.`;
+Generate 3 checkpoint questions now in JSON.`;
 
   let questions: QuizQuestion[] = [];
 
