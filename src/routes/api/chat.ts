@@ -469,12 +469,24 @@ export const Route = createFileRoute("/api/chat")({
             const storagePath = `${userId}/${Date.now()}-${safeName}`;
             
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { error: uploadErr } = await supabaseAdmin.storage
+            let { error: uploadErr } = await supabaseAdmin.storage
               .from("materials")
               .upload(storagePath, buffer, {
                 contentType: mime,
                 upsert: true,
               });
+
+            if (uploadErr && (uploadErr.message.includes("not found") || uploadErr.message.includes("does not exist") || uploadErr.message.includes("Bucket"))) {
+              await supabaseAdmin.storage.createBucket("materials", { public: true });
+              const retry = await supabaseAdmin.storage
+                .from("materials")
+                .upload(storagePath, buffer, {
+                  contentType: mime,
+                  upsert: true,
+                });
+              uploadErr = retry.error;
+            }
+
             if (uploadErr) {
               log(
                 "error",
