@@ -19,6 +19,7 @@ import { Route as AuthenticatedFocusRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
 import { Route as AuthenticatedHabitsRouteImport } from './routes/_authenticated/habits'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedPricingRouteImport } from './routes/_authenticated/pricing'
 import { Route as AuthenticatedRoadmapsRouteImport } from './routes/_authenticated/roadmaps'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStudyRouteImport } from './routes/_authenticated/study'
@@ -33,6 +34,7 @@ import { Route as AuthenticatedMaterialResourceIdRouteImport } from './routes/_a
 import { Route as AuthenticatedPagePageIdRouteImport } from './routes/_authenticated/page.$pageId'
 import { Route as AuthenticatedResourceResourceIdRouteImport } from './routes/_authenticated/resource.$resourceId'
 import { Route as AuthenticatedRoadmapRoadmapIdRouteImport } from './routes/_authenticated/roadmap.$roadmapId'
+import { Route as ApiWebhooksRazorpayRouteImport } from './routes/api/webhooks/razorpay'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -81,6 +83,11 @@ const AuthenticatedHabitsRoute = AuthenticatedHabitsRouteImport.update({
 const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPricingRoute = AuthenticatedPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRoadmapsRoute = AuthenticatedRoadmapsRouteImport.update({
@@ -159,6 +166,11 @@ const AuthenticatedRoadmapRoadmapIdRoute =
     path: '/roadmap/$roadmapId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiWebhooksRazorpayRoute = ApiWebhooksRazorpayRouteImport.update({
+  id: '/api/webhooks/razorpay',
+  path: '/api/webhooks/razorpay',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -170,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/goals': typeof AuthenticatedGoalsRoute
   '/habits': typeof AuthenticatedHabitsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/pricing': typeof AuthenticatedPricingRoute
   '/roadmaps': typeof AuthenticatedRoadmapsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/study': typeof AuthenticatedStudyRoute
@@ -183,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/page/$pageId': typeof AuthenticatedPagePageIdRoute
   '/resource/$resourceId': typeof AuthenticatedResourceResourceIdRoute
   '/roadmap/$roadmapId': typeof AuthenticatedRoadmapRoadmapIdRoute
+  '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/conversation/': typeof AuthenticatedConversationIndexRoute
 }
 export interface FileRoutesByTo {
@@ -195,6 +209,7 @@ export interface FileRoutesByTo {
   '/goals': typeof AuthenticatedGoalsRoute
   '/habits': typeof AuthenticatedHabitsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/pricing': typeof AuthenticatedPricingRoute
   '/roadmaps': typeof AuthenticatedRoadmapsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/study': typeof AuthenticatedStudyRoute
@@ -208,6 +223,7 @@ export interface FileRoutesByTo {
   '/page/$pageId': typeof AuthenticatedPagePageIdRoute
   '/resource/$resourceId': typeof AuthenticatedResourceResourceIdRoute
   '/roadmap/$roadmapId': typeof AuthenticatedRoadmapRoadmapIdRoute
+  '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/conversation': typeof AuthenticatedConversationIndexRoute
 }
 export interface FileRoutesById {
@@ -222,6 +238,7 @@ export interface FileRoutesById {
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/habits': typeof AuthenticatedHabitsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/pricing': typeof AuthenticatedPricingRoute
   '/_authenticated/roadmaps': typeof AuthenticatedRoadmapsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/study': typeof AuthenticatedStudyRoute
@@ -235,6 +252,7 @@ export interface FileRoutesById {
   '/_authenticated/page/$pageId': typeof AuthenticatedPagePageIdRoute
   '/_authenticated/resource/$resourceId': typeof AuthenticatedResourceResourceIdRoute
   '/_authenticated/roadmap/$roadmapId': typeof AuthenticatedRoadmapRoadmapIdRoute
+  '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/_authenticated/conversation/': typeof AuthenticatedConversationIndexRoute
 }
 export interface FileRouteTypes {
@@ -249,6 +267,7 @@ export interface FileRouteTypes {
     | '/goals'
     | '/habits'
     | '/onboarding'
+    | '/pricing'
     | '/roadmaps'
     | '/settings'
     | '/study'
@@ -262,6 +281,7 @@ export interface FileRouteTypes {
     | '/page/$pageId'
     | '/resource/$resourceId'
     | '/roadmap/$roadmapId'
+    | '/api/webhooks/razorpay'
     | '/conversation/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -274,6 +294,7 @@ export interface FileRouteTypes {
     | '/goals'
     | '/habits'
     | '/onboarding'
+    | '/pricing'
     | '/roadmaps'
     | '/settings'
     | '/study'
@@ -287,6 +308,7 @@ export interface FileRouteTypes {
     | '/page/$pageId'
     | '/resource/$resourceId'
     | '/roadmap/$roadmapId'
+    | '/api/webhooks/razorpay'
     | '/conversation'
   id:
     | '__root__'
@@ -300,6 +322,7 @@ export interface FileRouteTypes {
     | '/_authenticated/goals'
     | '/_authenticated/habits'
     | '/_authenticated/onboarding'
+    | '/_authenticated/pricing'
     | '/_authenticated/roadmaps'
     | '/_authenticated/settings'
     | '/_authenticated/study'
@@ -313,6 +336,7 @@ export interface FileRouteTypes {
     | '/_authenticated/page/$pageId'
     | '/_authenticated/resource/$resourceId'
     | '/_authenticated/roadmap/$roadmapId'
+    | '/api/webhooks/razorpay'
     | '/_authenticated/conversation/'
   fileRoutesById: FileRoutesById
 }
@@ -323,6 +347,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiLogErrorRoute: typeof ApiLogErrorRoute
   ApiMaterialChatRoute: typeof ApiMaterialChatRoute
+  ApiWebhooksRazorpayRoute: typeof ApiWebhooksRazorpayRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -395,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pricing': {
+      id: '/_authenticated/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof AuthenticatedPricingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/roadmaps': {
@@ -495,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRoadmapRoadmapIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/webhooks/razorpay': {
+      id: '/api/webhooks/razorpay'
+      path: '/api/webhooks/razorpay'
+      fullPath: '/api/webhooks/razorpay'
+      preLoaderRoute: typeof ApiWebhooksRazorpayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -506,6 +545,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedHabitsRoute: typeof AuthenticatedHabitsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedPricingRoute: typeof AuthenticatedPricingRoute
   AuthenticatedRoadmapsRoute: typeof AuthenticatedRoadmapsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStudyRoute: typeof AuthenticatedStudyRoute
@@ -527,6 +567,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedHabitsRoute: AuthenticatedHabitsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedPricingRoute: AuthenticatedPricingRoute,
   AuthenticatedRoadmapsRoute: AuthenticatedRoadmapsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStudyRoute: AuthenticatedStudyRoute,
@@ -551,6 +592,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiLogErrorRoute: ApiLogErrorRoute,
   ApiMaterialChatRoute: ApiMaterialChatRoute,
+  ApiWebhooksRazorpayRoute: ApiWebhooksRazorpayRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

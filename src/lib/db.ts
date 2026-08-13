@@ -19,6 +19,8 @@ export type AgentMemory = Tables["agent_memories"]["Row"];
 export type RoadmapResource = Tables["roadmap_resources"]["Row"];
 export type Flashcard = Tables["flashcards"]["Row"];
 export type QuizAttempt = Tables["quiz_attempts"]["Row"];
+export type Subscription = Tables["subscriptions"]["Row"];
+export type UsageLog = Tables["usage_logs"]["Row"];
 
 export function today(): string {
   const d = new Date();
@@ -541,4 +543,43 @@ export function streakFor(habitId: string, logs: HabitLog[]): number {
     else if (i > 0) break;
   }
   return streak;
+}
+
+/* ---------- subscriptions & usage ---------- */
+
+export async function fetchSubscription(): Promise<Subscription | null> {
+  const userId = await requireUserId();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function fetchUsage(weekStartDate: string): Promise<UsageLog | null> {
+  const userId = await requireUserId();
+  const { data, error } = await supabase
+    .from("usage_logs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("week_start_date", weekStartDate)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function recordUsage(patch: Partial<UsageLog> & { week_start_date: string }) {
+  const user_id = await requireUserId();
+  const { data, error } = await supabase
+    .from("usage_logs")
+    .upsert(
+      { user_id, ...patch },
+      { onConflict: "user_id,week_start_date" }
+    )
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 }

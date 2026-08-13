@@ -978,6 +978,69 @@ export type Database = {
           },
         ];
       };
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          razorpay_subscription_id: string | null;
+          tier: string;
+          status: string;
+          current_period_end: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          razorpay_subscription_id?: string | null;
+          tier?: string;
+          status?: string;
+          current_period_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          razorpay_subscription_id?: string | null;
+          tier?: string;
+          status?: string;
+          current_period_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      usage_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          week_start_date: string;
+          roadmaps_generated: number;
+          notebooks_created: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          week_start_date: string;
+          roadmaps_generated?: number;
+          notebooks_created?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          week_start_date?: string;
+          roadmaps_generated?: number;
+          notebooks_created?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           created_at: string;

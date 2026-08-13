@@ -314,6 +314,9 @@ function Landing() {
             <a href="#remi" className="transition-colors hover:text-foreground">
               AI Coach
             </a>
+            <a href="#pricing" className="transition-colors hover:text-foreground">
+              Pricing
+            </a>
             <a href="#workspace" className="transition-colors hover:text-foreground">
               Workspace
             </a>
@@ -604,6 +607,105 @@ function Landing() {
             );
           })}
         </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="mx-auto max-w-6xl px-6 py-20">
+        <SectionTitle
+          center
+          eyebrow="Pricing"
+          title="Simple, transparent plans."
+          body="Start for free, upgrade when you need more power and limits."
+        />
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {/* Free Tier */}
+          <Reveal className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+            <h3 className="text-xl font-bold text-foreground">Free Trial</h3>
+            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-foreground">
+              ₹0<span className="ml-1 text-xl font-medium text-muted-foreground">/ forever</span>
+            </div>
+            <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> 2 Roadmaps per week
+              </li>
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> 5 Notebooks per week
+              </li>
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> 15MB file upload limit
+              </li>
+            </ul>
+            <div className="mt-8">
+              <Button asChild variant="outline" className="w-full rounded-xl border-border">
+                <Link to="/auth" search={{ mode: "signup" }}>Get Started</Link>
+              </Button>
+            </div>
+          </Reveal>
+
+          {/* Weekly Tier */}
+          <Reveal className="relative rounded-2xl border-2 border-primary bg-card p-8 shadow-md">
+            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-0 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+              Most Popular
+            </div>
+            <h3 className="text-xl font-bold text-foreground">Weekly Premium</h3>
+            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-foreground">
+              ₹99<span className="ml-1 text-xl font-medium text-muted-foreground">/ week</span>
+            </div>
+            <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> 10 Roadmaps per week
+              </li>
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> 15 Notebooks per week
+              </li>
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> 50MB file upload limit
+              </li>
+            </ul>
+            <div className="mt-8">
+              <Button asChild className="w-full rounded-xl">
+                <Link to="/auth" search={{ mode: "signup" }}>Upgrade Now</Link>
+              </Button>
+            </div>
+          </Reveal>
+
+          {/* Monthly Tier */}
+          <Reveal className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+            <h3 className="text-xl font-bold text-foreground">Monthly Premium</h3>
+            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-foreground">
+              ₹399<span className="ml-1 text-xl font-medium text-muted-foreground">/ month</span>
+            </div>
+            <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> All Weekly Features
+              </li>
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> Save ~10% over weekly
+              </li>
+              <li className="flex items-center">
+                <Check className="mr-3 size-4 text-primary" /> Priority Support
+              </li>
+            </ul>
+            <div className="mt-8">
+              <Button asChild variant="outline" className="w-full rounded-xl border-border bg-background">
+                <Link to="/auth" search={{ mode: "signup" }}>Subscribe Monthly</Link>
+              </Button>
+            </div>
+          </Reveal>
+        </div>
+        <Reveal className="mt-12 rounded-2xl bg-gradient-to-br from-indigo-950 to-indigo-900 p-8 text-white max-w-5xl mx-auto shadow-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h2 className="text-2xl font-bold">Enterprise & Teams</h2>
+              <p className="mt-2 text-indigo-200">
+                Need BYOK (Bring Your Own Key) or dedicated enterprise rate limits?
+              </p>
+            </div>
+            <button className="whitespace-nowrap rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-900 shadow-sm hover:bg-indigo-50">
+              Contact Sales
+            </button>
+          </div>
+        </Reveal>
       </section>
 
       {/* Call to action footer banner */}

@@ -31,6 +31,12 @@ export function getNotebookTools(
           ),
       }),
       execute: async ({ topicOrUrl, title, include_images }) => {
+        const { getRemainingLimitsServer } = await import("@/lib/limits");
+        const limits = await getRemainingLimitsServer(supabase, userId);
+        if (!limits.notebooks.canCreate) {
+          return `Upgrade Required! You have reached your limit of ${limits.notebooks.limit} notebooks this week. Please tell the user to upgrade their subscription.`;
+        }
+
         const raw = topicOrUrl.trim();
         const directVideoId =
           youtubeIdFromUrl(raw) ?? (raw.length === 11 && !raw.includes(" ") ? raw : null);

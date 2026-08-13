@@ -184,14 +184,37 @@ function WorkspaceSidebar() {
     navigate({ to: "/page/$pageId", params: { pageId: page.id } });
   }
 
+  const { data: subscription } = useQuery({
+    queryKey: ["subscription"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
+      if (!userId) return null;
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      return sub;
+    },
+  });
+  const isPremium = subscription && subscription.status === "active" && (subscription.tier === "weekly" || subscription.tier === "monthly");
+
   return (
     <Sidebar collapsible="icon" className="border-border/70">
       <SidebarHeader>
         <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1.5">
           <img src={remiLogo} alt="" width={36} height={36} className="size-9 shrink-0" />
-          <span className="font-display text-xl font-bold group-data-[collapsible=icon]:hidden">
-            Remispace
-          </span>
+          <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+            <span className="font-display text-xl font-bold">
+              Remispace
+            </span>
+            {isPremium && (
+              <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-sm">
+                Pro
+              </span>
+            )}
+          </div>
         </Link>
       </SidebarHeader>
 

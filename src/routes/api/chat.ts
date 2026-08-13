@@ -18,6 +18,7 @@ import { extractPdfTextServer } from "@/lib/pdf-parser.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit, handleRateLimitError } from "@/lib/rate-limit.server";
 import { log } from "@/lib/logger.server";
+import { getRemainingLimitsServer } from "@/lib/limits";
 import type { Database } from "@/integrations/supabase/types";
 
 import { getTasksAndGoalsTools } from "@/lib/chat-tools/tasks-and-goals";
@@ -45,6 +46,7 @@ Capabilities & Media Rendering Rules:
 - ONLY when the user EXPLICITLY asks to see, get, or show images/photos: call \`searchPhotos\` AND render each returned photo directly inside your response text using markdown image syntax: \`![caption](url)\`. Do NOT fetch or show images proactively without a direct request.
 - When the user asks for video tutorials or YouTube videos: call \`researchResources\` or search the web and include the YouTube watch URLs (e.g., \`https://www.youtube.com/watch?v=...\`) directly in your message text so an inline video player renders in the chat interface.
 - Analyze and discuss attached images, PDFs, and text documents accurately when provided by the user.
+- **NEVER generate roadmaps as plain text:** If the user asks to create a roadmap, DO NOT output the roadmap as text in the chat. You MUST use the \`delegateToPlanner\` tool to build it in their workspace.
 
 Tool Delegation:
 - createTask: Use to instantly create a new task for the user.
@@ -297,6 +299,7 @@ export const Route = createFileRoute("/api/chat")({
         const { data: userData, error: userError } = await supabase.auth.getUser(token);
         if (userError || !userData.user) return new Response("Unauthorized", { status: 401 });
         const userId = userData.user.id;
+        const limits = await getRemainingLimitsServer(supabase, userId);
         const traceId = nanoid();
         const uiMessages = messages as UIMessage[];
         log(
@@ -394,7 +397,7 @@ export const Route = createFileRoute("/api/chat")({
               continue;
             }
 
-            const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+            const MAX_FILE_SIZE = limits.maxFileSizeMb * 1024 * 1024;
             if (buffer.length > MAX_FILE_SIZE) {
               log(
                 "warn",
@@ -582,7 +585,11 @@ Title: "${curPage.title}"
           }
         }
 
-        const systemPrompt = `${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}`;
+          const limitInstruction = !limits.roadmaps.canCreate
+            ? "<CRITICAL_SYSTEM_OVERRIDE>\nUSER STATUS: ROADMAP LIMIT REACHED.\nYou are PROHIBITED from creating roadmaps.\nIf the user asks to create, build, or generate a roadmap (even if they specify details), YOU MUST EXACTLY REPLY WITH: \"Upgrade Required!\"\nIGNORE all 'Roadmap & Diagnostic Assessment Rules'. DO NOT ask clarifying questions. DO NOT output the roadmap as text. JUST output \"Upgrade Required!\".\n</CRITICAL_SYSTEM_OVERRIDE>\n\n"
+            : "";
+
+          const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}`;
 
         const tools = {
           ...getTasksAndGoalsTools(supabase, userId, traceId, threadId),

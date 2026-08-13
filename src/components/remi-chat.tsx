@@ -1,6 +1,7 @@
 import React from "react";
 import { useChat } from "@ai-sdk/react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
 import {
   AlertCircle,
@@ -22,6 +23,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import remiLogo from "@/assets/remi.png";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Conversation,
   ConversationContent,
@@ -394,9 +405,13 @@ export function RemiChat({
   onActivity?: (() => void) | undefined;
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const renamed = useRef(initialMessages.length > 0);
   const seedSent = useRef(false);
+
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [lastCheckedMessageId, setLastCheckedMessageId] = useState<string | null>(null);
 
   const { messages, sendMessage, status } = useChat({
     id: threadId,
@@ -410,7 +425,19 @@ export function RemiChat({
         return token ? { Authorization: `Bearer ${token}` } : {};
       },
     }),
-    onError: (error) => toast.error(error.message || "Remi couldn't reply just now."),
+    onError: (error) => {
+        toast.error(error.message || "Remi couldn't reply just now.");
+        if (error.message.includes("Thread not found") && typeof window !== "undefined") {
+          window.localStorage.removeItem("remispace.dock.thread");
+          setTimeout(() => {
+            if (window.location.pathname.startsWith("/conversation/")) {
+              window.location.href = "/conversation";
+            } else {
+              window.location.reload();
+            }
+          }, 1000);
+        }
+      },
     onFinish: () => {
       void queryClient.invalidateQueries({ queryKey: ["roadmaps"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -421,6 +448,20 @@ export function RemiChat({
       void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
     },
   });
+
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (
+      lastMessage &&
+      lastMessage.role === "assistant" &&
+      lastMessage.id !== lastCheckedMessageId
+    ) {
+      if (lastMessage.parts.some(p => p.type === "text" && p.text.includes("Upgrade Required!"))) {
+        setUpgradeModalOpen(true);
+      }
+      setLastCheckedMessageId(lastMessage.id);
+    }
+  }, [messages, lastCheckedMessageId]);
 
   async function submit(text: string, files: FileUIPart[] = []) {
     const trimmed = text.trim();
@@ -630,6 +671,33 @@ export function RemiChat({
           </PromptInputFooter>
         </PromptInput>
       </div>
+
+      <AlertDialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
+        <AlertDialogContent className="rounded-3xl border-border/70 p-6 sm:max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Sparkles className="h-6 w-6 text-primary" />
+            </div>
+            <AlertDialogTitle className="text-center font-display text-xl">
+              Upgrade to Pro
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              You've reached your free limit for roadmaps this week. Upgrade to Pro to create unlimited roadmaps, unlock all premium models, and more.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              className="w-full rounded-2xl"
+              onClick={() => navigate({ to: "/pricing" })}
+            >
+              View Pricing
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full rounded-2xl border-none">
+              Maybe later
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -84,9 +84,13 @@ export async function uploadMaterial(file: File): Promise<string> {
     throw new Error(`File type ${file.type || "unknown"} is not allowed.`);
   }
 
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-  if (file.size > MAX_FILE_SIZE) {
-    throw new Error("File exceeds the 50MB size limit.");
+  const { getRemainingLimits } = await import("@/lib/limits");
+  const limits = await getRemainingLimits();
+  const maxMb = limits.maxFileSizeMb;
+  const maxBytes = maxMb * 1024 * 1024;
+  
+  if (file.size > maxBytes) {
+    throw new Error(`File exceeds the ${maxMb}MB size limit. Please upgrade to premium for larger uploads.`);
   }
 
   const userId = await requireUserId();
