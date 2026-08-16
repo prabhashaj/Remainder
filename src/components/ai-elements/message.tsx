@@ -295,7 +295,7 @@ function preprocessMarkdown(children?: React.ReactNode): string {
   text = text.replace(/(^|\n)\$\s+/g, "$1\\$ ");
 
   // 3. Convert \( ... \) inline math to $ ... $
-  text = text.replace(/\\\(([\s\S]*?)\\\)/g, " $1 ");
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, "$$1$");
 
   // 4. Convert \[ ... \] display math to \n$$\n...\n$$\n
   text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, p1) => `\n$$\n${p1}\n$$\n`);

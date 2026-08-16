@@ -6,30 +6,31 @@ import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
-import { math } from "@streamdown/math";
+import { createMathPlugin } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import "katex/dist/katex.min.css";
 
 import { ExpandableImage } from "@/components/ui/expandable-image";
 import { Button } from "@/components/ui/button";
 
-const streamdownPlugins = { cjk, code, math, mermaid } as never;
+const mathPlugin = createMathPlugin({ singleDollarTextMath: true });
+const streamdownPlugins = { cjk, code, math: mathPlugin, mermaid } as never;
 
 function preprocessLatexText(text: string): string {
   if (typeof text !== "string") return "";
   let result = text;
 
-  // Convert \( ... \) inline math to $ ... $
-  result = result.replace(/\\\(([\s\S]*?)\\\)/g, " $1 ");
+  // 1. Convert \( ... \) inline math to $ ... $
+  result = result.replace(/\\\(([\s\S]*?)\\\)/g, "$$1$");
 
-  // Convert \[ ... \] display math to \n$$\n$1\n$$\n
-  result = result.replace(/\\\[([\s\S]*?)\\\]/g, "\n$$\n$1\n$$\n");
+  // 2. Convert \[ ... \] display math to \n\n$$\n$1\n$$\n\n
+  result = result.replace(/\\\[([\s\S]*?)\\\]/g, "\n\n$$\n$1\n$$\n\n");
 
-  // Convert inline $$ ... $$ inside sentences into $ ... $
+  // 3. Clean up $$ blocks. Convert inline $$ inside sentences to $ ... $
   result = result.replace(/([^\n])\$\$([^\n$#]+?)\$\$/g, "$1$$2$");
   result = result.replace(/\$\$([^\n$#]+?)\$\$([^\n])/g, "$$1$$2");
 
-  // Ensure block display math equations $$ ... $$ have newlines around them
+  // 4. Ensure standalone block display math equations $$ ... $$ have newlines
   result = result.replace(/([^\n])\$\$([\s\S]+?)\$\$/g, "$1\n\n$$\n$2\n$$\n");
   result = result.replace(/\$\$([\s\S]+?)\$\$([^\n])/g, "\n$$\n$1\n$$\n$2");
 
@@ -419,7 +420,7 @@ function BlockRow({ block, onChanged }: { block: Block; onChanged: () => void })
                     />
                   ) : null,
               }}
-              className="prose-base sm:prose-lg max-w-none text-inherit [&>p]:m-0 [&>p]:inline"
+              className="prose-base sm:prose-lg max-w-none text-inherit leading-relaxed [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&>ul]:my-1.5 [&>ol]:my-1.5 [&>li]:my-0.5"
             >
               {preprocessLatexText(value)}
             </Streamdown>
