@@ -85,37 +85,52 @@ export function getDocumentTools(
                 return { success: false, error: `No documents available in workspace.` };
               }
 
-              // Strip filler words from input: "rmit_sop document" -> "rmitsop"
-              const normalize = (str: string) =>
-                str
-                  .toLowerCase()
-                  .replace(/_|-/g, " ")
-                  .replace(/\b(document|pdf|file|book|notes|resource|section)\b/gi, "")
-                  .replace(/[^\w\s]/g, "")
-                  .trim();
+              const lowerInput = cleanInput.toLowerCase().trim();
+              const baseName = lowerInput.replace(/\.[^.]+$/, "");
 
-              const searchNormalized = normalize(cleanInput);
-
-              // Find best matching document
-              bestDoc = allDocs.find((d) => normalize(d.title) === searchNormalized);
+              // 1. Direct title, basename, or storage path match
+              bestDoc = allDocs.find((d) => {
+                const docTitle = d.title.toLowerCase();
+                const docPath = (d.storage_path ?? "").toLowerCase();
+                return (
+                  docTitle === lowerInput ||
+                  docTitle === baseName ||
+                  docPath.includes(lowerInput) ||
+                  docPath.includes(baseName)
+                );
+              });
 
               if (!bestDoc) {
-                // Partial keyword match
-                const keywords = searchNormalized.split(/\s+/).filter((k) => k.length > 1);
-                bestDoc = allDocs.find((d) => {
-                  const docNorm = normalize(d.title);
-                  return (
-                    keywords.some((k) => docNorm.includes(k)) ||
-                    docNorm.split(/\s+/).some((k) => searchNormalized.includes(k))
-                  );
-                });
+                // 2. Normalized alphanumeric match
+                const normalize = (str: string) =>
+                  str
+                    .toLowerCase()
+                    .replace(/_|-|\./g, " ")
+                    .replace(/\b(document|pdf|file|book|notes|resource|section)\b/gi, "")
+                    .replace(/[^\w\s]/g, "")
+                    .trim();
+
+                const searchNormalized = normalize(cleanInput);
+                bestDoc = allDocs.find((d) => normalize(d.title) === searchNormalized);
+
+                if (!bestDoc) {
+                  // 3. Substring / keyword match
+                  const keywords = searchNormalized.split(/\s+/).filter((k) => k.length > 1);
+                  bestDoc = allDocs.find((d) => {
+                    const docNorm = normalize(d.title);
+                    return (
+                      keywords.some((k) => docNorm.includes(k)) ||
+                      docNorm.split(/\s+/).some((k) => searchNormalized.includes(k))
+                    );
+                  });
+                }
               }
 
               if (!bestDoc) {
                 return {
                   success: false,
-                  error: `Could not match document '${document_id}'. Available documents: ${allDocs
-                    .map((d: { title: string }) => `"${d.title}"`)
+                  error: `Could not match document '${document_id}'. Available documents in workspace: ${allDocs
+                    .map((d: { title: string; id: string }) => `"${d.title}" [ID: ${d.id}]`)
                     .join(", ")}`,
                 };
               }
