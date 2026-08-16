@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { waitUntil } from "@vercel/functions";
-import { chunkText } from "./chunking.server";
+import { chunkTextWithMeta } from "./chunking.server";
 import { generateEmbeddings } from "./embeddings.server";
 import { log } from "./logger.server";
 
@@ -53,28 +53,30 @@ export async function saveDocumentTextAndEmbed(
   waitUntil(
     (async () => {
       try {
-        const chunks = chunkText(text);
+        const chunks = chunkTextWithMeta(text);
         if (chunks.length > 0) {
           // Clear existing chunks for this document if any
           await supabase.from("document_chunks").delete().eq("document_id", resourceId);
 
-          // Batch process to avoid hitting API limits
+          // Batch process to avoid hitting API limits (50 chunks per batch)
           for (let i = 0; i < chunks.length; i += 50) {
             const batchChunks = chunks.slice(i, i + 50);
             let batchEmbeddings: number[][] = [];
             try {
-              batchEmbeddings = await generateEmbeddings(batchChunks);
+              batchEmbeddings = await generateEmbeddings(batchChunks.map((c) => c.content));
             } catch (embErr) {
               log("warn", "embed_generation_failed_fallback", {
                 error: embErr instanceof Error ? embErr.message : String(embErr),
               });
             }
 
-            const chunkRows = batchChunks.map((content, idx) => {
+            const chunkRows = batchChunks.map((chunk, idx) => {
               const emb = batchEmbeddings[idx];
               return {
                 document_id: resourceId,
-                content,
+                content: chunk.content,
+                // page_number stored as metadata for citation support
+                ...(chunk.pageNumber != null ? { page_number: chunk.pageNumber } : {}),
                 ...(emb && emb.length > 0 ? { embedding: `[${emb.join(",")}]` } : {}),
               };
             });

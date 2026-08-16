@@ -4,6 +4,7 @@ import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
 import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
 import { checkRateLimit, handleRateLimitError } from "@/lib/rate-limit.server";
+import { generateEmbedding } from "@/lib/embeddings.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const TUTOR_PROMPT = `You are Remi, a patient tutor answering a learner's question about THEIR OWN study material.
@@ -161,13 +162,50 @@ export const Route = createFileRoute("/api/material-chat")({
         if (resource.summary) blocks.push(`## Existing brief\n${resource.summary}`);
 
         const fullText = resource.extracted_text ?? "";
+        const LARGE_TEXT_THRESHOLD = 20000; // ~13 pages
+
         if (fullText.trim()) {
-          const relevant = selectRelevantPassages(fullText, question, 20);
-          blocks.push(
-            `## Most relevant passages\n${relevant.map((s, i) => `[${i + 1}] ${s}`).join("\n\n")}`,
-          );
-          const shortened = clip(fullText, 30000);
-          if (shortened.trim()) blocks.push(`## Full text (broader context)\n${shortened}`);
+          // For large documents, prefer semantic search over blind clipping
+          if (fullText.length > LARGE_TEXT_THRESHOLD && question.trim()) {
+            try {
+              const queryEmbedding = await generateEmbedding(question);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data: semChunks } = await (supabase as any).rpc("match_document_chunks", {
+                query_embedding: `[${queryEmbedding.join(",")}]`,
+                match_threshold: 0.15,
+                match_count: 12,
+                filter_document_id: resourceId,
+              });
+              if (semChunks && semChunks.length > 0) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const semText = semChunks.map((c: any, i: number) => {
+                  const pageTag = c.page_number ? ` (p. ${c.page_number})` : "";
+                  return `[${i + 1}${pageTag}] ${c.content}`;
+                }).join("\n\n");
+                blocks.push(`## Most relevant passages\n${semText}`);
+              } else {
+                // Semantic search returned nothing — fall back to BM25 relevance
+                const relevant = selectRelevantPassages(fullText, question, 20);
+                blocks.push(
+                  `## Most relevant passages\n${relevant.map((s, i) => `[${i + 1}] ${s}`).join("\n\n")}`,
+                );
+              }
+            } catch {
+              // Embedding failed — degrade gracefully to BM25
+              const relevant = selectRelevantPassages(fullText, question, 20);
+              blocks.push(
+                `## Most relevant passages\n${relevant.map((s, i) => `[${i + 1}] ${s}`).join("\n\n")}`,
+              );
+            }
+          } else {
+            // Small document: use BM25 selection + include full text
+            const relevant = selectRelevantPassages(fullText, question, 20);
+            blocks.push(
+              `## Most relevant passages\n${relevant.map((s, i) => `[${i + 1}] ${s}`).join("\n\n")}`,
+            );
+            const shortened = clip(fullText, 30000);
+            if (shortened.trim()) blocks.push(`## Full text (broader context)\n${shortened}`);
+          }
         }
 
         if (highlights && highlights.length > 0)

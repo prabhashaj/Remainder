@@ -8,6 +8,19 @@ import { generateEmbedding } from "@/lib/embeddings.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { log } from "@/lib/logger.server";
 
+/** Documents with more than this many chunks are treated as "large" — full-text
+ *  injection is skipped in favour of pure semantic retrieval. */
+const LARGE_DOC_CHUNK_THRESHOLD = 20;
+
+/** How many semantically-similar chunks to return for large documents */
+const SEMANTIC_TOP_K_LARGE = 15;
+
+/** How many chunks to return for small documents (also via semantic if query given) */
+const SEMANTIC_TOP_K_SMALL = 10;
+
+/** Max chars of full extracted text to return inline for small documents (no query) */
+const SMALL_DOC_INLINE_CHARS = 40_000;
+
 export function getDocumentTools(
   supabase: ReturnType<typeof createClient<Database>>,
   userId: string,
@@ -28,7 +41,7 @@ export function getDocumentTools(
           .string()
           .optional()
           .describe(
-            "Optional. The specific topic, question, or chapter you are looking for in the document (e.g., 'Chapter 2' or 'methodology'). If provided, semantic search will be used to extract the most relevant chunks.",
+            "The specific topic, question, or chapter you are looking for in the document (e.g., 'Chapter 2 summary' or 'methodology'). Always provide this when the user asks a specific question — it enables precise semantic search over the document chunks.",
           ),
       }),
       execute: async ({ document_id, query }) =>
@@ -87,7 +100,7 @@ export function getDocumentTools(
               bestDoc = allDocs.find((d) => normalize(d.title) === searchNormalized);
 
               if (!bestDoc) {
-                // Partial keyword match: check if document title contains search keywords or vice versa
+                // Partial keyword match
                 const keywords = searchNormalized.split(/\s+/).filter((k) => k.length > 1);
                 bestDoc = allDocs.find((d) => {
                   const docNorm = normalize(d.title);
@@ -168,7 +181,17 @@ export function getDocumentTools(
               }
             }
 
-            // 4. Perform RAG / semantic search or fetch document chunks
+            // 4. Count stored chunks to determine large-doc path
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { count: chunkCount } = await (supabase as any)
+              .from("document_chunks")
+              .select("id", { count: "exact", head: true })
+              .eq("document_id", doc.id);
+
+            const isLargeDoc = (chunkCount ?? 0) >= LARGE_DOC_CHUNK_THRESHOLD;
+            const topK = isLargeDoc ? SEMANTIC_TOP_K_LARGE : SEMANTIC_TOP_K_SMALL;
+
+            // 5. Semantic search — always used when a query is provided
             let semanticContext: string | null = null;
             if (query && query.trim()) {
               try {
@@ -180,7 +203,7 @@ export function getDocumentTools(
                   {
                     query_embedding: `[${queryEmbedding.join(",")}]`,
                     match_threshold: 0.15,
-                    match_count: 30,
+                    match_count: topK,
                     filter_document_id: doc.id,
                   },
                 );
@@ -190,7 +213,10 @@ export function getDocumentTools(
                 if (!matchErr && chunks && chunks.length > 0) {
                   semanticContext = chunks
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    .map((c: any, i: number) => `--- CHUNK ${i + 1} ---\n${c.content}`)
+                    .map((c: any, i: number) => {
+                      const pageTag = c.page_number ? ` (p. ${c.page_number})` : "";
+                      return `--- CHUNK ${i + 1}${pageTag} ---\n${c.content}`;
+                    })
                     .join("\n\n");
                 }
               } catch (e) {
@@ -203,37 +229,83 @@ export function getDocumentTools(
               }
             }
 
-            // 5. Build returned text with high capacity (up to 80,000 characters)
+            // 6. Build return text
             let returnedText = "";
 
             if (semanticContext) {
               returnedText += "--- RELEVANT CHUNKS FOR YOUR QUERY ---\n" + semanticContext + "\n\n";
             }
 
-            if (doc.extracted_text) {
-              // Include full extracted text up to 80,000 characters so agent has full document context
-              const fullDocText = doc.extracted_text.slice(0, 80000);
-              returnedText += "--- FULL DOCUMENT CONTENT ---\n" + fullDocText;
-            } else if (!semanticContext) {
-              // Fetch stored chunks directly if extracted_text is missing
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const { data: dbChunks } = await (supabase as any)
-                .from("document_chunks")
-                .select("content")
-                .eq("document_id", doc.id)
-                .order("id", { ascending: true })
-                .limit(60);
-
-              if (dbChunks && dbChunks.length > 0) {
+            if (!isLargeDoc) {
+              // Small document: include full text inline (helps with open-ended questions)
+              if (doc.extracted_text) {
                 returnedText +=
-                  "--- STORED DOCUMENT CHUNKS ---\n" +
-                  dbChunks
-                    .map(
-                      (c: { content: string }, i: number) => `--- CHUNK ${i + 1} ---\n${c.content}`,
-                    )
-                    .join("\n\n");
+                  "--- FULL DOCUMENT CONTENT ---\n" +
+                  doc.extracted_text.slice(0, SMALL_DOC_INLINE_CHARS);
+              } else if (!semanticContext) {
+                // Fallback: fetch stored chunks directly
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { data: dbChunks } = await (supabase as any)
+                  .from("document_chunks")
+                  .select("content, page_number")
+                  .eq("document_id", doc.id)
+                  .order("id", { ascending: true })
+                  .limit(60);
+
+                if (dbChunks && dbChunks.length > 0) {
+                  returnedText +=
+                    "--- STORED DOCUMENT CHUNKS ---\n" +
+                    dbChunks
+                      .map(
+                        (c: { content: string; page_number?: number | null }, i: number) => {
+                          const pageTag = c.page_number ? ` (p. ${c.page_number})` : "";
+                          return `--- CHUNK ${i + 1}${pageTag} ---\n${c.content}`;
+                        },
+                      )
+                      .join("\n\n");
+                }
+              }
+            } else {
+              // Large document: only semantic chunks are returned.
+              // If no query was provided, return first N chunks so the model can orient itself.
+              if (!semanticContext) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { data: firstChunks } = await (supabase as any)
+                  .from("document_chunks")
+                  .select("content, page_number")
+                  .eq("document_id", doc.id)
+                  .order("id", { ascending: true })
+                  .limit(SEMANTIC_TOP_K_LARGE);
+
+                if (firstChunks && firstChunks.length > 0) {
+                  returnedText +=
+                    "--- DOCUMENT OPENING (first chunks) ---\n" +
+                    firstChunks
+                      .map(
+                        (c: { content: string; page_number?: number | null }, i: number) => {
+                          const pageTag = c.page_number ? ` (p. ${c.page_number})` : "";
+                          return `--- CHUNK ${i + 1}${pageTag} ---\n${c.content}`;
+                        },
+                      )
+                      .join("\n\n");
+                  returnedText +=
+                    "\n\n[This is a large document. Provide a specific query to search deeper.]";
+                }
               }
             }
+
+            log(
+              "info",
+              "read_document_executed",
+              {
+                docId: doc.id,
+                isLargeDoc,
+                chunkCount: chunkCount ?? 0,
+                semanticUsed: !!semanticContext,
+                returnedChars: returnedText.length,
+              },
+              { userId, traceId },
+            );
 
             return {
               success: true,
@@ -245,7 +317,9 @@ export function getDocumentTools(
               key_points: doc.key_points,
               extracted_text: returnedText || "Document exists but contains no text content.",
               semantic_search_used: !!semanticContext,
-              citation_note: `Source: "${doc.title}" (document_id: ${doc.id}). Page numbers are tagged as "--- Page N ---" in the content above.`,
+              is_large_document: isLargeDoc,
+              total_chunks: chunkCount ?? 0,
+              citation_note: `Source: "${doc.title}" (document_id: ${doc.id}). Page numbers are tagged as "(p. N)" in the chunk headers above. Always cite the page number when referencing specific content.`,
             };
           },
           supabase,

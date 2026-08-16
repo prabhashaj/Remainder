@@ -513,6 +513,35 @@ export function RemiChat({
     }
   }
 
+  /**
+   * Pre-uploads a non-image file to /api/upload-document via multipart/form-data.
+   * Returns { resourceId, title } on success, null on failure.
+   * This avoids sending raw PDF bytes in the chat request body (Vercel 4.5 MB limit).
+   */
+  async function preUploadDocument(
+    file: File,
+  ): Promise<{ resourceId: string; title: string; kind: string; hasText: boolean } | null> {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) return null;
+
+    const form = new FormData();
+    form.append("file", file);
+
+    const res = await fetch("/api/upload-document", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Upload failed (${res.status}): ${body}`);
+    }
+
+    return res.json() as Promise<{ resourceId: string; title: string; kind: string; hasText: boolean }>;
+  }
+
   async function submit(text: string, files: FileUIPart[] = []) {
     const trimmed = text.trim();
     if (!trimmed && files.length === 0) return;
@@ -527,24 +556,88 @@ export function RemiChat({
     const pageMatch = pathname.match(/\/page\/([^/]+)/);
     const activePageId = pageMatch ? pageMatch[1] : undefined;
 
-    // Serialize file attachments as {filename, mimeType, dataUrl} for the API, converting blob URLs to base64
-    const attachments = await Promise.all(
-      files
-        .filter((f) => f.url)
-        .map(async (f) => {
-          const convertedUrl = await blobUrlToDataUrl(f.url);
-          return {
-            filename: f.filename ?? "file",
-            mimeType: f.mediaType ?? "application/octet-stream",
-            dataUrl: convertedUrl || f.url,
-          };
-        }),
-    );
+    // Two-tier attachment handling:
+    //  - Images (< 1 MB): keep as inline base64 for vision-model compatibility
+    //  - PDFs and large files: pre-upload via /api/upload-document to avoid
+    //    hitting Vercel's 4.5 MB serverless request body limit
+    const inlineAttachments: Array<{ filename: string; mimeType: string; dataUrl: string }> = [];
+    const uploadedRefs: Array<{ resourceId: string; title: string; kind: string; filename: string }> = [];
 
-    if (attachments.some((attachment) => !attachment.dataUrl.startsWith("data:"))) {
-      throw new Error(
-        "Could not prepare the attachment for upload. Please try attaching the file again.",
-      );
+    const IMAGE_INLINE_LIMIT = 1 * 1024 * 1024; // 1 MB
+
+    for (const f of files.filter((fi) => fi.url)) {
+      const isImage = (f.mediaType ?? "").startsWith("image/");
+      const lowerName = (f.filename ?? "").toLowerCase();
+      const isPdf = lowerName.endsWith(".pdf") || f.mediaType === "application/pdf";
+
+      // Try to get the raw File object from the blob URL so we know actual size
+      let rawFile: File | null = null;
+      if (f.url.startsWith("blob:")) {
+        try {
+          const res = await fetch(f.url);
+          const blob = await res.blob();
+          rawFile = new File([blob], f.filename ?? "file", { type: f.mediaType ?? blob.type });
+        } catch {
+          // ignore — fall through
+        }
+      }
+
+      const fileSizeBytes = rawFile?.size ?? 0;
+      const useInline = isImage && fileSizeBytes < IMAGE_INLINE_LIMIT;
+
+      if (useInline && !isPdf) {
+        // Small image: send inline as base64
+        const dataUrl = await blobUrlToDataUrl(f.url);
+        if (dataUrl && dataUrl.startsWith("data:")) {
+          inlineAttachments.push({
+            filename: f.filename ?? "image",
+            mimeType: f.mediaType ?? "image/jpeg",
+            dataUrl,
+          });
+        }
+      } else {
+        // PDF or large file: pre-upload via dedicated route
+        if (!rawFile) {
+          // If we couldn't get the File from blob, fall back to inline for small files
+          const dataUrl = await blobUrlToDataUrl(f.url);
+          if (dataUrl && dataUrl.startsWith("data:")) {
+            inlineAttachments.push({
+              filename: f.filename ?? "file",
+              mimeType: f.mediaType ?? "application/octet-stream",
+              dataUrl,
+            });
+          }
+          continue;
+        }
+
+        toast.loading(`Uploading ${f.filename ?? "file"}…`, { id: "doc-upload" });
+        try {
+          const result = await preUploadDocument(rawFile);
+          toast.dismiss("doc-upload");
+          if (result) {
+            uploadedRefs.push({
+              resourceId: result.resourceId,
+              title: result.title,
+              kind: result.kind,
+              filename: f.filename ?? "file",
+            });
+            if (!result.hasText) {
+              toast.warning(
+                `"${f.filename}" was uploaded but no text could be extracted. It may be a scanned or image-only PDF.`,
+                { duration: 6000 },
+              );
+            } else {
+              toast.success(`"${f.filename}" uploaded and processed.`, { duration: 3000 });
+            }
+          }
+        } catch (uploadErr) {
+          toast.dismiss("doc-upload");
+          toast.error(
+            `Failed to upload "${f.filename}": ${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)}`,
+          );
+          // Don't abort the whole submit — just skip this file
+        }
+      }
     }
 
     await sendMessage(
@@ -554,12 +647,13 @@ export function RemiChat({
           threadId,
           topicItemId: topicId,
           activePageId,
-          ...(attachments.length > 0 ? { attachments } : {}),
+          ...(inlineAttachments.length > 0 ? { attachments: inlineAttachments } : {}),
+          ...(uploadedRefs.length > 0 ? { uploadedDocuments: uploadedRefs } : {}),
         },
       },
     );
 
-    if (attachments.length > 0) {
+    if (inlineAttachments.length > 0 || uploadedRefs.length > 0) {
       void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
     }
   }

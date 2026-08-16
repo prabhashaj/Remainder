@@ -1,74 +1,150 @@
 /**
- * A simple utility to chunk text into smaller, overlapping segments.
+ * Semantic-aware text chunker for RAG over large documents (textbooks, papers, etc.).
  *
- * @param text The full text to chunk
- * @param chunkSize The maximum size of each chunk (in characters)
- * @param overlap The number of characters to overlap between chunks
- * @returns Array of text chunks
+ * Strategy:
+ * - Split first on structural boundaries extracted by the PDF parser:
+ *   "--- Page N ---" markers, markdown headings, chapter/section titles.
+ * - Within each section, apply a sliding window (1500 chars / 300 overlap)
+ *   that prefers paragraph > sentence > word breaks.
+ * - Each chunk carries optional page metadata for citation support.
  */
-export function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
-  if (!text) return [];
 
-  // Normalize whitespace somewhat
-  const normalizedText = text.replace(/\r\n/g, "\n");
+export interface TextChunk {
+  /** The chunk text content */
+  content: string;
+  /** 1-indexed page number if detected from "--- Page N ---" markers, else null */
+  pageNumber: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/** Boundary patterns that separate structural sections in extracted PDF text */
+const SECTION_BOUNDARY_RE =
+  /(?=--- Page \d+ ---)|(?=\n#{1,4} )|(?=\n(?:Chapter|Section|CHAPTER|SECTION)\s+[\dIVXivx]+)/g;
+
+/**
+ * Split text into rough structural sections, keeping track of the most recent
+ * page number seen so each section inherits it.
+ */
+function splitIntoSections(text: string): Array<{ content: string; pageNumber: number | null }> {
+  const parts = text.split(SECTION_BOUNDARY_RE);
+  const sections: Array<{ content: string; pageNumber: number | null }> = [];
+  let currentPage: number | null = null;
+
+  for (const part of parts) {
+    if (!part || !part.trim()) continue;
+
+    // Detect "--- Page N ---" at the very start of this section
+    const pageMatch = part.match(/^--- Page (\d+) ---/);
+    if (pageMatch) {
+      currentPage = parseInt(pageMatch[1]!, 10);
+    }
+
+    sections.push({ content: part.trim(), pageNumber: currentPage });
+  }
+
+  return sections;
+}
+
+/**
+ * Slide a window over `text` producing chunks of at most `chunkSize` chars,
+ * breaking at paragraph > sentence > word boundaries, with `overlap` backtrack.
+ */
+function slideWindow(
+  text: string,
+  chunkSize: number,
+  overlap: number,
+): string[] {
+  if (text.length <= chunkSize) return [text];
+
   const chunks: string[] = [];
+  let start = 0;
 
-  let startIndex = 0;
-  while (startIndex < normalizedText.length) {
-    let endIndex = startIndex + chunkSize;
+  while (start < text.length) {
+    let end = start + chunkSize;
 
-    if (endIndex >= normalizedText.length) {
-      // Last chunk
-      chunks.push(normalizedText.slice(startIndex));
+    if (end >= text.length) {
+      chunks.push(text.slice(start).trim());
       break;
     }
 
-    // Try to find a logical break point (double newline, single newline, period, space)
-    // within the last 20% of the chunk size to avoid cutting words in half
-    const searchArea = normalizedText.slice(
-      Math.max(startIndex + chunkSize * 0.8, startIndex),
-      endIndex,
-    );
+    // Search for a good break in the last 20% of the window
+    const searchStart = Math.max(start, start + Math.floor(chunkSize * 0.8));
+    const searchArea = text.slice(searchStart, end);
+    let breakOffset = -1;
 
-    let breakIndex = -1;
-
-    // Prefer paragraph breaks
-    const doubleNewline = searchArea.lastIndexOf("\n\n");
-    if (doubleNewline !== -1) {
-      breakIndex = endIndex - searchArea.length + doubleNewline + 2;
+    const dbl = searchArea.lastIndexOf("\n\n");
+    if (dbl !== -1) {
+      breakOffset = searchStart - start + dbl + 2;
     } else {
-      // Fallback to sentence breaks
-      const singleNewline = searchArea.lastIndexOf("\n");
+      const sngl = searchArea.lastIndexOf("\n");
       const period = searchArea.lastIndexOf(". ");
-
-      if (singleNewline !== -1) {
-        breakIndex = endIndex - searchArea.length + singleNewline + 1;
+      if (sngl !== -1) {
+        breakOffset = searchStart - start + sngl + 1;
       } else if (period !== -1) {
-        breakIndex = endIndex - searchArea.length + period + 2;
+        breakOffset = searchStart - start + period + 2;
       } else {
-        // Fallback to word breaks
         const space = searchArea.lastIndexOf(" ");
-        if (space !== -1) {
-          breakIndex = endIndex - searchArea.length + space + 1;
-        }
+        if (space !== -1) breakOffset = searchStart - start + space + 1;
       }
     }
 
-    if (breakIndex !== -1 && breakIndex > startIndex) {
-      endIndex = breakIndex;
-    }
+    if (breakOffset > 0) end = start + breakOffset;
 
-    chunks.push(normalizedText.slice(startIndex, endIndex).trim());
+    const chunk = text.slice(start, end).trim();
+    if (chunk) chunks.push(chunk);
 
-    // Move start index forward, accounting for overlap
-    startIndex = endIndex - overlap;
+    start = end - overlap;
+    if (start >= end) start = end; // safety — always advance
+  }
 
-    // Ensure we always move forward
-    if (startIndex <= 0 || endIndex - startIndex <= 0) {
-      startIndex = endIndex;
+  return chunks.filter((c) => c.length > 0);
+}
+
+// ---------------------------------------------------------------------------
+// Public API — simple string array (backward-compatible with existing callers)
+// ---------------------------------------------------------------------------
+
+/**
+ * Chunk `text` into overlapping segments suitable for embedding.
+ *
+ * Drop-in replacement for the old `chunkText` — same signature, richer output.
+ * Defaults kept compatible: callers that don't pass params get the new defaults.
+ */
+export function chunkText(
+  text: string,
+  chunkSize: number = 1500,
+  overlap: number = 300,
+): string[] {
+  return chunkTextWithMeta(text, chunkSize, overlap).map((c) => c.content);
+}
+
+/**
+ * Like `chunkText` but returns rich metadata alongside each chunk.
+ * Used by the document processor to store `page_number` per chunk.
+ */
+export function chunkTextWithMeta(
+  text: string,
+  chunkSize: number = 1500,
+  overlap: number = 300,
+): TextChunk[] {
+  if (!text || !text.trim()) return [];
+
+  const normalized = text.replace(/\r\n/g, "\n");
+  const sections = splitIntoSections(normalized);
+  const result: TextChunk[] = [];
+
+  for (const section of sections) {
+    const windows = slideWindow(section.content, chunkSize, overlap);
+    for (const w of windows) {
+      if (w.trim().length > 40) {
+        // Skip tiny fragments
+        result.push({ content: w, pageNumber: section.pageNumber });
+      }
     }
   }
 
-  // Filter out any empty chunks that might have been created
-  return chunks.filter((c) => c.length > 0);
+  return result;
 }

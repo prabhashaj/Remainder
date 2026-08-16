@@ -111,6 +111,7 @@ type ChatBody = {
   topicItemId?: unknown;
   activePageId?: unknown;
   attachments?: { filename: string; mimeType: string; dataUrl: string }[];
+  uploadedDocuments?: { resourceId: string; filename: string; title: string; kind: string }[];
 };
 
 function fmtDate(d: Date): string {
@@ -592,9 +593,20 @@ export const Route = createFileRoute("/api/chat")({
 
             if (extractedText && extractedText.trim().length > 0) {
               attachedTextMap[att.filename] = extractedText;
-              attachedDocBlocks.push(
-                `\n\n## Attached File Content: "${att.filename}"\n${extractedText.slice(0, 50000)}`,
-              );
+              // For PDFs, inject only a short summary header — Remi should use readDocument
+              // for specific queries. Injecting 50k chars burns context window on every turn.
+              if (kind === "pdf" || lowerFilename.endsWith(".pdf")) {
+                attachedDocBlocks.push(
+                  `\n\n## Attached PDF: "${att.filename}"` +
+                  `\n(Document has been saved to workspace and is being processed for semantic search.)` +
+                  `\nDocument opening preview (first 3000 chars):\n${extractedText.slice(0, 3000)}`,
+                );
+              } else {
+                // Plain text/markdown: safe to inline fully up to 8000 chars
+                attachedDocBlocks.push(
+                  `\n\n## Attached File Content: "${att.filename}"\n${extractedText.slice(0, 8000)}`,
+                );
+              }
             }
           } catch (attErr) {
             log(
@@ -604,6 +616,20 @@ export const Route = createFileRoute("/api/chat")({
               { userId, traceId },
             );
           }
+        }
+
+        // --- 2. Handle uploadedDocuments references (pre-uploaded via /api/upload-document) ---
+        // The client already uploaded these files directly; we just inject a lightweight context
+        // block so Remi knows they exist and can use readDocument to retrieve relevant chunks.
+        const rawUploaded = Array.isArray(body.uploadedDocuments) ? body.uploadedDocuments : [];
+        for (const ref of rawUploaded) {
+          if (typeof ref.resourceId !== "string" || typeof ref.filename !== "string") continue;
+          attachedDocBlocks.push(
+            `\n\n## Uploaded Document: "${ref.filename}" (resource_id: ${ref.resourceId})` +
+            `\nThis document has been uploaded, stored, and is being chunked for semantic search.` +
+            `\nUse readDocument("${ref.resourceId}", query) to retrieve specific content from it.` +
+            `\nAlways provide a specific query matching what the user asked about.`,
+          );
         }
 
         const userContext = await buildUserContext(supabase);

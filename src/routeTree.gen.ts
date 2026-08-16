@@ -28,6 +28,7 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLogErrorRouteImport } from './routes/api/log-error'
 import { Route as ApiMaterialChatRouteImport } from './routes/api/material-chat'
+import { Route as ApiUploadDocumentRouteImport } from './routes/api/upload-document'
 import { Route as AuthenticatedConversationIndexRouteImport } from './routes/_authenticated/conversation.index'
 import { Route as AuthenticatedConversationThreadIdRouteImport } from './routes/_authenticated/conversation.$threadId'
 import { Route as AuthenticatedLessonItemIdRouteImport } from './routes/_authenticated/lesson.$itemId'
@@ -131,6 +132,11 @@ const ApiMaterialChatRoute = ApiMaterialChatRouteImport.update({
   path: '/api/material-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUploadDocumentRoute = ApiUploadDocumentRouteImport.update({
+  id: '/api/upload-document',
+  path: '/api/upload-document',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedConversationIndexRoute =
   AuthenticatedConversationIndexRouteImport.update({
     id: '/conversation/',
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
+  '/api/upload-document': typeof ApiUploadDocumentRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
   '/material/$resourceId': typeof AuthenticatedMaterialResourceIdRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
+  '/api/upload-document': typeof ApiUploadDocumentRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
   '/material/$resourceId': typeof AuthenticatedMaterialResourceIdRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
+  '/api/upload-document': typeof ApiUploadDocumentRoute
   '/_authenticated/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/_authenticated/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
   '/_authenticated/material/$resourceId': typeof AuthenticatedMaterialResourceIdRoute
@@ -285,6 +294,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
+    | '/api/upload-document'
     | '/conversation/$threadId'
     | '/lesson/$itemId'
     | '/material/$resourceId'
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
+    | '/api/upload-document'
     | '/conversation/$threadId'
     | '/lesson/$itemId'
     | '/material/$resourceId'
@@ -342,6 +353,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
+    | '/api/upload-document'
     | '/_authenticated/conversation/$threadId'
     | '/_authenticated/lesson/$itemId'
     | '/_authenticated/material/$resourceId'
@@ -360,6 +372,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLogErrorRoute: typeof ApiLogErrorRoute
   ApiMaterialChatRoute: typeof ApiMaterialChatRoute
+  ApiUploadDocumentRoute: typeof ApiUploadDocumentRoute
   ApiWebhooksRazorpayRoute: typeof ApiWebhooksRazorpayRoute
 }
 
@@ -554,6 +567,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksRazorpayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/upload-document': {
+      id: '/api/upload-document'
+      path: '/api/upload-document'
+      fullPath: '/api/upload-document'
+      preLoaderRoute: typeof ApiUploadDocumentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -613,6 +633,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiLogErrorRoute: ApiLogErrorRoute,
   ApiMaterialChatRoute: ApiMaterialChatRoute,
+  ApiUploadDocumentRoute: ApiUploadDocumentRoute,
   ApiWebhooksRazorpayRoute: ApiWebhooksRazorpayRoute,
 }
 export const routeTree = rootRouteImport
