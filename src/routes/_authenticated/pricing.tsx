@@ -107,85 +107,18 @@ function PricingPage() {
 
   const handleSubscribe = async (tier: "weekly" | "monthly") => {
     setUpgrading(true);
-    toast.loading("Opening secure checkout…", { id: "checkout" });
+    toast.loading("Redirecting to Razorpay secure payment…", { id: "checkout" });
 
     try {
-      const isSdkLoaded = await ensureRazorpayLoaded(1500);
+      const origin = typeof window !== "undefined" ? window.location.origin : "https://remispace.in";
+      const link = await createPaymentLink({ data: { tier, origin } });
+      toast.dismiss("checkout");
 
-      if (isSdkLoaded && window.Razorpay) {
-        // Option A: In-app popup modal
-        const order = await createOrder({ data: { tier } });
-        toast.dismiss("checkout");
-
-        const options = {
-          key: order.keyId,
-          amount: order.amount,
-          currency: order.currency,
-          name: "Remispace",
-          description: `${order.planName} Subscription`,
-          image: "/favicon.png",
-          order_id: order.orderId,
-          prefill: {
-            email: order.userEmail,
-          },
-          theme: {
-            color: "#f43f5e",
-          },
-          handler: async (response: {
-            razorpay_payment_id: string;
-            razorpay_order_id: string;
-            razorpay_signature: string;
-          }) => {
-            toast.loading("Verifying your payment…", { id: "verify" });
-            try {
-              await verifyPayment({
-                data: {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  tier,
-                },
-              });
-              await qc.invalidateQueries({ queryKey: ["subscription"] });
-              await qc.invalidateQueries({ queryKey: ["planUsage"] });
-              toast.dismiss("verify");
-              toast.success("🎉 Payment successful! You are now a Remispace Pro user.", {
-                duration: 8000,
-              });
-            } catch (verifyErr) {
-              toast.dismiss("verify");
-              toast.error(
-                verifyErr instanceof Error
-                  ? verifyErr.message
-                  : "Payment verification failed. Please contact support.",
-              );
-            } finally {
-              setUpgrading(false);
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              setUpgrading(false);
-            },
-          },
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.on("payment.failed", (response) => {
-          toast.error(response.error?.description || "Payment failed. Please try again.");
-          setUpgrading(false);
-        });
-        rzp.open();
+      if (link?.shortUrl) {
+        // Redirect directly to Razorpay's official checkout page
+        window.location.href = link.shortUrl;
       } else {
-        // Option B: Official Razorpay Hosted Checkout URL (never blocked by adblockers/CSP)
-        const origin = typeof window !== "undefined" ? window.location.origin : "https://remispace.in";
-        const link = await createPaymentLink({ data: { tier, origin } });
-        toast.dismiss("checkout");
-        if (link.shortUrl) {
-          window.location.href = link.shortUrl;
-        } else {
-          throw new Error("Unable to initialize payment link");
-        }
+        throw new Error("Unable to create Razorpay payment link.");
       }
     } catch (err) {
       toast.dismiss("checkout");
