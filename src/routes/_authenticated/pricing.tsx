@@ -4,14 +4,18 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createRazorpayOrderFn, verifyRazorpayPaymentFn } from "@/lib/billing.functions";
+import {
+  createRazorpayOrderFn,
+  createRazorpayPaymentLinkFn,
+  verifyRazorpayPaymentFn,
+  verifyPaymentLinkCallbackFn,
+} from "@/lib/billing.functions";
 import { isSubscriptionPremium } from "@/lib/limits";
 
-async function ensureRazorpayLoaded(maxWaitMs = 5000): Promise<boolean> {
+async function ensureRazorpayLoaded(maxWaitMs = 1500): Promise<boolean> {
   if (typeof window === "undefined") return false;
   if (window.Razorpay) return true;
 
-  // Check if script exists, if not create it
   let script = document.querySelector<HTMLScriptElement>('script[src*="checkout.razorpay.com"]');
   if (!script) {
     script = document.createElement("script");
@@ -37,13 +41,52 @@ export const Route = createFileRoute("/_authenticated/pricing")({
 function PricingPage() {
   const qc = useQueryClient();
   const createOrder = useServerFn(createRazorpayOrderFn);
+  const createPaymentLink = useServerFn(createRazorpayPaymentLinkFn);
   const verifyPayment = useServerFn(verifyRazorpayPaymentFn);
+  const verifyPaymentLink = useServerFn(verifyPaymentLinkCallbackFn);
   const [upgrading, setUpgrading] = useState(false);
 
-  // Pre-load SDK on page mount
+  // 1. Preload SDK on mount & check for payment redirect return
   useEffect(() => {
     ensureRazorpayLoaded().catch(() => {});
-  }, []);
+
+    // Check if returning from a successful Razorpay hosted link
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const paymentStatus = params.get("payment_status") || params.get("razorpay_payment_link_status");
+      const paymentId = params.get("razorpay_payment_id");
+      const linkId = params.get("razorpay_payment_link_id");
+      const signature = params.get("razorpay_signature");
+      const tierParam = params.get("tier") as "weekly" | "monthly" | null;
+
+      if (paymentStatus === "paid" || paymentId) {
+        toast.loading("Verifying your payment…", { id: "payment-callback" });
+        verifyPaymentLink({
+          data: {
+            razorpay_payment_id: paymentId || undefined,
+            razorpay_payment_link_id: linkId || undefined,
+            razorpay_payment_link_status: paymentStatus || undefined,
+            razorpay_signature: signature || undefined,
+            tier: tierParam || "monthly",
+          },
+        })
+          .then(() => {
+            qc.invalidateQueries({ queryKey: ["subscription"] });
+            qc.invalidateQueries({ queryKey: ["planUsage"] });
+            toast.dismiss("payment-callback");
+            toast.success("🎉 Payment successful! You are now a Remispace Pro user.", {
+              duration: 8000,
+            });
+            // Clean up URL query parameters without reloading
+            window.history.replaceState({}, document.title, window.location.pathname);
+          })
+          .catch((err) => {
+            toast.dismiss("payment-callback");
+            toast.error(err instanceof Error ? err.message : "Payment verification failed.");
+          });
+      }
+    }
+  }, [qc, verifyPaymentLink]);
 
   const { data: subscription } = useQuery({
     queryKey: ["subscription"],
@@ -67,77 +110,83 @@ function PricingPage() {
     toast.loading("Opening secure checkout…", { id: "checkout" });
 
     try {
-      const loaded = await ensureRazorpayLoaded();
-      if (!loaded) {
-        throw new Error("Unable to load Razorpay checkout SDK. Please ensure adblockers or browser privacy shields are disabled.");
-      }
+      const isSdkLoaded = await ensureRazorpayLoaded(1500);
 
-      const order = await createOrder({ data: { tier } });
-      toast.dismiss("checkout");
+      if (isSdkLoaded && window.Razorpay) {
+        // Option A: In-app popup modal
+        const order = await createOrder({ data: { tier } });
+        toast.dismiss("checkout");
 
-      const options = {
-        key: order.keyId,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Remispace",
-        description: `${order.planName} Subscription`,
-        image: "/favicon.png",
-        order_id: order.orderId,
-        prefill: {
-          email: order.userEmail,
-        },
-        theme: {
-          color: "#f43f5e",
-        },
-        handler: async (response: {
-          razorpay_payment_id: string;
-          razorpay_order_id: string;
-          razorpay_signature: string;
-        }) => {
-          toast.loading("Verifying your payment…", { id: "verify" });
-          try {
-            await verifyPayment({
-              data: {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                tier,
-              },
-            });
-            await qc.invalidateQueries({ queryKey: ["subscription"] });
-            await qc.invalidateQueries({ queryKey: ["planUsage"] });
-            toast.dismiss("verify");
-            toast.success("🎉 Payment successful! You are now a Remispace Pro user.", {
-              duration: 8000,
-            });
-          } catch (verifyErr) {
-            toast.dismiss("verify");
-            toast.error(
-              verifyErr instanceof Error
-                ? verifyErr.message
-                : "Payment verification failed. Please contact support.",
-            );
-          } finally {
-            setUpgrading(false);
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setUpgrading(false);
+        const options = {
+          key: order.keyId,
+          amount: order.amount,
+          currency: order.currency,
+          name: "Remispace",
+          description: `${order.planName} Subscription`,
+          image: "/favicon.png",
+          order_id: order.orderId,
+          prefill: {
+            email: order.userEmail,
           },
-        },
-      };
+          theme: {
+            color: "#f43f5e",
+          },
+          handler: async (response: {
+            razorpay_payment_id: string;
+            razorpay_order_id: string;
+            razorpay_signature: string;
+          }) => {
+            toast.loading("Verifying your payment…", { id: "verify" });
+            try {
+              await verifyPayment({
+                data: {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  tier,
+                },
+              });
+              await qc.invalidateQueries({ queryKey: ["subscription"] });
+              await qc.invalidateQueries({ queryKey: ["planUsage"] });
+              toast.dismiss("verify");
+              toast.success("🎉 Payment successful! You are now a Remispace Pro user.", {
+                duration: 8000,
+              });
+            } catch (verifyErr) {
+              toast.dismiss("verify");
+              toast.error(
+                verifyErr instanceof Error
+                  ? verifyErr.message
+                  : "Payment verification failed. Please contact support.",
+              );
+            } finally {
+              setUpgrading(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setUpgrading(false);
+            },
+          },
+        };
 
-      if (!window.Razorpay) {
-        throw new Error("Razorpay SDK is not available.");
+        const rzp = new window.Razorpay(options);
+        rzp.on("payment.failed", (response) => {
+          toast.error(response.error?.description || "Payment failed. Please try again.");
+          setUpgrading(false);
+        });
+        rzp.open();
+      } else {
+        // Option B: Official Razorpay Hosted Checkout URL (never blocked by adblockers/CSP)
+        const origin = typeof window !== "undefined" ? window.location.origin : "https://remispace.in";
+        const link = await createPaymentLink({ data: { tier, origin } });
+        toast.dismiss("checkout");
+        if (link.shortUrl) {
+          window.location.href = link.shortUrl;
+        } else {
+          throw new Error("Unable to initialize payment link");
+        }
       }
-
-      const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", (response) => {
-        toast.error(response.error?.description || "Payment failed. Please try again.");
-        setUpgrading(false);
-      });
-      rzp.open();
     } catch (err) {
       toast.dismiss("checkout");
       toast.error(err instanceof Error ? err.message : "Failed to open payment gateway");

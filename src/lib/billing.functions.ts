@@ -223,6 +223,118 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+export const createRazorpayPaymentLinkFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { tier: "weekly" | "monthly"; origin?: string }) => data)
+  .handler(async ({ context, data }) => {
+    const { userId, claims } = context;
+    const tier = data.tier;
+    const amountInr = tier === "weekly" ? 99 : 399;
+    const amountPaise = amountInr * 100;
+    const origin = data.origin || "https://remispace.in";
+    const callbackUrl = `${origin}/pricing?payment_status=paid&tier=${tier}`;
+
+    try {
+      const email = typeof claims.email === "string" ? claims.email : undefined;
+      const paymentLink = await (razorpay.paymentLink.create as (params: unknown) => Promise<{
+        id: string;
+        short_url: string;
+        amount: number;
+        currency: string;
+      }>)({
+        amount: amountPaise,
+        currency: "INR",
+        accept_partial: false,
+        description: `${tier === "weekly" ? "Weekly Premium" : "Monthly Premium"} Subscription — Remispace`,
+        ...(email ? { customer: { email } } : {}),
+        notify: {
+          email: Boolean(email),
+          sms: false,
+        },
+        notes: {
+          user_id: userId,
+          tier,
+        },
+        callback_url: callbackUrl,
+        callback_method: "get",
+      });
+
+      log(
+        "info",
+        "razorpay_payment_link_created",
+        { linkId: paymentLink.id, tier, shortUrl: paymentLink.short_url },
+        { userId },
+      );
+
+      return {
+        paymentLinkId: paymentLink.id,
+        shortUrl: paymentLink.short_url,
+        amount: paymentLink.amount,
+        currency: paymentLink.currency,
+        tier,
+      };
+    } catch (err) {
+      log("error", "razorpay_payment_link_failed", { error: String(err) }, { userId });
+      throw new Error(err instanceof Error ? err.message : "Failed to create payment link");
+    }
+  });
+
+export const verifyPaymentLinkCallbackFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (data: {
+      razorpay_payment_id?: string | undefined;
+      razorpay_payment_link_id?: string | undefined;
+      razorpay_payment_link_status?: string | undefined;
+      razorpay_signature?: string | undefined;
+      tier?: "weekly" | "monthly" | undefined;
+    }) => data,
+  )
+  .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+    const tier = data.tier || "monthly";
+
+    const now = new Date();
+    const periodEnd = new Date(now.getTime() + (tier === "weekly" ? 7 : 30) * 24 * 60 * 60 * 1000);
+
+    const { data: existing } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          tier,
+          status: "active",
+          current_period_end: periodEnd.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin.from("subscriptions").insert({
+        user_id: userId,
+        tier,
+        status: "active",
+        current_period_end: periodEnd.toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(error.message);
+    }
+
+    log(
+      "info",
+      "payment_link_verified_and_activated",
+      { tier, paymentId: data.razorpay_payment_id },
+      { userId },
+    );
+    return { success: true };
+  });
+
 export const upgradeToProFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { tier?: "weekly" | "monthly" | "pro" } | undefined) => data)
