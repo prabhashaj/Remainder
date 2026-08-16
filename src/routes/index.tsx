@@ -70,7 +70,7 @@ function PrimaryLink({ children, className = "" }: { children: ReactNode; classN
     <Link
       to="/auth"
       search={{ mode: "signup" }}
-      className={`group inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-soft transition hover:-translate-y-0.5 press ${className}`}
+      className={`group inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3.5 text-sm font-bold text-black shadow-lg shadow-emerald-500/10 transition-all hover:bg-emerald-400 hover:-translate-y-0.5 press ${className}`}
     >
       {children}
       <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -94,27 +94,19 @@ function SectionTitle({
   return (
     <Reveal className={center ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
       {eyebrow && (
-        <p
-          className={`mb-3 text-xs font-semibold uppercase tracking-wider ${
-            inverse ? "text-primary-foreground/80" : "text-primary font-medium"
-          }`}
-        >
+        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-emerald-400">
           {eyebrow}
         </p>
       )}
       <h2
         className={`text-balance text-4xl font-bold leading-[1.15] tracking-tight md:text-5xl font-display ${
-          inverse ? "text-primary-foreground" : "text-foreground"
+          inverse ? "text-white" : "text-white"
         }`}
       >
         {title}
       </h2>
       {body && (
-        <p
-          className={`mt-4 text-pretty text-base leading-relaxed md:text-lg ${
-            inverse ? "text-primary-foreground/80" : "text-muted-foreground"
-          }`}
-        >
+        <p className="mt-4 text-pretty text-base leading-relaxed md:text-lg text-emerald-100/70">
           {body}
         </p>
       )}
@@ -142,11 +134,11 @@ function WorkspaceShowcase() {
       initial={{ opacity: 0, y: 32 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0 : 0.8, delay: 0.18 }}
-      className="relative mt-12 overflow-hidden rounded-3xl border border-[#0f3d2e] bg-[#021810] p-2.5 shadow-2xl backdrop-blur-xl md:p-4 text-left text-zinc-100 font-sans"
+      className="relative mt-12 overflow-hidden rounded-3xl border border-[#0d402e] bg-[#021810] p-2.5 shadow-2xl backdrop-blur-xl md:p-4 text-left text-zinc-100 font-sans"
     >
-      <div className="flex min-h-[560px] overflow-hidden rounded-2xl border border-[#0f3d2e] bg-[#031c13] text-zinc-100">
+      <div className="flex min-h-[560px] overflow-hidden rounded-2xl border border-[#0d402e] bg-[#031c13] text-zinc-100">
         {/* Left Sidebar */}
-        <aside className="hidden w-[205px] shrink-0 border-r border-[#0e3b2b] bg-[#021810] p-4 md:flex flex-col justify-between">
+        <aside className="hidden w-[205px] shrink-0 border-r border-[#0d402e] bg-[#021810] p-4 md:flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2">
               <img src={remiLogo} alt="Remispace" className="size-6 rounded-lg object-cover" />
@@ -189,7 +181,7 @@ function WorkspaceShowcase() {
             </div>
           </div>
 
-          <div className="text-[11px] text-zinc-500 flex items-center gap-2 pt-4 border-t border-[#0e3b2b]">
+          <div className="text-[11px] text-zinc-500 flex items-center gap-2 pt-4 border-t border-[#0d402e]">
             <span>⚙️ Settings</span>
           </div>
         </aside>
@@ -198,25 +190,25 @@ function WorkspaceShowcase() {
         <div className="min-w-0 flex-1 p-5 md:p-8 flex flex-col justify-between bg-[#031e14]">
           <div>
             {/* Top Bar Header */}
-            <div className="flex items-center justify-between border-b border-[#0e3b2b]/60 pb-4">
+            <div className="flex items-center justify-between border-b border-[#0d402e]/60 pb-4">
               <div className="flex items-center gap-3">
                 <span className="cursor-pointer text-zinc-400">◫</span>
-                <div className="flex items-center gap-2 rounded-full bg-[#06291d] border border-[#0f4432] px-3 py-1.5 text-xs text-zinc-400">
+                <div className="flex items-center gap-2 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1.5 text-xs text-zinc-400">
                   <FileSearch className="size-3 text-zinc-500" />
                   <span>Search</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 rounded-full bg-[#06291d] border border-[#0f4432] px-3 py-1 text-xs text-zinc-300">
+                <div className="flex items-center gap-1.5 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1 text-xs text-zinc-300">
                   <BookOpen className="size-3 text-emerald-400" />
                   <span>Study Place</span>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-full bg-[#06291d] border border-[#0f4432] px-3 py-1 text-xs text-zinc-300 font-mono">
+                <div className="flex items-center gap-1.5 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1 text-xs text-zinc-300 font-mono">
                   <Focus className="size-3 text-emerald-400" />
                   <span>89:53</span>
                 </div>
-                <div className="grid size-7 place-items-center rounded-full bg-[#093828] border border-[#0f4432] text-xs font-bold text-emerald-400">
+                <div className="grid size-7 place-items-center rounded-full bg-[#093828] border border-[#0d402e] text-xs font-bold text-emerald-400">
                   PR
                 </div>
               </div>
@@ -224,11 +216,11 @@ function WorkspaceShowcase() {
 
             {/* Active Study Banner Pills */}
             <div className="flex justify-end gap-2 mt-3 text-[11px]">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#062b1e] border border-[#0e3f2e] px-3 py-1 text-zinc-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#062b1e] border border-[#0d402e] px-3 py-1 text-zinc-300">
                 <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Introduction to Distribute... <strong className="font-mono">89:53</strong> ⏸ ✕
               </span>
-              <span className="hidden sm:inline-flex items-center rounded-full bg-[#062b1e] border border-[#0e3f2e] px-3 py-1 text-zinc-400">
+              <span className="hidden sm:inline-flex items-center rounded-full bg-[#062b1e] border border-[#0d402e] px-3 py-1 text-zinc-400">
                 Data Engineering to Data Scien...
               </span>
             </div>
@@ -246,7 +238,7 @@ function WorkspaceShowcase() {
             {/* Main Stage Grid (UP NEXT & SESSION) */}
             <div className="mt-6 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
               {/* UP NEXT Left Card */}
-              <div className="rounded-2xl border border-[#0f3d2e] bg-[#05261b] p-5 shadow-xs flex flex-col justify-between">
+              <div className="rounded-2xl border border-[#0d402e] bg-[#05261b] p-5 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold text-emerald-400 tracking-wider uppercase">
@@ -267,13 +259,13 @@ function WorkspaceShowcase() {
                     <button className="rounded-full bg-emerald-500 px-4 py-1.8 text-xs font-semibold text-black shadow-sm hover:bg-emerald-400 transition-colors flex items-center gap-1.5">
                       <BookOpen className="size-3.5" /> Open lesson
                     </button>
-                    <button className="rounded-full border border-[#0f3d2e] bg-[#062b1e] px-4 py-1.8 text-xs font-medium text-zinc-200 hover:bg-[#093828] transition-colors flex items-center gap-1.5">
+                    <button className="rounded-full border border-[#0d402e] bg-[#062b1e] px-4 py-1.8 text-xs font-medium text-zinc-200 hover:bg-[#093828] transition-colors flex items-center gap-1.5">
                       <Focus className="size-3.5" /> Start focus
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#0e3b2b]/60">
+                <div className="mt-6 pt-4 border-t border-[#0d402e]/60">
                   <div className="flex items-center justify-between text-[11px] text-zinc-400">
                     <span>Subject progress</span>
                     <span>0/91 sub-topics</span>
@@ -287,7 +279,7 @@ function WorkspaceShowcase() {
               {/* Right Column Cards */}
               <div className="space-y-4">
                 {/* Session Timer Card */}
-                <div className="rounded-2xl border border-[#0f3d2e] bg-[#05261b] p-5 shadow-xs">
+                <div className="rounded-2xl border border-[#0d402e] bg-[#05261b] p-5 shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
                     SESSION
                   </span>
@@ -301,7 +293,7 @@ function WorkspaceShowcase() {
                     {["15m", "25m", "45m"].map((dur) => (
                       <span
                         key={dur}
-                        className="rounded-full bg-[#083022] border border-[#0e3f2e] px-2.5 py-0.5 text-[10px] font-medium text-zinc-300"
+                        className="rounded-full bg-[#083022] border border-[#0d402e] px-2.5 py-0.5 text-[10px] font-medium text-zinc-300"
                       >
                         {dur}
                       </span>
@@ -310,7 +302,7 @@ function WorkspaceShowcase() {
                 </div>
 
                 {/* Today's Tasks Card */}
-                <div className="rounded-2xl border border-[#0f3d2e] bg-[#05261b] p-4 shadow-xs">
+                <div className="rounded-2xl border border-[#0d402e] bg-[#05261b] p-4 shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
                     TODAY'S TASKS
                   </span>
@@ -328,7 +320,7 @@ function WorkspaceShowcase() {
                 Expand to browse phases, topics and read lessons inline.
               </p>
 
-              <div className="mt-2.5 rounded-2xl border border-[#0f3d2e] bg-[#05261b] p-3.5 flex items-center justify-between">
+              <div className="mt-2.5 rounded-2xl border border-[#0d402e] bg-[#05261b] p-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5 text-xs font-medium text-zinc-200">
                   <BookOpen className="size-4 text-emerald-400" />
                   <span>Data Engineering to Data Science: Intermediate Roadmap</span>
@@ -347,9 +339,9 @@ function WorkspaceShowcase() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Main Landing Component                                                     */
+/* Main Landing Component (Fixed Pure Dark Green Palette)                    */
 /* -------------------------------------------------------------------------- */
-function Landing() {
+export default function Landing() {
   const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -398,9 +390,9 @@ function Landing() {
   ];
 
   return (
-    <main className="min-h-screen bg-background text-foreground selection:bg-primary/20">
+    <main className="min-h-screen bg-[#021810] text-[#f4f4f5] selection:bg-emerald-500/30 font-sans">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-[#0d402e]/80 bg-[#021810]/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <img
@@ -410,33 +402,40 @@ function Landing() {
               height={34}
               className="size-8.5 rounded-xl object-cover shadow-xs"
             />
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
+            <span className="font-display text-xl font-bold tracking-tight text-white">
               Remispace
             </span>
           </div>
 
-          <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground md:flex">
-            <a href="#features" className="transition-colors hover:text-foreground">
+          <nav className="hidden items-center gap-7 text-sm font-medium text-emerald-100/70 md:flex">
+            <a href="#features" className="transition-colors hover:text-white">
               Features
             </a>
-            <a href="#interactive-preview" className="transition-colors hover:text-foreground">
+            <a href="#interactive-preview" className="transition-colors hover:text-white">
               Explore
             </a>
-            <a href="#how-it-works" className="transition-colors hover:text-foreground">
+            <a href="#how-it-works" className="transition-colors hover:text-white">
               How it works
             </a>
-            <a href="#pricing" className="transition-colors hover:text-foreground">
+            <a href="#pricing" className="transition-colors hover:text-white">
               Pricing
             </a>
           </nav>
 
           <div className="hidden items-center gap-2.5 md:flex">
-            <Button asChild variant="ghost" className="rounded-2xl font-medium">
+            <Button
+              asChild
+              variant="ghost"
+              className="rounded-2xl font-medium text-zinc-300 hover:text-white hover:bg-[#062b1e]"
+            >
               <Link to="/auth" search={{ mode: "signin" }}>
                 Sign in
               </Link>
             </Button>
-            <Button asChild className="rounded-2xl px-5 font-semibold press">
+            <Button
+              asChild
+              className="rounded-2xl px-5 font-bold bg-emerald-500 text-black hover:bg-emerald-400 press shadow-sm"
+            >
               <Link to="/auth" search={{ mode: "signup" }}>
                 Start for free
               </Link>
@@ -447,28 +446,28 @@ function Landing() {
             type="button"
             aria-label="Toggle navigation"
             onClick={() => setMenu(!menu)}
-            className="grid size-9 place-items-center rounded-xl bg-muted md:hidden"
+            className="grid size-9 place-items-center rounded-xl bg-[#062b1e] text-zinc-300 md:hidden border border-[#0d402e]"
           >
             {menu ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
         </div>
 
         {menu && (
-          <div className="border-t border-border bg-background px-6 py-5 md:hidden">
+          <div className="border-t border-[#0d402e] bg-[#021810] px-6 py-5 md:hidden">
             <nav className="grid gap-4 text-sm font-medium">
-              <a href="#features" onClick={() => setMenu(false)}>
+              <a href="#features" onClick={() => setMenu(false)} className="text-zinc-300">
                 Features
               </a>
-              <a href="#interactive-preview" onClick={() => setMenu(false)}>
+              <a href="#interactive-preview" onClick={() => setMenu(false)} className="text-zinc-300">
                 Explore
               </a>
-              <a href="#how-it-works" onClick={() => setMenu(false)}>
+              <a href="#how-it-works" onClick={() => setMenu(false)} className="text-zinc-300">
                 How it works
               </a>
-              <a href="#pricing" onClick={() => setMenu(false)}>
+              <a href="#pricing" onClick={() => setMenu(false)} className="text-zinc-300">
                 Pricing
               </a>
-              <Button asChild className="rounded-2xl w-full">
+              <Button asChild className="rounded-2xl w-full bg-emerald-500 text-black font-bold">
                 <Link to="/auth" search={{ mode: "signup" }}>
                   Start your workspace
                 </Link>
@@ -481,15 +480,15 @@ function Landing() {
       {/* Hero Section */}
       <section className="mx-auto max-w-6xl px-6 pt-16 pb-20 text-center">
         <Reveal>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground border border-border/60">
-            <Sparkles className="size-3.5 text-primary" /> A calm sanctuary for deep learning
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#052b1e] px-4 py-1.5 text-xs font-bold text-emerald-400 border border-[#0d402e]">
+            <Sparkles className="size-3.5 text-emerald-400" /> A calm sanctuary for deep learning
           </span>
 
-          <h1 className="mx-auto mt-6 max-w-4xl text-balance text-5xl font-bold leading-[1.08] tracking-tight md:text-6xl lg:text-7xl text-foreground font-display">
+          <h1 className="mx-auto mt-6 max-w-4xl text-balance text-5xl font-bold leading-[1.08] tracking-tight md:text-6xl lg:text-7xl text-white font-display">
             The thoughtful workspace for everything you're learning.
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground md:text-xl">
+          <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-emerald-100/70 md:text-xl">
             Remispace combines structured study roadmaps, intelligent PDF research, habit rituals,
             and ambient focus studios with Remi—a calm AI learning coach who turns complex
             disciplines into daily momentum.
@@ -501,7 +500,7 @@ function Landing() {
               asChild
               size="lg"
               variant="outline"
-              className="rounded-2xl px-7 font-medium press border-border"
+              className="rounded-2xl px-7 font-medium press border-[#0d402e] bg-[#05261b] text-zinc-200 hover:bg-[#083626] hover:text-white"
             >
               <Link to="/auth" search={{ mode: "signin" }}>
                 Sign in to existing
@@ -509,7 +508,7 @@ function Landing() {
             </Button>
           </div>
 
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-4 text-xs text-zinc-400">
             Free forever tier · No credit card required · Instant setup
           </p>
         </Reveal>
@@ -519,7 +518,7 @@ function Landing() {
       </section>
 
       {/* 6 Core Feature Pillars */}
-      <section id="features" className="mx-auto max-w-6xl px-6 py-20 border-t border-border/60">
+      <section id="features" className="mx-auto max-w-6xl px-6 py-20 border-t border-[#0d402e]/60">
         <SectionTitle
           eyebrow="Crafted for deep thinking"
           title="Everything you need to master complex subjects."
@@ -530,20 +529,20 @@ function Landing() {
           {features.map((f) => (
             <Reveal
               key={f.title}
-              className="group rounded-3xl border border-border bg-card p-7 shadow-soft transition hover:-translate-y-1 hover:shadow-lift"
+              className="group rounded-3xl border border-[#0d402e] bg-[#042419] p-7 shadow-lg transition hover:-translate-y-1 hover:border-emerald-500/40 hover:bg-[#062f21]"
             >
-              <div className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="grid size-11 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-400 transition-colors group-hover:bg-emerald-500 group-hover:text-black">
                 <f.icon className="size-5.5" />
               </div>
-              <h3 className="mt-5 font-display text-xl font-bold text-foreground">{f.title}</h3>
-              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{f.body}</p>
+              <h3 className="mt-5 font-display text-xl font-bold text-white">{f.title}</h3>
+              <p className="mt-2.5 text-sm leading-relaxed text-zinc-400">{f.body}</p>
             </Reveal>
           ))}
         </div>
       </section>
 
       {/* Interactive Feature Deep Dive (Tabbed Showcase) */}
-      <section id="interactive-preview" className="bg-muted/30 border-y border-border px-6 py-20">
+      <section id="interactive-preview" className="bg-[#02140d] border-y border-[#0d402e] px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <SectionTitle
             center
@@ -567,8 +566,8 @@ function Landing() {
                 onClick={() => setActiveTab(t.id as typeof activeTab)}
                 className={`press flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition-all ${
                   activeTab === t.id
-                    ? "bg-primary text-primary-foreground shadow-soft"
-                    : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                    ? "bg-emerald-500 text-black shadow-lg font-bold"
+                    : "bg-[#042419] border border-[#0d402e] text-zinc-400 hover:text-white hover:bg-[#062f21]"
                 }`}
               >
                 <t.icon className="size-4" />
@@ -578,32 +577,32 @@ function Landing() {
           </div>
 
           {/* Tab Content Display */}
-          <Reveal className="mt-8 overflow-hidden rounded-3xl border border-border bg-card p-6 md:p-10 shadow-lift">
+          <Reveal className="mt-8 overflow-hidden rounded-3xl border border-[#0d402e] bg-[#042419] p-6 md:p-10 shadow-2xl">
             {activeTab === "roadmaps" && (
               <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                     Module 01 · Structured Mastery
                   </span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
                     Transform any subject into a step-by-step curriculum.
                   </h3>
-                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
                     Whether you're preparing for technical interviews, learning machine learning, or
                     studying history, Remi decomposes the syllabus into phases, milestones, and
                     actionable daily lessons that prevent overwhelm.
                   </p>
-                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Automatic checkpoint & quiz
+                      <Check className="size-4.5 text-emerald-400" /> Automatic checkpoint & quiz
                       generation
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Adaptive pacing based on your
+                      <Check className="size-4.5 text-emerald-400" /> Adaptive pacing based on your
                       learning speed
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Directly connected to your daily
+                      <Check className="size-4.5 text-emerald-400" /> Directly connected to your daily
                       task list
                     </li>
                   </ul>
@@ -612,29 +611,29 @@ function Landing() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background p-5 shadow-xs">
-                  <div className="flex items-center justify-between border-b border-border pb-3">
-                    <span className="text-xs font-bold text-foreground">Curriculum Preview</span>
-                    <span className="text-[11px] text-primary font-semibold">Phase 1 / 4 Complete</span>
+                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-[#0d402e] pb-3">
+                    <span className="text-xs font-bold text-white">Curriculum Preview</span>
+                    <span className="text-[11px] text-emerald-400 font-semibold">Phase 1 / 4 Complete</span>
                   </div>
                   <div className="mt-4 space-y-2.5">
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-medium text-foreground flex items-center justify-between">
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-medium text-white flex items-center justify-between">
                       <span>✓ 1. Mathematical Foundations & Linear Algebra</span>
-                      <span className="text-[10px] text-emerald-600 font-bold uppercase">Passed</span>
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase">Passed</span>
                     </div>
-                    <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-xs font-semibold text-primary flex items-center justify-between">
+                    <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/20 p-3 text-xs font-semibold text-emerald-300 flex items-center justify-between">
                       <span>→ 2. Loss Functions & Gradient Descent Optimization</span>
-                      <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-md">
+                      <span className="text-[10px] bg-emerald-500 text-black px-2 py-0.5 rounded-md font-bold">
                         Active
                       </span>
                     </div>
-                    <div className="rounded-xl border border-border bg-card p-3 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                    <div className="rounded-xl border border-[#0d402e] bg-[#05261b] p-3 text-xs font-medium text-zinc-400 flex items-center justify-between">
                       <span>3. Neural Network Backpropagation from Scratch</span>
-                      <span className="text-[10px] text-muted-foreground">Upcoming</span>
+                      <span className="text-[10px] text-zinc-500">Upcoming</span>
                     </div>
-                    <div className="rounded-xl border border-border bg-card p-3 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                    <div className="rounded-xl border border-[#0d402e] bg-[#05261b] p-3 text-xs font-medium text-zinc-400 flex items-center justify-between">
                       <span>4. Transformers & Multi-Head Self Attention</span>
-                      <span className="text-[10px] text-muted-foreground">Upcoming</span>
+                      <span className="text-[10px] text-zinc-500">Upcoming</span>
                     </div>
                   </div>
                 </div>
@@ -644,28 +643,28 @@ function Landing() {
             {activeTab === "documents" && (
               <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                     Module 02 · Deep Document Research
                   </span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
                     Interactive PDF reader with theorem extraction.
                   </h3>
-                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
                     Upload textbooks, lecture slide decks, and dense academic papers. Remi indexes
                     your materials, allowing you to ask questions with exact page references,
                     generate pre-reading briefs, and extract formulas into your notes.
                   </p>
-                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Instant document synthesis &
+                      <Check className="size-4.5 text-emerald-400" /> Instant document synthesis &
                       chapter summaries
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Page-by-page citations with inline
+                      <Check className="size-4.5 text-emerald-400" /> Page-by-page citations with inline
                       snippets
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> 1-click flashcard deck generation
+                      <Check className="size-4.5 text-emerald-400" /> 1-click flashcard deck generation
                     </li>
                   </ul>
                   <div className="mt-8">
@@ -673,18 +672,18 @@ function Landing() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background p-5 shadow-xs">
-                  <div className="flex items-center gap-2 border-b border-border pb-3">
-                    <FileText className="size-4 text-primary" />
-                    <span className="text-xs font-bold text-foreground">
+                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 shadow-xs">
+                  <div className="flex items-center gap-2 border-b border-[#0d402e] pb-3">
+                    <FileText className="size-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white truncate">
                       Paper: Deep Residual Learning for Image Recognition.pdf
                     </span>
                   </div>
-                  <div className="mt-4 rounded-xl bg-card border border-border p-3 text-xs leading-relaxed text-muted-foreground">
-                    <span className="font-semibold text-foreground">Key Concept Extracted:</span>
+                  <div className="mt-4 rounded-xl bg-[#05261b] border border-[#0d402e] p-3 text-xs leading-relaxed text-zinc-300">
+                    <span className="font-semibold text-white">Key Concept Extracted:</span>
                     "Residual mapping allows layers to fit residual functions instead of unreferenced ones, preventing the degradation problem in deep networks."
                   </div>
-                  <div className="mt-3 rounded-xl bg-primary/10 border border-primary/20 p-3 text-xs text-primary font-medium">
+                  <div className="mt-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 text-xs text-emerald-300 font-medium">
                     💡 Remi generated 8 review flashcards for this section.
                   </div>
                 </div>
@@ -694,28 +693,28 @@ function Landing() {
             {activeTab === "focus" && (
               <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                     Module 03 · Ambient Focus Studio
                   </span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
                     Distraction-free flow state for deep work.
                   </h3>
-                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
                     Silence the noise of the internet. The Focus Studio provides customizable
                     Pomodoro intervals, real-time local weather updates, calming background audio,
                     and end-of-session reflection logs.
                   </p>
-                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Fullscreen deep work mode with
+                      <Check className="size-4.5 text-emerald-400" /> Fullscreen deep work mode with
                       countdown
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Ambient soundscapes: Rain, Coffee
+                      <Check className="size-4.5 text-emerald-400" /> Ambient soundscapes: Rain, Coffee
                       Shop, Forest, White Noise
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Live weather integration & gentle
+                      <Check className="size-4.5 text-emerald-400" /> Live weather integration & gentle
                       breaks
                     </li>
                   </ul>
@@ -724,21 +723,21 @@ function Landing() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background p-6 text-center shadow-xs">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-6 text-center shadow-xs">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
                     POMODORO INTERVAL
                   </span>
-                  <div className="mt-3 text-5xl font-extrabold tracking-tight text-foreground font-mono">
+                  <div className="mt-3 text-5xl font-extrabold tracking-tight text-white font-mono">
                     25:00
                   </div>
-                  <p className="mt-2 text-xs text-primary font-semibold">
+                  <p className="mt-2 text-xs text-emerald-400 font-semibold">
                     Rainy Afternoon · 22°C Overcast
                   </p>
                   <div className="mt-6 flex justify-center gap-3">
-                    <button className="rounded-xl bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground shadow-soft press flex items-center gap-1.5">
+                    <button className="rounded-xl bg-emerald-500 px-6 py-2.5 text-xs font-bold text-black shadow-lg press flex items-center gap-1.5">
                       <Play className="size-3.5 fill-current" /> Start Focus
                     </button>
-                    <button className="rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors flex items-center gap-1.5">
+                    <button className="rounded-xl border border-[#0d402e] bg-[#062b1e] px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-[#093828] transition-colors flex items-center gap-1.5">
                       <Music className="size-3.5" /> Ambient Audio
                     </button>
                   </div>
@@ -749,28 +748,28 @@ function Landing() {
             {activeTab === "notes" && (
               <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                     Module 04 · Mathematical Canvas
                   </span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
                     Block-based notebook with native KaTeX rendering.
                   </h3>
-                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
                     A calm, fluid text editor that handles equations, syntax-highlighted code,
                     nested subpages, and interactive toggle lists effortlessly. Never compromise
                     between beauty and technical rigor.
                   </p>
-                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Instant LaTeX math rendering with
+                      <Check className="size-4.5 text-emerald-400" /> Instant LaTeX math rendering with
                       KaTeX
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> 10+ handcrafted sensory color
+                      <Check className="size-4.5 text-emerald-400" /> 10+ handcrafted sensory color
                       themes
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Seamless inline Remi assistant
+                      <Check className="size-4.5 text-emerald-400" /> Seamless inline Remi assistant
                       prompts
                     </li>
                   </ul>
@@ -779,17 +778,17 @@ function Landing() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background p-5 font-mono text-xs shadow-xs text-foreground">
-                  <div className="border-b border-border pb-2 text-muted-foreground flex items-center justify-between">
+                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 font-mono text-xs shadow-xs text-white">
+                  <div className="border-b border-[#0d402e] pb-2 text-zinc-400 flex items-center justify-between">
                     <span>linear_algebra_notes.md</span>
-                    <span className="text-[10px]">KaTeX Enabled</span>
+                    <span className="text-[10px] text-emerald-400">KaTeX Enabled</span>
                   </div>
                   <div className="mt-3 space-y-2">
-                    <p className="text-primary font-bold"># Eigenvalues & Eigenvectors</p>
-                    <p className="text-muted-foreground font-sans">
+                    <p className="text-emerald-400 font-bold"># Eigenvalues & Eigenvectors</p>
+                    <p className="text-zinc-300 font-sans">
                       A non-zero vector v is an eigenvector of matrix A with eigenvalue λ if:
                     </p>
-                    <div className="rounded-lg bg-card border border-border p-2.5 text-center text-foreground font-sans text-sm">
+                    <div className="rounded-lg bg-[#05261b] border border-[#0d402e] p-2.5 text-center text-white font-sans text-sm">
                       A v = λ v ⟺ (A - λ I)v = 0
                     </div>
                   </div>
@@ -800,28 +799,28 @@ function Landing() {
             {activeTab === "habits" && (
               <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                     Module 05 · Habit Rituals & Streaks
                   </span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
                     Visible momentum that celebrates small efforts.
                   </h3>
-                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
                     Big achievements are simply daily rituals stacked over time. Remispace's habit
                     tracker offers visual completion heatmaps, streak shields, and intelligent
                     rescheduling so missing one day never derails your long-term consistency.
                   </p>
-                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Daily check-ins with reflection
+                      <Check className="size-4.5 text-emerald-400" /> Daily check-ins with reflection
                       prompts
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Streak preservation & gentle
+                      <Check className="size-4.5 text-emerald-400" /> Streak preservation & gentle
                       reminders
                     </li>
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-primary" /> Weekly completion analytics &
+                      <Check className="size-4.5 text-emerald-400" /> Weekly completion analytics &
                       insights
                     </li>
                   </ul>
@@ -830,38 +829,38 @@ function Landing() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background p-5 shadow-xs">
-                  <div className="flex items-center justify-between border-b border-border pb-3">
-                    <span className="text-xs font-bold text-foreground">Today's Rituals</span>
-                    <span className="text-xs font-semibold text-emerald-500">4 / 4 Completed</span>
+                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-[#0d402e] pb-3">
+                    <span className="text-xs font-bold text-white">Today's Rituals</span>
+                    <span className="text-xs font-semibold text-emerald-400">4 / 4 Completed</span>
                   </div>
                   <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-between rounded-xl bg-card border border-border p-2.5 text-xs">
+                    <div className="flex items-center justify-between rounded-xl bg-[#05261b] border border-[#0d402e] p-2.5 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-black text-[9px] font-bold">
                           ✓
                         </span>
-                        <span className="font-medium text-foreground">Read 30 mins technical paper</span>
+                        <span className="font-medium text-white">Read 30 mins technical paper</span>
                       </div>
-                      <span className="text-[11px] text-muted-foreground">🔥 14 days</span>
+                      <span className="text-[11px] text-zinc-400">🔥 14 days</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-card border border-border p-2.5 text-xs">
+                    <div className="flex items-center justify-between rounded-xl bg-[#05261b] border border-[#0d402e] p-2.5 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-black text-[9px] font-bold">
                           ✓
                         </span>
-                        <span className="font-medium text-foreground">Complete 1 Roadmap lesson</span>
+                        <span className="font-medium text-white">Complete 1 Roadmap lesson</span>
                       </div>
-                      <span className="text-[11px] text-muted-foreground">🔥 21 days</span>
+                      <span className="text-[11px] text-zinc-400">🔥 21 days</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-card border border-border p-2.5 text-xs">
+                    <div className="flex items-center justify-between rounded-xl bg-[#05261b] border border-[#0d402e] p-2.5 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-black text-[9px] font-bold">
                           ✓
                         </span>
-                        <span className="font-medium text-foreground">Evening review & reflection</span>
+                        <span className="font-medium text-white">Evening review & reflection</span>
                       </div>
-                      <span className="text-[11px] text-muted-foreground">🔥 7 days</span>
+                      <span className="text-[11px] text-zinc-400">🔥 7 days</span>
                     </div>
                   </div>
                 </div>
@@ -898,19 +897,22 @@ function Landing() {
               desc: "Enter the ambient focus studio, preserve your daily habit streaks, and watch your knowledge compound week over week.",
             },
           ].map((item) => (
-            <Reveal key={item.step} className="rounded-3xl border border-border bg-card p-8 shadow-xs">
-              <span className="text-xs font-bold tracking-widest text-primary font-mono">
+            <Reveal
+              key={item.step}
+              className="rounded-3xl border border-[#0d402e] bg-[#042419] p-8 shadow-xs hover:border-emerald-500/40 transition-colors"
+            >
+              <span className="text-xs font-bold tracking-widest text-emerald-400 font-mono">
                 {item.step}
               </span>
-              <h3 className="mt-4 text-xl font-bold text-foreground font-display">{item.title}</h3>
-              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+              <h3 className="mt-4 text-xl font-bold text-white font-display">{item.title}</h3>
+              <p className="mt-2.5 text-sm leading-relaxed text-zinc-400">{item.desc}</p>
             </Reveal>
           ))}
         </div>
       </section>
 
       {/* Transparent Pricing Section */}
-      <section id="pricing" className="mx-auto max-w-6xl px-6 py-20 border-t border-border/60">
+      <section id="pricing" className="mx-auto max-w-6xl px-6 py-20 border-t border-[#0d402e]/60">
         <SectionTitle
           center
           eyebrow="Simple, Honest Pricing"
@@ -920,30 +922,34 @@ function Landing() {
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {/* Free Tier */}
-          <Reveal className="rounded-3xl border border-border bg-card p-8 shadow-sm flex flex-col justify-between">
+          <Reveal className="rounded-3xl border border-[#0d402e] bg-[#042419] p-8 shadow-sm flex flex-col justify-between">
             <div>
-              <h3 className="text-xl font-bold text-foreground font-display">Free Trial</h3>
-              <p className="mt-1 text-xs text-muted-foreground">For curious minds getting started</p>
-              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-foreground">
-                ₹0<span className="ml-1 text-base font-normal text-muted-foreground">/ forever</span>
+              <h3 className="text-xl font-bold text-white font-display">Free Trial</h3>
+              <p className="mt-1 text-xs text-zinc-400">For curious minds getting started</p>
+              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-white">
+                ₹0<span className="ml-1 text-base font-normal text-zinc-400">/ forever</span>
               </div>
-              <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
+              <ul className="mt-8 space-y-4 text-sm text-zinc-300">
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> 20 daily messages with Remi
+                  <Check className="size-4 text-emerald-400" /> 20 daily messages with Remi
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> 2 Active Study Roadmaps
+                  <Check className="size-4 text-emerald-400" /> 2 Active Study Roadmaps
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> 5 Notebooks & canvases
+                  <Check className="size-4 text-emerald-400" /> 5 Notebooks & canvases
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> 15MB file upload limit
+                  <Check className="size-4 text-emerald-400" /> 15MB file upload limit
                 </li>
               </ul>
             </div>
             <div className="mt-8">
-              <Button asChild variant="outline" className="w-full rounded-2xl border-border">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full rounded-2xl border-[#0d402e] bg-[#062b1e] text-zinc-200 hover:bg-[#093828] hover:text-white"
+              >
                 <Link to="/auth" search={{ mode: "signup" }}>
                   Get Started Free
                 </Link>
@@ -952,33 +958,33 @@ function Landing() {
           </Reveal>
 
           {/* Weekly Tier */}
-          <Reveal className="relative rounded-3xl border-2 border-primary bg-card p-8 shadow-lift flex flex-col justify-between">
-            <div className="absolute top-0 right-6 -translate-y-1/2 rounded-full bg-primary px-3.5 py-1 text-xs font-bold text-primary-foreground shadow-xs">
+          <Reveal className="relative rounded-3xl border-2 border-emerald-500 bg-[#062f21] p-8 shadow-2xl flex flex-col justify-between">
+            <div className="absolute top-0 right-6 -translate-y-1/2 rounded-full bg-emerald-500 px-3.5 py-1 text-xs font-bold text-black shadow-xs">
               Most Flexible
             </div>
             <div>
-              <h3 className="text-xl font-bold text-foreground font-display">Weekly Pro</h3>
-              <p className="mt-1 text-xs text-muted-foreground">For intensive study sprints & exams</p>
-              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-foreground">
-                ₹99<span className="ml-1 text-base font-normal text-muted-foreground">/ week</span>
+              <h3 className="text-xl font-bold text-white font-display">Weekly Pro</h3>
+              <p className="mt-1 text-xs text-zinc-300">For intensive study sprints & exams</p>
+              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-white">
+                ₹99<span className="ml-1 text-base font-normal text-zinc-300">/ week</span>
               </div>
-              <ul className="mt-8 space-y-4 text-sm text-foreground">
+              <ul className="mt-8 space-y-4 text-sm text-zinc-100">
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> <strong>Unlimited</strong> messages with Remi
+                  <Check className="size-4 text-emerald-400" /> <strong>Unlimited</strong> messages with Remi
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> 10 Active Study Roadmaps
+                  <Check className="size-4 text-emerald-400" /> 10 Active Study Roadmaps
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> 15 Notebooks & canvases
+                  <Check className="size-4 text-emerald-400" /> 15 Notebooks & canvases
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> 50MB file upload limit
+                  <Check className="size-4 text-emerald-400" /> 50MB file upload limit
                 </li>
               </ul>
             </div>
             <div className="mt-8">
-              <Button asChild className="w-full rounded-2xl press">
+              <Button asChild className="w-full rounded-2xl bg-emerald-500 text-black font-bold hover:bg-emerald-400 press">
                 <Link to="/auth" search={{ mode: "signup" }}>
                   Upgrade to Weekly Pro
                 </Link>
@@ -987,30 +993,34 @@ function Landing() {
           </Reveal>
 
           {/* Monthly Tier */}
-          <Reveal className="rounded-3xl border border-border bg-card p-8 shadow-sm flex flex-col justify-between">
+          <Reveal className="rounded-3xl border border-[#0d402e] bg-[#042419] p-8 shadow-sm flex flex-col justify-between">
             <div>
-              <h3 className="text-xl font-bold text-foreground font-display">Monthly Pro</h3>
-              <p className="mt-1 text-xs text-muted-foreground">For dedicated lifelong learners</p>
-              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-foreground">
-                ₹399<span className="ml-1 text-base font-normal text-muted-foreground">/ month</span>
+              <h3 className="text-xl font-bold text-white font-display">Monthly Pro</h3>
+              <p className="mt-1 text-xs text-zinc-400">For dedicated lifelong learners</p>
+              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-white">
+                ₹399<span className="ml-1 text-base font-normal text-zinc-400">/ month</span>
               </div>
-              <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
+              <ul className="mt-8 space-y-4 text-sm text-zinc-300">
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> All Weekly Pro Features
+                  <Check className="size-4 text-emerald-400" /> All Weekly Pro Features
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> Save ~10% compared to weekly
+                  <Check className="size-4 text-emerald-400" /> Save ~10% compared to weekly
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> Highest priority response latency
+                  <Check className="size-4 text-emerald-400" /> Highest priority response latency
                 </li>
                 <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> Priority email support
+                  <Check className="size-4 text-emerald-400" /> Priority email support
                 </li>
               </ul>
             </div>
             <div className="mt-8">
-              <Button asChild variant="outline" className="w-full rounded-2xl border-border">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full rounded-2xl border-[#0d402e] bg-[#062b1e] text-zinc-200 hover:bg-[#093828] hover:text-white"
+              >
                 <Link to="/auth" search={{ mode: "signup" }}>
                   Subscribe Monthly
                 </Link>
@@ -1020,18 +1030,17 @@ function Landing() {
         </div>
 
         {/* Enterprise Banner */}
-        <Reveal className="mt-12 rounded-3xl bg-primary p-8 text-primary-foreground max-w-5xl mx-auto shadow-lift">
+        <Reveal className="mt-12 rounded-3xl bg-gradient-to-r from-[#073826] to-[#0a4831] border border-emerald-500/30 p-8 text-white max-w-5xl mx-auto shadow-2xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-2xl font-bold font-display">Institutions & Study Groups</h3>
-              <p className="mt-1.5 text-sm text-primary-foreground/85">
+              <p className="mt-1.5 text-sm text-emerald-100/80">
                 Need Bring Your Own Key (BYOK) support, custom rate limits, or volume team licensing?
               </p>
             </div>
             <Button
               asChild
-              variant="secondary"
-              className="rounded-2xl px-6 font-semibold shadow-xs whitespace-nowrap press"
+              className="rounded-2xl px-6 font-bold bg-white text-black hover:bg-zinc-100 shadow-xs whitespace-nowrap press"
             >
               <a href="mailto:aajprabhash@gmail.com?subject=Remispace Enterprise Inquiry">
                 Contact Founder
@@ -1042,15 +1051,15 @@ function Landing() {
       </section>
 
       {/* Call to Action Final Banner */}
-      <section className="bg-primary/10 border-t border-border px-6 py-24 text-center">
+      <section className="bg-[#02140d] border-t border-[#0d402e] px-6 py-24 text-center">
         <Reveal>
-          <span className="text-xs font-bold uppercase tracking-widest text-primary">Remispace</span>
-          <h2 className="mx-auto mt-4 max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight md:text-5xl text-foreground font-display">
+          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Remispace</span>
+          <h2 className="mx-auto mt-4 max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight md:text-5xl text-white font-display">
             You don't need to do everything today.
             <br />
-            <span className="text-primary font-normal">You just need a quiet place to begin.</span>
+            <span className="text-emerald-400 font-normal">You just need a quiet place to begin.</span>
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-zinc-300">
             Join students, researchers, and engineers building real learning momentum with Remispace.
           </p>
           <div className="mt-8">
@@ -1060,30 +1069,30 @@ function Landing() {
       </section>
 
       {/* Classic Editorial Footer */}
-      <footer className="border-t border-border bg-background px-6 py-12">
+      <footer className="border-t border-[#0d402e] bg-[#021810] px-6 py-12">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col justify-between gap-8 md:flex-row md:items-center">
             <div className="flex items-center gap-3">
               <img src={remiLogo} alt="Remispace" className="size-7 rounded-xl object-cover" />
-              <span className="font-display font-bold text-foreground text-lg">Remispace</span>
+              <span className="font-display font-bold text-white text-lg">Remispace</span>
             </div>
 
-            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-              <a href="#features" className="hover:text-foreground transition-colors">
+            <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
+              <a href="#features" className="hover:text-white transition-colors">
                 Features
               </a>
-              <a href="#interactive-preview" className="hover:text-foreground transition-colors">
+              <a href="#interactive-preview" className="hover:text-white transition-colors">
                 Modules
               </a>
-              <a href="#pricing" className="hover:text-foreground transition-colors">
+              <a href="#pricing" className="hover:text-white transition-colors">
                 Pricing
               </a>
-              <Link to="/auth" search={{ mode: "signin" }} className="hover:text-foreground transition-colors">
+              <Link to="/auth" search={{ mode: "signin" }} className="hover:text-white transition-colors">
                 Sign in
               </Link>
             </div>
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-zinc-500">
               © 2026 Remispace. Crafted for deep learning & focused thought.
             </p>
           </div>
