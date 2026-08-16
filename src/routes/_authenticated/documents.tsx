@@ -230,7 +230,20 @@ function DocumentsPage() {
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      if (msg.includes("15MB") || msg.includes("limit") || msg.includes("upgrade") || msg.includes("exceeds")) {
+        toast.error(msg, {
+          action: {
+            label: "Upgrade",
+            onClick: () => {
+              window.location.href = "/pricing";
+            },
+          },
+          duration: 10000,
+        });
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setUploading(false);
     }

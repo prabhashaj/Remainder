@@ -7,12 +7,12 @@ export const LIMITS = {
   FREE: {
     ROADMAPS_PER_WEEK: 2,
     NOTEBOOKS_PER_WEEK: 5,
-    MAX_FILE_SIZE_MB: 50,
+    MAX_FILE_SIZE_MB: 15,
   },
   PREMIUM: {
     ROADMAPS_PER_WEEK: 10,
     NOTEBOOKS_PER_WEEK: 15,
-    MAX_FILE_SIZE_MB: 250,
+    MAX_FILE_SIZE_MB: 50,
   },
 };
 

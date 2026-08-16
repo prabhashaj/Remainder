@@ -645,9 +645,25 @@ export function RemiChat({
             }
           } catch (uploadErr) {
             toast.dismiss("doc-upload");
-            toast.error(
-              `Failed to upload "${f.filename}": ${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)}`,
-            );
+            const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+            const isLimitErr =
+              msg.includes("15MB") || msg.includes("limit") || msg.includes("upgrade") || msg.includes("exceeds");
+            if (isLimitErr) {
+              toast.error(
+                `"${f.filename}" exceeds the 15MB Free limit. Upgrade to Pro to upload documents up to 50MB.`,
+                {
+                  action: {
+                    label: "Upgrade",
+                    onClick: () => {
+                      window.location.href = "/pricing";
+                    },
+                  },
+                  duration: 10000,
+                },
+              );
+            } else {
+              toast.error(`Failed to upload "${f.filename}": ${msg}`);
+            }
             // Don't abort the whole submit — just skip this file
           }
         }

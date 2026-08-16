@@ -30,7 +30,9 @@ export const getUploadTokenFn = createServerFn({ method: "POST" })
     const maxBytes = maxMb * 1024 * 1024;
     if (data.fileSize > maxBytes) {
       throw new Error(
-        `File exceeds the ${maxMb}MB size limit. Please upgrade to premium for larger uploads.`,
+        limits.isPremium
+          ? `File exceeds the maximum limit of ${maxMb}MB.`
+          : `File exceeds the 15MB Free tier limit. Please upgrade to Pro to upload documents up to 50MB.`,
       );
     }
 
