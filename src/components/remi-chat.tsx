@@ -57,19 +57,30 @@ import { renameThread } from "@/lib/db";
 import { getPlanUsage } from "@/lib/billing.functions";
 import { cn } from "@/lib/utils";
 
-function getToolLabel(part: any, isRunning: boolean): string {
-  let name = part.type.replace(/^tool-/, "");
-  if (part.type === "dynamic-tool" && part.toolName) {
+function getToolLabel(
+  part:
+    | {
+        type?: string;
+        toolName?: string;
+        args?: Record<string, unknown>;
+        input?: Record<string, unknown>;
+      }
+    | Record<string, unknown>,
+  isRunning: boolean,
+): string {
+  const typeStr = typeof part.type === "string" ? part.type : "";
+  let name = typeStr.replace(/^tool-/, "");
+  if (typeStr === "dynamic-tool" && typeof part.toolName === "string") {
     name = part.toolName;
   }
-  if (part.toolName) {
+  if (typeof part.toolName === "string") {
     name = part.toolName;
   }
 
-  const args = part.args || part.input || {};
+  const args = ((part.args || part.input || {}) as Record<string, unknown>) ?? {};
 
   if (name === "delegateToPlanner") {
-    const inst = (typeof args.instruction === "string" ? args.instruction : "").toLowerCase();
+    const inst = (typeof args["instruction"] === "string" ? args["instruction"] : "").toLowerCase();
     if (
       inst.includes("roadmap") ||
       inst.includes("curriculum") ||
@@ -422,7 +433,7 @@ export function RemiChat({
     refetchInterval: 30000, // refresh every 30s
   });
 
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, stop } = useChat({
     id: threadId,
     messages: initialMessages,
     transport: new DefaultChatTransport({
@@ -486,21 +497,21 @@ export function RemiChat({
     }
   }, [messages, stop]);
 
-async function blobUrlToDataUrl(url: string): Promise<string | null> {
-  if (url.startsWith("data:")) return url;
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
+  async function blobUrlToDataUrl(url: string): Promise<string | null> {
+    if (url.startsWith("data:")) return url;
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
   }
-}
 
   async function submit(text: string, files: FileUIPart[] = []) {
     const trimmed = text.trim();
@@ -531,7 +542,9 @@ async function blobUrlToDataUrl(url: string): Promise<string | null> {
     );
 
     if (attachments.some((attachment) => !attachment.dataUrl.startsWith("data:"))) {
-      throw new Error("Could not prepare the attachment for upload. Please try attaching the file again.");
+      throw new Error(
+        "Could not prepare the attachment for upload. Please try attaching the file again.",
+      );
     }
 
     await sendMessage(

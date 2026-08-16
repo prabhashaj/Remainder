@@ -445,23 +445,19 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           .single();
         if (rErr) return { success: false, error: rErr.message };
 
-        // Record usage
+        // Record usage — reuse already-fetched limits.roadmaps.used to avoid an extra read
         const weekStart = getCurrentWeekStart();
-        const { data: usage } = await supabase
-          .from("usage_logs")
-          .select("roadmaps_generated")
-          .eq("user_id", userId)
-          .eq("week_start_date", weekStart)
-          .maybeSingle();
-
-        await supabase.from("usage_logs").upsert(
+        const { error: usageErr } = await supabase.from("usage_logs").upsert(
           {
             user_id: userId,
             week_start_date: weekStart,
-            roadmaps_generated: (usage?.roadmaps_generated || 0) + 1,
+            roadmaps_generated: limits.roadmaps.used + 1,
           },
           { onConflict: "user_id,week_start_date" },
         );
+        if (usageErr) {
+          log("error", "usage_record_failed", { error: usageErr.message }, { userId });
+        }
 
         let topicCount = 0;
         let subCount = 0;
@@ -693,33 +689,35 @@ export async function runPlanner(params: {
       maxRetries: 5,
       stopWhen: stepCountIs(5),
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     let limitReached = false;
 
     // Check final step tool results
+    const finalToolResults = result.toolResults as Array<{ result?: unknown }> | undefined;
     if (
-      result.toolResults?.some(
-        (tr: any) =>
+      finalToolResults?.some(
+        (tr) =>
           tr.result &&
           typeof tr.result === "object" &&
           "limitReached" in tr.result &&
-          tr.result.limitReached === true,
+          (tr.result as { limitReached: boolean }).limitReached === true,
       )
     ) {
       limitReached = true;
     }
 
     // Check all intermediate steps in multi-step execution
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!limitReached && (result as any).steps) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      limitReached = (result as any).steps.some((step: any) =>
+    const steps = (
+      result as unknown as { steps?: Array<{ toolResults?: Array<{ result?: unknown }> }> }
+    ).steps;
+    if (!limitReached && steps) {
+      limitReached = steps.some((step) =>
         step.toolResults?.some(
-          (tr: any) =>
+          (tr) =>
             tr.result &&
             typeof tr.result === "object" &&
             "limitReached" in tr.result &&
-            tr.result.limitReached === true,
+            (tr.result as { limitReached: boolean }).limitReached === true,
         ),
       );
     }
