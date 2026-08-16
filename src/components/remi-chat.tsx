@@ -453,6 +453,8 @@ export function RemiChat({
     },
   });
 
+  const isPremium = isSubscriptionPremium(subscription);
+
   const { messages, sendMessage, status, stop, setMessages } = useChat({
     id: threadId,
     messages: initialMessages,

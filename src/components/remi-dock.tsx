@@ -54,7 +54,7 @@ function useDockThread() {
           .order("updated_at", { ascending: false })
           .limit(1);
 
-        if (latest && latest.length > 0) {
+        if (latest && latest.length > 0 && latest[0]) {
           const validId = latest[0].id;
           window.localStorage.setItem(userKey, validId);
           setThreadId(validId);
