@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Block-based notes, habit rituals, intelligent PDF research, and structured study roadmaps with Remi — a calm AI learning coach designed for lifelong learners.",
+          "A calm sanctuary designed for deep thinkers. Master complex subjects with structured roadmaps, mathematical notebooks, document intelligence, and Remi—your dedicated AI companion for lasting momentum.",
       },
       {
         property: "og:title",
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Notes, habits, goals, ambient focus sessions, and structured study roadmaps in one warm, distraction-free workspace.",
+          "A calm sanctuary designed for deep thinkers. Master complex subjects with structured roadmaps, mathematical notebooks, document intelligence, and Remi—your dedicated AI companion for lasting momentum.",
       },
     ],
   }),
@@ -246,9 +246,9 @@ export default function Landing() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-emerald-100/70 md:text-xl">
-            Remispace combines structured study roadmaps, intelligent PDF research, habit rituals,
-            and ambient focus studios with Remi—a calm AI learning coach who turns complex
-            disciplines into daily momentum.
+            A calm sanctuary designed for deep thinkers. Master complex subjects with structured
+            roadmaps, mathematical notebooks, document intelligence, and Remi—your dedicated AI
+            companion for lasting momentum.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
