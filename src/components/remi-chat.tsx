@@ -453,9 +453,7 @@ export function RemiChat({
     },
   });
 
-  const isPremium = isSubscriptionPremium(subscription);
-
-  const { messages, sendMessage, status, stop } = useChat({
+  const { messages, sendMessage, status, stop, setMessages } = useChat({
     id: threadId,
     messages: initialMessages,
     transport: new DefaultChatTransport({
@@ -474,16 +472,6 @@ export function RemiChat({
         return;
       }
       toast.error(error.message || "Remi couldn't reply just now.");
-      if (error.message.includes("Thread not found") && typeof window !== "undefined") {
-        window.localStorage.removeItem("remispace.dock.thread");
-        setTimeout(() => {
-          if (window.location.pathname.startsWith("/conversation/")) {
-            window.location.href = "/conversation";
-          } else {
-            window.location.reload();
-          }
-        }, 1000);
-      }
     },
     onFinish: () => {
       void queryClient.invalidateQueries({ queryKey: ["roadmaps"] });
@@ -495,6 +483,27 @@ export function RemiChat({
       void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
     },
   });
+
+  // Keep useChat messages in sync whenever initialMessages or threadId changes
+  const isStreaming = status === "streaming" || status === "submitted";
+  const lastSyncedThreadId = useRef<string>(threadId);
+  const lastSyncedInitialCount = useRef<number>(initialMessages.length);
+
+  useEffect(() => {
+    // If threadId changed, immediately set that thread's messages
+    if (lastSyncedThreadId.current !== threadId) {
+      lastSyncedThreadId.current = threadId;
+      lastSyncedInitialCount.current = initialMessages.length;
+      setMessages(initialMessages);
+      return;
+    }
+
+    // If query fetched messages while idle, update internal state
+    if (!isStreaming && initialMessages.length !== lastSyncedInitialCount.current) {
+      lastSyncedInitialCount.current = initialMessages.length;
+      setMessages(initialMessages);
+    }
+  }, [threadId, initialMessages, isStreaming, setMessages]);
 
   const seenLimitMessages = useRef<Set<string>>(new Set());
 

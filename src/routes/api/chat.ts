@@ -342,18 +342,44 @@ export const Route = createFileRoute("/api/chat")({
           return handleRateLimitError(error, 60);
         }
 
+        let activeThreadId = threadId;
         const { data: thread } = await supabase
           .from("chat_threads")
           .select("id")
-          .eq("id", threadId)
+          .eq("id", activeThreadId)
+          .eq("user_id", userId)
           .maybeSingle();
+
         if (!thread) {
           // The client may hold a thread id that no longer exists (cleared data,
-          // new device). Recreate it instead of failing the conversation.
-          const { error: threadError } = await supabase
+          // new device, or foreign key). Recreate it or fallback smoothly.
+          const { data: created, error: threadError } = await supabase
             .from("chat_threads")
-            .insert({ id: threadId, user_id: userId, title: "New conversation" });
-          if (threadError) return new Response("Thread not found", { status: 404 });
+            .upsert(
+              { id: activeThreadId, user_id: userId, title: "New conversation" },
+              { onConflict: "id" },
+            )
+            .select("id")
+            .maybeSingle();
+
+          if (threadError || !created) {
+            log(
+              "warn",
+              "thread_upsert_fallback",
+              { error: threadError?.message, threadId: activeThreadId },
+              { userId, traceId },
+            );
+            const { data: fallbackThread } = await supabase
+              .from("chat_threads")
+              .insert({ user_id: userId, title: "New conversation" })
+              .select("id")
+              .single();
+            if (fallbackThread) {
+              activeThreadId = fallbackThread.id;
+            } else {
+              return new Response("Unable to establish chat session", { status: 500 });
+            }
+          }
         }
 
         const key = getAiApiKey();
@@ -366,7 +392,7 @@ export const Route = createFileRoute("/api/chat")({
         const last = uiMessages[uiMessages.length - 1];
         if (last && last.role === "user") {
           const { error } = await supabase.from("chat_messages").insert({
-            thread_id: threadId,
+            thread_id: activeThreadId,
             user_id: userId,
             role: "user",
             message: last as never,
@@ -832,7 +858,7 @@ Title: "${curPage.title}"
           originalMessages: uiMessages,
           onFinish: async ({ responseMessage }) => {
             const { error } = await supabase.from("chat_messages").insert({
-              thread_id: threadId,
+              thread_id: activeThreadId,
               user_id: userId,
               role: "assistant",
               message: responseMessage as never,
@@ -848,7 +874,7 @@ Title: "${curPage.title}"
             await supabase
               .from("chat_threads")
               .update({ updated_at: new Date().toISOString() })
-              .eq("id", threadId);
+              .eq("id", activeThreadId);
           },
         });
 

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { createThread, fetchThreadMessages } from "@/lib/db";
 import { useTopicContext } from "@/lib/topic-context";
 
+import { supabase } from "@/integrations/supabase/client";
+
 const STORAGE_KEY = "remispace.dock.thread";
 
 /** Shared thread bootstrap so the dock and the dashboard panel share one chat. */
@@ -20,24 +22,71 @@ function useDockThread() {
   useEffect(() => {
     if (booted.current || typeof window === "undefined") return;
     booted.current = true;
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setThreadId(stored);
-      return;
-    }
-    void createThread().then((thread) => {
-      window.localStorage.setItem(STORAGE_KEY, thread.id);
-      setThreadId(thread.id);
-      void qc.invalidateQueries({ queryKey: ["threads"] });
-    });
+
+    void (async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData.session?.user?.id;
+        if (!userId) return;
+
+        const userKey = `${STORAGE_KEY}.${userId}`;
+        const stored = window.localStorage.getItem(userKey);
+
+        if (stored) {
+          const { data: existing } = await supabase
+            .from("chat_threads")
+            .select("id")
+            .eq("id", stored)
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (existing) {
+            setThreadId(existing.id);
+            return;
+          }
+        }
+
+        // Fallback: pick user's latest thread if available
+        const { data: latest } = await supabase
+          .from("chat_threads")
+          .select("id")
+          .eq("user_id", userId)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+
+        if (latest && latest.length > 0) {
+          const validId = latest[0].id;
+          window.localStorage.setItem(userKey, validId);
+          setThreadId(validId);
+          return;
+        }
+
+        // Otherwise create fresh thread
+        const thread = await createThread();
+        window.localStorage.setItem(userKey, thread.id);
+        setThreadId(thread.id);
+        void qc.invalidateQueries({ queryKey: ["threads"] });
+      } catch (e) {
+        console.error("Failed to initialize dock thread:", e);
+      }
+    })();
   }, [qc]);
 
   async function startFresh() {
-    const thread = await createThread();
-    window.localStorage.setItem(STORAGE_KEY, thread.id);
-    setThreadId(thread.id);
-    void qc.invalidateQueries({ queryKey: ["threads"] });
-    return thread.id;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id;
+      const thread = await createThread();
+      if (userId) {
+        window.localStorage.setItem(`${STORAGE_KEY}.${userId}`, thread.id);
+      }
+      setThreadId(thread.id);
+      void qc.invalidateQueries({ queryKey: ["threads"] });
+      return thread.id;
+    } catch (e) {
+      console.error("Failed to start fresh thread:", e);
+      return null;
+    }
   }
 
   return { threadId, startFresh };

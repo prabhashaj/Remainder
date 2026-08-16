@@ -37,6 +37,7 @@ function ConversationThread() {
   const { data: rows, isLoading } = useQuery({
     queryKey: ["thread-messages", threadId],
     queryFn: () => fetchThreadMessages(threadId),
+    staleTime: 10000,
   });
 
   const deleteMutation = useMutation({

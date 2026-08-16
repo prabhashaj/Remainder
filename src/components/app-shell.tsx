@@ -688,11 +688,19 @@ function ConversationsGroup() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [open, setOpen] = useState(false);
+  const isConversationActive = pathname.startsWith("/conversation");
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (isConversationActive) {
+      setOpen(true);
+    }
+  }, [isConversationActive]);
+
   const { data: threads = [] } = useQuery({
     queryKey: ["threads"],
     queryFn: fetchThreads,
-    enabled: open,
+    staleTime: 30000,
   });
 
   const deleteThreadMutation = useMutation({
