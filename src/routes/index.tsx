@@ -274,14 +274,14 @@ export default function Landing() {
         <WorkspaceShowcase />
       </section>
 
-      {/* Interactive Feature Showcase — 6 Core Features */}
+      {/* Interactive Feature Showcase */}
       <section id="features" className="bg-[#02140d] border-y border-[#0d402e] px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <SectionTitle
             center
-            eyebrow="What Remispace can do"
-            title="Six tools. One calm workspace."
-            body="Click each feature to see exactly how it looks and works — no marketing fluff, just the real product."
+            eyebrow="Crafted for deep mastery"
+            title="Everything you need to master complex subjects."
+            body="Explore the core environments designed to help you absorb, structure, and retain knowledge across disciplines."
           />
 
           {/* Tab Strip */}
@@ -313,73 +313,253 @@ export default function Landing() {
           <div className="mt-8 overflow-hidden rounded-3xl border border-[#0d402e] bg-[#042419] shadow-2xl">
             {/* ── Roadmaps ── */}
             {activeTab === "roadmaps" && (
-              <div className="overflow-hidden rounded-3xl">
-                <img
-                  src={roadmapsImg}
-                  alt="Remispace AI Learning Roadmaps"
-                  className="w-full object-cover object-top"
-                  loading="lazy"
-                />
+              <div className="grid gap-8 p-6 md:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Structured Mastery
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
+                    Deconstruct any subject into clear learning phases.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
+                    Transform ambitious goals into step-by-step curricula with milestone checkpoints, adaptive lesson plans, and active recall quizzes that prevent cognitive overload.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Multi-phase structured curricula tailored to your ambition</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Automatic checkpoint validations and progress tracking</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Direct connection to daily study sessions and focus timers</span>
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Build your roadmap</PrimaryLink>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-[#0d402e] bg-[#021810] shadow-xl">
+                  <img
+                    src={roadmapsImg}
+                    alt="Remispace AI Learning Roadmaps"
+                    className="w-full object-cover object-top"
+                    loading="lazy"
+                  />
+                </div>
               </div>
             )}
 
             {/* ── Notebooks ── */}
             {activeTab === "notebook" && (
-              <div className="overflow-hidden rounded-3xl">
-                <img
-                  src={notebookImg}
-                  alt="Remispace Notebooks — Mathematical canvas"
-                  className="w-full object-cover object-top"
-                  loading="lazy"
-                />
+              <div className="grid gap-8 p-6 md:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Mathematical Canvas
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
+                    Fluid block-based notes with live mathematical formulas.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
+                    A distraction-free writing environment that effortlessly formats equations, syntax-highlighted code blocks, toggleable sections, and AI-generated outlines.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Instant mathematical equation & formula typography</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Sensory color themes with toggle lists and callout blocks</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>1-click note generation from study materials and lectures</span>
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Start your notebook</PrimaryLink>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-[#0d402e] bg-[#021810] shadow-xl">
+                  <img
+                    src={notebookImg}
+                    alt="Remispace Notebooks — Mathematical canvas"
+                    className="w-full object-cover object-top"
+                    loading="lazy"
+                  />
+                </div>
               </div>
             )}
 
             {/* ── Remi Agent ── */}
             {activeTab === "remi" && (
-              <div className="overflow-hidden rounded-3xl">
-                <img
-                  src={remichatImg}
-                  alt="Chat with Remi — AI learning assistant"
-                  className="w-full object-cover object-top"
-                  loading="lazy"
-                />
+              <div className="grid gap-8 p-6 md:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Autonomous Learning Companion
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
+                    An AI coach with persistent memory across every session.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
+                    Remi doesn't just answer questions—it remembers your learning pace, suggests your next best action, creates tasks, and guides you through difficult concepts step by step.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Persistent memory of your past queries, roadmaps, and goals</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Autonomous tool use to create notebooks, roadmaps, and tasks</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Socratic explanations tailored to your exact level of understanding</span>
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Talk to Remi</PrimaryLink>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-[#0d402e] bg-[#021810] shadow-xl">
+                  <img
+                    src={remichatImg}
+                    alt="Chat with Remi — AI learning assistant"
+                    className="w-full object-cover object-top"
+                    loading="lazy"
+                  />
+                </div>
               </div>
             )}
 
             {/* ── Study Space ── */}
             {activeTab === "study" && (
-              <div className="overflow-hidden rounded-3xl">
-                <img
-                  src={studyspaceImg}
-                  alt="Remispace Study Space — distraction-free learning hub"
-                  className="w-full object-cover object-top"
-                  loading="lazy"
-                />
+              <div className="grid gap-8 p-6 md:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Unified Study Sanctuary
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
+                    All your materials, notes, and coaching in one view.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
+                    Enter a calm, focused environment where your open notebook, current roadmap milestone, and Remi AI coach sit side by side without messy browser tabs.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Seamless split-screen reading, note-taking, and AI dialog</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Integrated focus timer with ambient soundscapes and session logs</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Zero context switching between thinking, reading, and writing</span>
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Open Study Space</PrimaryLink>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-[#0d402e] bg-[#021810] shadow-xl">
+                  <img
+                    src={studyspaceImg}
+                    alt="Remispace Study Space — distraction-free learning hub"
+                    className="w-full object-cover object-top"
+                    loading="lazy"
+                  />
+                </div>
               </div>
             )}
 
             {/* ── Habits · Goals · Tasks ── */}
             {activeTab === "habits" && (
-              <div className="overflow-hidden rounded-3xl">
-                <img
-                  src={tasksImg}
-                  alt="Remispace Habits, Goals, and Daily Tasks"
-                  className="w-full object-cover object-top"
-                  loading="lazy"
-                />
+              <div className="grid gap-8 p-6 md:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Habit Rituals & Momentum
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
+                    Sustain steady daily progress without burnout.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
+                    Connect daily tasks to high-level goals. Track recurring habit streaks with visual heatmaps, intelligent rescheduling, and gentle momentum protection.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Visual completion streaks and guilt-free streak preservation</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Milestone tracking tied directly to your learning roadmaps</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Actionable daily task priorities derived from your study rhythm</span>
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Track your rituals</PrimaryLink>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-[#0d402e] bg-[#021810] shadow-xl">
+                  <img
+                    src={tasksImg}
+                    alt="Remispace Habits, Goals, and Daily Tasks"
+                    className="w-full object-cover object-top"
+                    loading="lazy"
+                  />
+                </div>
               </div>
             )}
 
             {/* ── In-Context Learning ── */}
             {activeTab === "incontext" && (
-              <div className="overflow-hidden rounded-3xl">
-                <img
-                  src={incontextImg}
-                  alt="Remispace In-Context Learning — Document intelligence"
-                  className="w-full object-cover object-top"
-                  loading="lazy"
-                />
+              <div className="grid gap-8 p-6 md:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Document Intelligence
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
+                    Chat deeply with textbooks, papers, and lecture slides.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
+                    Upload PDFs, lecture slides, or video links. Remi extracts core theorems, generates flashcards, and provides answers grounded in page-by-page citations.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Deep PDF comprehension with exact page references and quotes</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Automatic flashcard generation for spaced repetition reviews</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-emerald-400 shrink-0" />
+                      <span>Multi-modal synthesis across lecture notes, slides, and papers</span>
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Upload a document</PrimaryLink>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-[#0d402e] bg-[#021810] shadow-xl">
+                  <img
+                    src={incontextImg}
+                    alt="Remispace In-Context Learning — Document intelligence"
+                    className="w-full object-cover object-top"
+                    loading="lazy"
+                  />
+                </div>
               </div>
             )}
           </div>
