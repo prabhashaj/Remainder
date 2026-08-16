@@ -8,13 +8,18 @@ import {
   Check,
   ChevronRight,
   Compass,
+  CornerDownLeft,
   FileSearch,
   FileText,
   Focus,
+  Maximize2,
   Menu,
   MessageSquareText,
+  Mic,
   Music,
+  Paperclip,
   Play,
+  Plus,
   Sparkles,
   X,
 } from "lucide-react";
@@ -115,18 +120,18 @@ function SectionTitle({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Exact Study Place Workspace Showcase (Match User UI)                       */
+/* Exact Remispace Dashboard & Remi AI Assistant Showcase Mockup             */
 /* -------------------------------------------------------------------------- */
 function WorkspaceShowcase() {
   const reduced = useReducedMotion();
   const sidebarNav = [
-    { label: "Dashboard", icon: BookHeart, active: false },
+    { label: "Dashboard", icon: BookHeart, active: true },
     { label: "Tasks", icon: Check, active: false },
     { label: "Habits", icon: CalendarHeart, active: false },
     { label: "Goals", icon: Compass, active: false },
     { label: "Roadmaps", icon: FileSearch, active: false },
     { label: "Documents", icon: FileText, active: false },
-    { label: "Conversations", icon: MessageSquareText, hasChevron: true },
+    { label: "Conversations", icon: MessageSquareText, hasChevron: true, active: false },
   ];
 
   return (
@@ -136,9 +141,9 @@ function WorkspaceShowcase() {
       transition={{ duration: reduced ? 0 : 0.8, delay: 0.18 }}
       className="relative mt-12 overflow-hidden rounded-3xl border border-[#0d402e] bg-[#021810] p-2.5 shadow-2xl backdrop-blur-xl md:p-4 text-left text-zinc-100 font-sans"
     >
-      <div className="flex min-h-[560px] overflow-hidden rounded-2xl border border-[#0d402e] bg-[#031c13] text-zinc-100">
+      <div className="flex min-h-[580px] overflow-hidden rounded-2xl border border-[#0d402e] bg-[#031c13] text-zinc-100">
         {/* Left Sidebar */}
-        <aside className="hidden w-[205px] shrink-0 border-r border-[#0d402e] bg-[#021810] p-4 md:flex flex-col justify-between">
+        <aside className="hidden w-[210px] shrink-0 border-r border-[#0d402e] bg-[#021810] p-4 md:flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2">
               <img src={remiLogo} alt="Remispace" className="size-6 rounded-lg object-cover" />
@@ -152,7 +157,11 @@ function WorkspaceShowcase() {
               {sidebarNav.map((item) => (
                 <div
                   key={item.label}
-                  className="flex items-center justify-between rounded-xl px-2.5 py-1.8 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+                  className={`flex items-center justify-between rounded-xl px-2.5 py-2 text-xs font-medium transition-colors ${
+                    item.active
+                      ? "bg-[#063826] text-white font-semibold shadow-xs"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <item.icon className="size-3.5" />
@@ -166,7 +175,7 @@ function WorkspaceShowcase() {
             <div className="mt-7">
               <div className="flex items-center justify-between text-xs text-zinc-400 font-medium px-2.5">
                 <span>Notebook</span>
-                <span className="cursor-pointer hover:text-white">+</span>
+                <span className="cursor-pointer hover:text-white font-bold">+</span>
               </div>
               <div className="mt-2 space-y-1 text-[11px] text-zinc-400">
                 <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-[#072a1e] truncate">
@@ -187,10 +196,10 @@ function WorkspaceShowcase() {
         </aside>
 
         {/* Main Viewport */}
-        <div className="min-w-0 flex-1 p-5 md:p-8 flex flex-col justify-between bg-[#031e14]">
-          <div>
+        <div className="min-w-0 flex-1 p-5 md:p-7 flex flex-col justify-between bg-[#031e14]">
+          <div className="space-y-4">
             {/* Top Bar Header */}
-            <div className="flex items-center justify-between border-b border-[#0d402e]/60 pb-4">
+            <div className="flex items-center justify-between border-b border-[#0d402e]/60 pb-3.5">
               <div className="flex items-center gap-3">
                 <span className="cursor-pointer text-zinc-400">◫</span>
                 <div className="flex items-center gap-2 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1.5 text-xs text-zinc-400">
@@ -204,9 +213,9 @@ function WorkspaceShowcase() {
                   <BookOpen className="size-3 text-emerald-400" />
                   <span>Study Place</span>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1 text-xs text-zinc-300 font-mono">
+                <div className="flex items-center gap-1.5 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1 text-xs text-zinc-300">
                   <Focus className="size-3 text-emerald-400" />
-                  <span>89:53</span>
+                  <span>Focus</span>
                 </div>
                 <div className="grid size-7 place-items-center rounded-full bg-[#093828] border border-[#0d402e] text-xs font-bold text-emerald-400">
                   PR
@@ -214,120 +223,84 @@ function WorkspaceShowcase() {
               </div>
             </div>
 
-            {/* Active Study Banner Pills */}
-            <div className="flex justify-end gap-2 mt-3 text-[11px]">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#062b1e] border border-[#0d402e] px-3 py-1 text-zinc-300">
-                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Introduction to Distribute... <strong className="font-mono">89:53</strong> ⏸ ✕
-              </span>
-              <span className="hidden sm:inline-flex items-center rounded-full bg-[#062b1e] border border-[#0d402e] px-3 py-1 text-zinc-400">
-                Data Engineering to Data Scien...
-              </span>
-            </div>
-
-            {/* Title & Description */}
-            <div className="mt-4">
-              <h3 className="text-2xl font-bold tracking-tight text-white font-display">
-                Study Place
-              </h3>
-              <p className="mt-0.5 text-xs text-zinc-400">
-                Everything for this session — and nothing else.
-              </p>
-            </div>
-
-            {/* Main Stage Grid (UP NEXT & SESSION) */}
-            <div className="mt-6 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-              {/* UP NEXT Left Card */}
-              <div className="rounded-2xl border border-[#0d402e] bg-[#05261b] p-5 shadow-xs flex flex-col justify-between">
+            {/* Top Action Banner (Next Best Action Card) */}
+            <div className="rounded-2xl border border-[#0d402e] bg-[#042419] p-3.5 px-4 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="grid size-7 place-items-center rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <Compass className="size-3.5" />
+                </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-emerald-400 tracking-wider uppercase">
-                      UP NEXT
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
-                    Phase 1: Advanced Data Engineering Fundamentals (4-6 weeks)
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    NEXT BEST ACTION · DAILY HABIT
                   </p>
-                  <h4 className="mt-2 text-xl font-bold text-white font-display">
-                    Introduction to Distributed Systems
-                  </h4>
-                  <p className="mt-1 text-xs leading-relaxed text-zinc-400">
-                    Core concepts like CAP theorem, consistency models, and fault tolerance.
-                  </p>
-
-                  <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                    <button className="rounded-full bg-emerald-500 px-4 py-1.8 text-xs font-semibold text-black shadow-sm hover:bg-emerald-400 transition-colors flex items-center gap-1.5">
-                      <BookOpen className="size-3.5" /> Open lesson
-                    </button>
-                    <button className="rounded-full border border-[#0d402e] bg-[#062b1e] px-4 py-1.8 text-xs font-medium text-zinc-200 hover:bg-[#093828] transition-colors flex items-center gap-1.5">
-                      <Focus className="size-3.5" /> Start focus
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-[#0d402e]/60">
-                  <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                    <span>Subject progress</span>
-                    <span>0/91 sub-topics</span>
-                  </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#0a3324]">
-                    <div className="h-full w-[2%] rounded-full bg-emerald-500" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column Cards */}
-              <div className="space-y-4">
-                {/* Session Timer Card */}
-                <div className="rounded-2xl border border-[#0d402e] bg-[#05261b] p-5 shadow-xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                    SESSION
-                  </span>
-                  <div className="mt-1 text-3xl font-extrabold tracking-tight text-white font-mono">
-                    89:53
-                  </div>
-                  <p className="mt-0.5 text-xs text-zinc-400 truncate">
-                    Introduction to Distributed Systems
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    {["15m", "25m", "45m"].map((dur) => (
-                      <span
-                        key={dur}
-                        className="rounded-full bg-[#083022] border border-[#0d402e] px-2.5 py-0.5 text-[10px] font-medium text-zinc-300"
-                      >
-                        {dur}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Today's Tasks Card */}
-                <div className="rounded-2xl border border-[#0d402e] bg-[#05261b] p-4 shadow-xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                    TODAY'S TASKS
-                  </span>
-                  <p className="mt-2 text-xs text-zinc-400 flex items-center gap-1.5">
-                    <Check className="size-3.5 text-emerald-400" /> All clear for today.
+                  <p className="text-xs sm:text-sm font-medium text-white">
+                    Deep Work: AI Engineering Focus (4x/week)
                   </p>
                 </div>
               </div>
+
+              <button className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-bold text-black hover:bg-emerald-400 transition-colors flex items-center gap-1 shrink-0">
+                Log habit <ArrowRight className="size-3.5" />
+              </button>
             </div>
 
-            {/* Bottom Roadmaps Section */}
-            <div className="mt-6">
-              <p className="text-xs font-bold text-white">Your roadmaps</p>
-              <p className="text-[11px] text-zinc-400">
-                Expand to browse phases, topics and read lessons inline.
-              </p>
-
-              <div className="mt-2.5 rounded-2xl border border-[#0d402e] bg-[#05261b] p-3.5 flex items-center justify-between">
-                <div className="flex items-center gap-2.5 text-xs font-medium text-zinc-200">
-                  <BookOpen className="size-4 text-emerald-400" />
-                  <span>Data Engineering to Data Science: Intermediate Roadmap</span>
+            {/* Main Remi AI Assistant Panel */}
+            <div className="rounded-2xl border border-[#0d402e] bg-[#042419] p-5 sm:p-7 shadow-xs flex flex-col justify-between">
+              {/* Remi Header */}
+              <div className="flex items-center justify-between border-b border-[#0d402e]/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="grid size-5 place-items-center rounded-full bg-emerald-500/20 text-emerald-400">
+                    <Sparkles className="size-3" />
+                  </div>
+                  <span className="font-display font-bold text-sm text-white">Remi</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] text-zinc-400">0/91</span>
-                  <ChevronRight className="size-4 text-zinc-500" />
+                <div className="flex items-center gap-2 text-zinc-500 text-xs">
+                  <Plus className="size-3.5 hover:text-white cursor-pointer" />
+                  <Maximize2 className="size-3.5 hover:text-white cursor-pointer" />
+                </div>
+              </div>
+
+              {/* Remi Central Greeting */}
+              <div className="py-6 sm:py-8 text-center">
+                <img
+                  src={remiLogo}
+                  alt="Remi"
+                  className="mx-auto size-14 object-cover"
+                />
+                <h3 className="mt-3 font-display text-xl sm:text-2xl font-bold text-white">
+                  Hi, I'm Remi.
+                </h3>
+                <p className="mx-auto mt-2 max-w-lg text-xs sm:text-sm leading-relaxed text-zinc-400">
+                  Build study roadmaps, read and synthesize PDFs, generate rich math and note
+                  pages, plan habits and goals, or organize your tasks — all in one structured
+                  workspace.
+                </p>
+
+                {/* Suggestions Pills */}
+                <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
+                  <span className="rounded-full border border-[#0d402e] bg-[#021810] px-3.5 py-1.5 text-xs text-zinc-300">
+                    Build a study roadmap for this topic
+                  </span>
+                  <span className="rounded-full border border-[#0d402e] bg-[#021810] px-3.5 py-1.5 text-xs text-zinc-300">
+                    Generate a notebook with formulas
+                  </span>
+                  <span className="rounded-full border border-[#0d402e] bg-[#021810] px-3.5 py-1.5 text-xs text-zinc-300">
+                    Add tasks and habits for today
+                  </span>
+                </div>
+              </div>
+
+              {/* Bottom Input Box */}
+              <div className="rounded-2xl border border-emerald-500/50 bg-[#021810] p-3 shadow-inner">
+                <p className="text-xs text-zinc-500">What do you want to create or ask?</p>
+                <div className="mt-3 flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-3 text-zinc-500">
+                    <Paperclip className="size-4 hover:text-zinc-300 cursor-pointer" />
+                    <Mic className="size-4 hover:text-zinc-300 cursor-pointer" />
+                  </div>
+                  <div className="grid size-6 place-items-center rounded-full bg-emerald-500 text-black">
+                    <CornerDownLeft className="size-3.5 stroke-[2.5]" />
+                  </div>
                 </div>
               </div>
             </div>
