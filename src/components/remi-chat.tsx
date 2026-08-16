@@ -588,9 +588,16 @@ export function RemiChat({
       const lowerName = (f.filename ?? "").toLowerCase();
       const isPdf = lowerName.endsWith(".pdf") || f.mediaType === "application/pdf";
 
-      // Try to get the raw File object from the blob URL or sourceFile
+      // Try to get the raw File object from the sourceFile or blob URL
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let rawFile: File | null = (f as any).sourceFile ?? null;
+      const source = (f as any).sourceFile;
+      let rawFile: File | null =
+        source instanceof File
+          ? source
+          : source instanceof Blob
+            ? new File([source], f.filename ?? "file", { type: f.mediaType ?? source.type })
+            : null;
+
       if (!rawFile && f.url && f.url.startsWith("blob:")) {
         try {
           const res = await fetch(f.url);

@@ -632,16 +632,32 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         // --- 2. Handle uploadedDocuments references (pre-uploaded directly to Supabase Storage) ---
-        // The client already uploaded these files directly to storage; we inject an explicit instruction
-        // directing Remi to call readDocument with the document_id.
         const rawUploaded = Array.isArray(body.uploadedDocuments) ? body.uploadedDocuments : [];
         for (const ref of rawUploaded) {
           if (typeof ref.resourceId !== "string" || typeof ref.filename !== "string") continue;
-          attachedDocBlocks.push(
-            `\n\n## Uploaded Document Attached by User: "${ref.filename}" (Document ID: ${ref.resourceId})` +
-            `\nThe user attached this file to their message.` +
-            `\nACTION REQUIRED: You MUST immediately call the \`readDocument\` tool with document_id: "${ref.resourceId}" and query: "${lastUserText || "summarize document"}" to read its content and answer the user. NEVER refuse or ask the user to paste text.`,
-          );
+
+          // Fetch document status and preview from database
+          const { data: docRecord } = await supabase
+            .from("study_resources")
+            .select("id, title, extracted_text, summary, page_count")
+            .eq("id", ref.resourceId)
+            .maybeSingle();
+
+          const extractedText = docRecord?.extracted_text;
+          if (extractedText && extractedText.trim().length > 0) {
+            attachedTextMap[ref.filename] = extractedText;
+            attachedDocBlocks.push(
+              `\n\n## Uploaded Document: "${ref.filename}" (Document ID: ${ref.resourceId}, ${docRecord.page_count ?? "N/A"} pages)` +
+              `\nDocument content preview (first 10,000 characters):\n${extractedText.slice(0, 10000)}` +
+              `\n\nUse \`readDocument("${ref.resourceId}", query)\` for specific chapters or in-depth semantic search.`,
+            );
+          } else {
+            attachedDocBlocks.push(
+              `\n\n## Uploaded Document Attached by User: "${ref.filename}" (Document ID: ${ref.resourceId})` +
+              `\nThe user attached this file to their message.` +
+              `\nACTION REQUIRED: You MUST immediately call the \`readDocument\` tool with document_id: "${ref.resourceId}" and query: "${lastUserText || "summarize document"}" to read its content and answer the user. NEVER refuse or ask the user to paste text.`,
+            );
+          }
         }
 
         const userContext = await buildUserContext(supabase);
