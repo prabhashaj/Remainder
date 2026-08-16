@@ -1,13 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, FileSearch, Menu, X } from "lucide-react";
+import { ArrowRight, Check, FileSearch, Menu, Sparkles, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import remiLogo from "@/assets/remi.png";
 import studyspaceImg from "@/assets/Studyspace.png";
-import dashboardImg from "@/assets/Remispace_dashboard.png";
 import roadmapsImg from "@/assets/roadmaps.png";
 import tasksImg from "@/assets/tasks.png";
+import remichatImg from "@/assets/remichat.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -365,8 +365,8 @@ export default function Landing() {
             {activeTab === "remi" && (
               <div className="overflow-hidden rounded-3xl">
                 <img
-                  src={dashboardImg}
-                  alt="Remi AI Agent — Dashboard view"
+                  src={remichatImg}
+                  alt="Chat with Remi — AI learning assistant"
                   className="w-full object-cover object-top"
                   loading="lazy"
                 />
