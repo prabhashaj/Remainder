@@ -39,7 +39,7 @@ function RoadmapsPage() {
     <div className="mx-auto max-w-4xl px-5 pb-32 pt-8 sm:px-8">
       <h1 className="font-display text-3xl font-bold">Roadmaps</h1>
       <p className="mt-2 text-muted-foreground">
-        Ask Remi to plan a topic and it shows up here, ready to work through.
+        Remi breaks any subject into phases, topics, and daily sub-topics — with lessons, checkpoints, and flashcards built in.
       </p>
 
       <div className="mt-7 space-y-4">
@@ -54,7 +54,7 @@ function RoadmapsPage() {
           <div className="panel-soft px-6 py-12 text-center">
             <Compass className="mx-auto size-7 text-primary" />
             <p className="mt-4 text-sm text-muted-foreground">
-              No roadmaps yet. Tell Remi what you want to learn.
+              No roadmaps yet. Tell Remi the subject, your skill level, and your goal — it builds the full curriculum.
             </p>
             <Button asChild className="press mt-5 rounded-2xl">
               <Link to="/conversation">Plan something with Remi</Link>

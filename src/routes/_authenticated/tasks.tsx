@@ -98,7 +98,7 @@ function TasksPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
       <h1 className="font-display text-3xl font-bold">Tasks</h1>
-      <p className="mt-2 text-muted-foreground">Small steps, kept somewhere safe.</p>
+      <p className="mt-2 text-muted-foreground">Tasks, due dates, and priorities — linked to your roadmaps and daily study rhythm.</p>
 
       <div className="card-soft mt-6 px-5 py-4">
         <div className="flex items-center justify-between text-sm">

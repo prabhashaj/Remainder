@@ -768,7 +768,7 @@ export function RemiChat({
                   Hi, I'm Remi.
                 </h1>
                 <p className="mx-auto mt-2 max-w-xl text-sm sm:text-base leading-relaxed text-muted-foreground">
-                  Your autonomous learning partner—ask me to generate structured study roadmaps, synthesize research documents, build KaTeX math notebooks, or guide your daily focus.
+                  Build study roadmaps, read and synthesize PDFs, generate KaTeX math notebooks, plan habits and goals, or organize your tasks — all in one structured workspace.
                 </p>
                 {suggestions.length > 0 && (
                   <div className="mt-5 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">

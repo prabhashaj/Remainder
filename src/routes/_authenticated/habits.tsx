@@ -96,7 +96,7 @@ function HabitsPage() {
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
       <h1 className="font-display text-3xl font-bold">Habits</h1>
       <p className="mt-2 text-muted-foreground">
-        Missing a day is fine. Coming back is the whole trick.
+        Track daily rituals, preserve streaks, and build the consistent weekly rhythm that compounds into real results.
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">

@@ -130,7 +130,7 @@ function FocusPage() {
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
       <h1 className="font-display text-3xl font-bold">Focus mode</h1>
       <p className="mt-2 text-muted-foreground">
-        One thing, one window. Notes stay right beside the timer.
+        Pomodoro intervals with ambient soundscapes — Rain, Café, Forest, or White Noise — for deep, distraction-free work.
       </p>
 
       <section className="panel-soft mt-6 p-7 text-center">

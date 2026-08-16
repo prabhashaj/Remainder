@@ -86,7 +86,7 @@ function GoalsPage() {
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
       <h1 className="font-display text-3xl font-bold">Goals</h1>
       <p className="mt-2 text-muted-foreground">
-        Name what matters, then let Remi help you shrink it into steps.
+        Set ambitious long-term goals and let Remi decompose them into concrete, measurable milestones with progress tracking.
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">

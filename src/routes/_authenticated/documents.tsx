@@ -317,7 +317,7 @@ function DocumentsPage() {
         <div>
           <h1 className="font-display text-3xl font-bold">Documents</h1>
           <p className="mt-2 text-muted-foreground">
-            Every file you've attached to Remi, in one place.
+            Upload PDFs, slides, and articles — Remi indexes them for synthesis, active-recall flashcards, and Q&amp;A with exact page citations.
           </p>
         </div>
         <Button
