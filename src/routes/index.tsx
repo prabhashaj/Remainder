@@ -110,7 +110,7 @@ function WorkspaceShowcase() {
       initial={{ opacity: 0, y: 32 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0 : 0.8, delay: 0.18 }}
-      className="relative mt-12 overflow-hidden rounded-3xl border border-[#0d402e] shadow-2xl"
+      className="relative mt-12 overflow-hidden rounded-3xl shadow-2xl"
     >
       <img
         src={studyspaceImg}
