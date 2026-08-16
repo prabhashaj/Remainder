@@ -375,7 +375,7 @@ export default function Landing() {
     {
       icon: BookOpen,
       title: "Sensory Block-Based Notes",
-      body: "A clean, beautiful canvas with full KaTeX math equation rendering, code blocks, toggleable callouts, and handcrafted pastel color themes.",
+      body: "A clean, beautiful canvas with instant mathematical equation rendering, code blocks, toggleable callouts, and handcrafted color themes.",
     },
     {
       icon: CalendarHeart,
@@ -557,7 +557,7 @@ export default function Landing() {
               { id: "roadmaps", label: "Study Roadmaps", icon: Compass },
               { id: "documents", label: "Document AI & PDFs", icon: FileSearch },
               { id: "focus", label: "Focus Studio & Audio", icon: Focus },
-              { id: "notes", label: "Notes & KaTeX Math", icon: BookOpen },
+              { id: "notes", label: "Notes & Math Formulas", icon: BookOpen },
               { id: "habits", label: "Habits & Rituals", icon: CalendarHeart },
             ].map((t) => (
               <button
@@ -752,7 +752,7 @@ export default function Landing() {
                     Module 04 · Mathematical Canvas
                   </span>
                   <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Block-based notebook with native KaTeX rendering.
+                    Block-based notebook with crystal-clear mathematical equation rendering.
                   </h3>
                   <p className="mt-3 text-base leading-relaxed text-zinc-300">
                     A calm, fluid text editor that handles equations, syntax-highlighted code,
@@ -761,8 +761,7 @@ export default function Landing() {
                   </p>
                   <ul className="mt-6 space-y-3 text-sm text-zinc-200">
                     <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Instant LaTeX math rendering with
-                      KaTeX
+                      <Check className="size-4.5 text-emerald-400" /> Instant mathematical formulas & equation formatting
                     </li>
                     <li className="flex items-center gap-2.5">
                       <Check className="size-4.5 text-emerald-400" /> 10+ handcrafted sensory color
@@ -781,7 +780,7 @@ export default function Landing() {
                 <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 font-mono text-xs shadow-xs text-white">
                   <div className="border-b border-[#0d402e] pb-2 text-zinc-400 flex items-center justify-between">
                     <span>linear_algebra_notes.md</span>
-                    <span className="text-[10px] text-emerald-400">KaTeX Enabled</span>
+                    <span className="text-[10px] text-emerald-400">Math Formulas Enabled</span>
                   </div>
                   <div className="mt-3 space-y-2">
                     <p className="text-emerald-400 font-bold"># Eigenvalues & Eigenvectors</p>
