@@ -1,26 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  ArrowRight,
-  BookOpen,
-  CalendarHeart,
-  Check,
-  ChevronRight,
-  Compass,
-  FileSearch,
-  FileText,
-  Focus,
-  Menu,
-  MessageSquareText,
-  Music,
-  Play,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { ArrowRight, Check, FileSearch, Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import remiLogo from "@/assets/remi.png";
 import studyspaceImg from "@/assets/Studyspace.png";
+import dashboardImg from "@/assets/Remispace_dashboard.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -144,7 +129,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "roadmaps" | "documents" | "focus" | "notes" | "habits"
+    "roadmaps" | "notebook" | "remi" | "study" | "habits" | "incontext"
   >("roadmaps");
 
   useEffect(() => {
@@ -155,38 +140,7 @@ export default function Landing() {
     });
   }, [navigate]);
 
-  const features = [
-    {
-      icon: Compass,
-      title: "Intelligent Study Roadmaps",
-      body: "Remi transforms any ambition—from mastering quantum mechanics to learning Spanish—into structured milestones, checkpoints, and bite-sized daily lessons.",
-    },
-    {
-      icon: FileSearch,
-      title: "Document & PDF Intelligence",
-      body: "Upload textbooks, research papers, and lecture slides. Interactively summarize, extract key theorems, search across pages, and test yourself with flashcards.",
-    },
-    {
-      icon: Focus,
-      title: "Ambient Focus Studio",
-      body: "Enter distraction-free flow with customizable Pomodoro timers, real-time meteorological weather, and relaxing ambient audio soundscapes.",
-    },
-    {
-      icon: BookOpen,
-      title: "Sensory Block-Based Notes",
-      body: "A clean, beautiful canvas with instant mathematical equation rendering, code blocks, toggleable callouts, and handcrafted color themes.",
-    },
-    {
-      icon: CalendarHeart,
-      title: "Habit Rituals & Momentum",
-      body: "Build lasting routines without the guilt. Visual habit heatmaps, streak preservation, and daily task management keep you grounded.",
-    },
-    {
-      icon: Sparkles,
-      title: "Remi AI Learning Companion",
-      body: "An encouraging coach with persistent memory that remembers your past questions, schedule, and learning style across every session.",
-    },
-  ];
+
 
   return (
     <main className="min-h-screen bg-[#021810] text-[#f4f4f5] selection:bg-emerald-500/30 font-sans">
@@ -316,355 +270,242 @@ export default function Landing() {
         <WorkspaceShowcase />
       </section>
 
-      {/* 6 Core Feature Pillars */}
-      <section id="features" className="mx-auto max-w-6xl px-6 py-20 border-t border-[#0d402e]/60">
-        <SectionTitle
-          eyebrow="Crafted for deep thinking"
-          title="Everything you need to master complex subjects."
-          body="Traditional note apps are passive containers. Generic AI chatbots lose your context. Remispace unites structure, materials, and coaching into one harmonious rhythm."
-        />
-
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((f) => (
-            <Reveal
-              key={f.title}
-              className="group rounded-3xl border border-[#0d402e] bg-[#042419] p-7 shadow-lg transition hover:-translate-y-1 hover:border-emerald-500/40 hover:bg-[#062f21]"
-            >
-              <div className="grid size-11 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-400 transition-colors group-hover:bg-emerald-500 group-hover:text-black">
-                <f.icon className="size-5.5" />
-              </div>
-              <h3 className="mt-5 font-display text-xl font-bold text-white">{f.title}</h3>
-              <p className="mt-2.5 text-sm leading-relaxed text-zinc-400">{f.body}</p>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* Interactive Feature Deep Dive (Tabbed Showcase) */}
-      <section id="interactive-preview" className="bg-[#02140d] border-y border-[#0d402e] px-6 py-20">
+      {/* Interactive Feature Showcase — 6 Core Features */}
+      <section id="features" className="bg-[#02140d] border-y border-[#0d402e] px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <SectionTitle
             center
-            eyebrow="Interactive Experience"
-            title="Explore how Remispace powers your daily study."
-            body="Click through each core module below to see how Remispace organizes your thoughts, materials, and focus."
+            eyebrow="What Remispace can do"
+            title="Six tools. One calm workspace."
+            body="Click each feature to see exactly how it looks and works — no marketing fluff, just the real product."
           />
 
-          {/* Tab Navigation */}
+          {/* Tab Strip */}
           <div className="mt-10 flex flex-wrap justify-center gap-2">
             {[
-              { id: "roadmaps", label: "Study Roadmaps", icon: Compass },
-              { id: "documents", label: "Document AI & PDFs", icon: FileSearch },
-              { id: "focus", label: "Focus Studio & Audio", icon: Focus },
-              { id: "notes", label: "Notes & Math Formulas", icon: BookOpen },
-              { id: "habits", label: "Habits & Rituals", icon: CalendarHeart },
+              { id: "roadmaps", label: "Roadmaps" },
+              { id: "notebook",  label: "Notebook" },
+              { id: "remi",      label: "Remi Agent" },
+              { id: "study",     label: "Study Space" },
+              { id: "habits",    label: "Habits · Goals · Tasks" },
+              { id: "incontext", label: "In-Context Learning" },
             ].map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setActiveTab(t.id as typeof activeTab)}
-                className={`press flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition-all ${
+                className={`press rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all ${
                   activeTab === t.id
                     ? "bg-emerald-500 text-black shadow-lg font-bold"
                     : "bg-[#042419] border border-[#0d402e] text-zinc-400 hover:text-white hover:bg-[#062f21]"
                 }`}
               >
-                <t.icon className="size-4" />
                 {t.label}
               </button>
             ))}
           </div>
 
-          {/* Tab Content Display */}
-          <Reveal className="mt-8 overflow-hidden rounded-3xl border border-[#0d402e] bg-[#042419] p-6 md:p-10 shadow-2xl">
+          {/* Showcase Panel */}
+          <div className="mt-8 overflow-hidden rounded-3xl border border-[#0d402e] bg-[#042419] shadow-2xl">
+            {/* ── Roadmaps ── */}
             {activeTab === "roadmaps" && (
-              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Module 01 · Structured Mastery
-                  </span>
+              <div className="grid gap-0 lg:grid-cols-[1fr_1.4fr]">
+                <div className="p-8 md:p-10 flex flex-col justify-center">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Feature 01 · Structured Mastery</span>
                   <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Transform any subject into a step-by-step curriculum.
+                    AI-generated learning roadmaps, phase by phase.
                   </h3>
                   <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    Whether you're preparing for technical interviews, learning machine learning, or
-                    studying history, Remi decomposes the syllabus into phases, milestones, and
-                    actionable daily lessons that prevent overwhelm.
+                    Tell Remi what you want to master — from machine learning to quantum mechanics — and it builds a full curriculum with phases, topics, sub-topics, lessons, checkpoints, and flashcards.
                   </p>
                   <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Automatic checkpoint & quiz
-                      generation
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Adaptive pacing based on your
-                      learning speed
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Directly connected to your daily
-                      task list
-                    </li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Multi-phase structured curricula from any subject</li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Auto-generated checkpoints and active-recall quizzes</li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Linked to daily tasks, study sessions, and progress</li>
                   </ul>
-                  <div className="mt-8">
-                    <PrimaryLink>Build your first roadmap</PrimaryLink>
-                  </div>
+                  <div className="mt-8"><PrimaryLink>Build your first roadmap</PrimaryLink></div>
                 </div>
-
-                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 shadow-xs">
-                  <div className="flex items-center justify-between border-b border-[#0d402e] pb-3">
-                    <span className="text-xs font-bold text-white">Curriculum Preview</span>
-                    <span className="text-[11px] text-emerald-400 font-semibold">Phase 1 / 4 Complete</span>
+                <div className="bg-[#021810] border-l border-[#0d402e] p-6 space-y-3">
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-medium text-white flex items-center justify-between">
+                    <span>✓ Phase 1: Mathematical Foundations &amp; Linear Algebra</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">PASSED</span>
                   </div>
-                  <div className="mt-4 space-y-2.5">
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-medium text-white flex items-center justify-between">
-                      <span>✓ 1. Mathematical Foundations & Linear Algebra</span>
-                      <span className="text-[10px] text-emerald-400 font-bold uppercase">Passed</span>
-                    </div>
-                    <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/20 p-3 text-xs font-semibold text-emerald-300 flex items-center justify-between">
-                      <span>→ 2. Loss Functions & Gradient Descent Optimization</span>
-                      <span className="text-[10px] bg-emerald-500 text-black px-2 py-0.5 rounded-md font-bold">
-                        Active
-                      </span>
-                    </div>
-                    <div className="rounded-xl border border-[#0d402e] bg-[#05261b] p-3 text-xs font-medium text-zinc-400 flex items-center justify-between">
-                      <span>3. Neural Network Backpropagation from Scratch</span>
-                      <span className="text-[10px] text-zinc-500">Upcoming</span>
-                    </div>
-                    <div className="rounded-xl border border-[#0d402e] bg-[#05261b] p-3 text-xs font-medium text-zinc-400 flex items-center justify-between">
-                      <span>4. Transformers & Multi-Head Self Attention</span>
-                      <span className="text-[10px] text-zinc-500">Upcoming</span>
-                    </div>
+                  <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/15 p-4 text-xs font-semibold text-emerald-300 flex items-center justify-between">
+                    <span>→ Phase 2: Loss Functions &amp; Gradient Descent</span>
+                    <span className="text-[10px] bg-emerald-500 text-black px-2 py-0.5 rounded-md font-bold">Active</span>
+                  </div>
+                  <div className="rounded-xl border border-[#0d402e] bg-[#05261b] p-4 text-xs font-medium text-zinc-400 flex items-center justify-between">
+                    <span>Phase 3: Neural Network Backpropagation</span>
+                    <span className="text-[10px] text-zinc-500">Upcoming</span>
+                  </div>
+                  <div className="rounded-xl border border-[#0d402e] bg-[#05261b] p-4 text-xs font-medium text-zinc-400 flex items-center justify-between">
+                    <span>Phase 4: Transformers &amp; Multi-Head Attention</span>
+                    <span className="text-[10px] text-zinc-500">Upcoming</span>
+                  </div>
+                  <div className="mt-2 pt-3 border-t border-[#0d402e] flex items-center justify-between text-[11px] text-zinc-400">
+                    <span>Overall progress</span>
+                    <span>12 / 91 sub-topics</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[#0a3324]">
+                    <div className="h-full w-[13%] rounded-full bg-emerald-500" />
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === "documents" && (
-              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Module 02 · Deep Document Research
-                  </span>
+            {/* ── Notebook ── */}
+            {activeTab === "notebook" && (
+              <div className="grid gap-0 lg:grid-cols-[1fr_1.4fr]">
+                <div className="p-8 md:p-10 flex flex-col justify-center">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Feature 02 · Mathematical Canvas</span>
                   <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Interactive PDF reader with theorem extraction.
+                    Block-based notes with live mathematical equation rendering.
                   </h3>
                   <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    Upload textbooks, lecture slide decks, and dense academic papers. Remi indexes
-                    your materials, allowing you to ask questions with exact page references,
-                    generate pre-reading briefs, and extract formulas into your notes.
+                    A calm, fluid editor that handles equations, syntax-highlighted code, nested subpages, and toggle lists effortlessly. Remi can generate entire notebooks from a single prompt.
                   </p>
                   <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Instant document synthesis &
-                      chapter summaries
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Page-by-page citations with inline
-                      snippets
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> 1-click flashcard deck generation
-                    </li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Instant mathematical formula &amp; equation formatting</li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> 10+ handcrafted sensory color themes</li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> AI-generated notebooks from any topic or PDF</li>
                   </ul>
-                  <div className="mt-8">
-                    <PrimaryLink>Try Document AI</PrimaryLink>
-                  </div>
+                  <div className="mt-8"><PrimaryLink>Start your notebook</PrimaryLink></div>
                 </div>
-
-                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 shadow-xs">
-                  <div className="flex items-center gap-2 border-b border-[#0d402e] pb-3">
-                    <FileText className="size-4 text-emerald-400" />
-                    <span className="text-xs font-bold text-white truncate">
-                      Paper: Deep Residual Learning for Image Recognition.pdf
-                    </span>
-                  </div>
-                  <div className="mt-4 rounded-xl bg-[#05261b] border border-[#0d402e] p-3 text-xs leading-relaxed text-zinc-300">
-                    <span className="font-semibold text-white">Key Concept Extracted:</span>
-                    "Residual mapping allows layers to fit residual functions instead of unreferenced ones, preventing the degradation problem in deep networks."
-                  </div>
-                  <div className="mt-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 text-xs text-emerald-300 font-medium">
-                    💡 Remi generated 8 review flashcards for this section.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "focus" && (
-              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Module 03 · Ambient Focus Studio
-                  </span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Distraction-free flow state for deep work.
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    Silence the noise of the internet. The Focus Studio provides customizable
-                    Pomodoro intervals, real-time local weather updates, calming background audio,
-                    and end-of-session reflection logs.
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Fullscreen deep work mode with
-                      countdown
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Ambient soundscapes: Rain, Coffee
-                      Shop, Forest, White Noise
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Live weather integration & gentle
-                      breaks
-                    </li>
-                  </ul>
-                  <div className="mt-8">
-                    <PrimaryLink>Open Focus Studio</PrimaryLink>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-6 text-center shadow-xs">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                    POMODORO INTERVAL
-                  </span>
-                  <div className="mt-3 text-5xl font-extrabold tracking-tight text-white font-mono">
-                    25:00
-                  </div>
-                  <p className="mt-2 text-xs text-emerald-400 font-semibold">
-                    Rainy Afternoon · 22°C Overcast
-                  </p>
-                  <div className="mt-6 flex justify-center gap-3">
-                    <button className="rounded-xl bg-emerald-500 px-6 py-2.5 text-xs font-bold text-black shadow-lg press flex items-center gap-1.5">
-                      <Play className="size-3.5 fill-current" /> Start Focus
-                    </button>
-                    <button className="rounded-xl border border-[#0d402e] bg-[#062b1e] px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-[#093828] transition-colors flex items-center gap-1.5">
-                      <Music className="size-3.5" /> Ambient Audio
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "notes" && (
-              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Module 04 · Mathematical Canvas
-                  </span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Block-based notebook with crystal-clear mathematical equation rendering.
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    A calm, fluid text editor that handles equations, syntax-highlighted code,
-                    nested subpages, and interactive toggle lists effortlessly. Never compromise
-                    between beauty and technical rigor.
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Instant mathematical formulas & equation formatting
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> 10+ handcrafted sensory color
-                      themes
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Seamless inline Remi assistant
-                      prompts
-                    </li>
-                  </ul>
-                  <div className="mt-8">
-                    <PrimaryLink>Start your notebook</PrimaryLink>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 font-mono text-xs shadow-xs text-white">
+                <div className="bg-[#021810] border-l border-[#0d402e] p-6 font-mono text-xs text-white space-y-3">
                   <div className="border-b border-[#0d402e] pb-2 text-zinc-400 flex items-center justify-between">
                     <span>linear_algebra_notes.md</span>
                     <span className="text-[10px] text-emerald-400">Math Formulas Enabled</span>
                   </div>
-                  <div className="mt-3 space-y-2">
-                    <p className="text-emerald-400 font-bold"># Eigenvalues & Eigenvectors</p>
-                    <p className="text-zinc-300 font-sans">
-                      A non-zero vector v is an eigenvector of matrix A with eigenvalue λ if:
-                    </p>
-                    <div className="rounded-lg bg-[#05261b] border border-[#0d402e] p-2.5 text-center text-white font-sans text-sm">
-                      A v = λ v ⟺ (A - λ I)v = 0
-                    </div>
+                  <p className="text-emerald-400 font-bold text-sm"># Eigenvalues &amp; Eigenvectors</p>
+                  <p className="text-zinc-300 font-sans text-sm leading-relaxed">A non-zero vector <strong>v</strong> is an eigenvector of matrix <strong>A</strong> with eigenvalue <strong>λ</strong> if:</p>
+                  <div className="rounded-xl bg-[#05261b] border border-[#0d402e] p-3.5 text-center text-white font-sans text-base font-semibold">
+                    A v = λ v &nbsp;⟺&nbsp; (A − λI)v = 0
+                  </div>
+                  <p className="text-zinc-300 font-sans text-sm leading-relaxed mt-1">To find eigenvalues, solve the <em>characteristic equation</em>:</p>
+                  <div className="rounded-xl bg-[#05261b] border border-[#0d402e] p-3.5 text-center text-white font-sans text-base font-semibold">
+                    det(A − λI) = 0
+                  </div>
+                  <div className="pt-2 flex items-center gap-2 text-[10px] text-zinc-500">
+                    <span className="rounded bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 font-sans">Remi</span>
+                    <span>Generated from CS50 Linear Algebra lecture notes</span>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* ── Remi Agent ── */}
+            {activeTab === "remi" && (
+              <div className="overflow-hidden rounded-3xl">
+                <img
+                  src={dashboardImg}
+                  alt="Remi AI Agent — Dashboard view"
+                  className="w-full object-cover object-top"
+                  loading="lazy"
+                />
+              </div>
+            )}
+
+            {/* ── Study Space ── */}
+            {activeTab === "study" && (
+              <div className="overflow-hidden rounded-3xl">
+                <img
+                  src={studyspaceImg}
+                  alt="Remispace Study Space — distraction-free learning hub"
+                  className="w-full object-cover object-top"
+                  loading="lazy"
+                />
+              </div>
+            )}
+
+            {/* ── Habits · Goals · Tasks ── */}
             {activeTab === "habits" && (
-              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Module 05 · Habit Rituals & Streaks
-                  </span>
+              <div className="grid gap-0 lg:grid-cols-[1fr_1.4fr]">
+                <div className="p-8 md:p-10 flex flex-col justify-center">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Feature 05 · Habit Rituals &amp; Momentum</span>
                   <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Visible momentum that celebrates small efforts.
+                    Habits, goals, and tasks — all wired together.
                   </h3>
                   <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    Big achievements are simply daily rituals stacked over time. Remispace's habit
-                    tracker offers visual completion heatmaps, streak shields, and intelligent
-                    rescheduling so missing one day never derails your long-term consistency.
+                    Track daily habits with streak preservation, break long-term goals into milestones with progress bars, and manage tasks linked to your roadmap — all from one calm dashboard.
                   </p>
                   <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Daily check-ins with reflection
-                      prompts
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Streak preservation & gentle
-                      reminders
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="size-4.5 text-emerald-400" /> Weekly completion analytics &
-                      insights
-                    </li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Daily habit check-ins with visual streak tracking</li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Long-term goals broken into measurable milestones</li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Tasks with due dates linked to your study rhythm</li>
                   </ul>
-                  <div className="mt-8">
-                    <PrimaryLink>Track your habits</PrimaryLink>
-                  </div>
+                  <div className="mt-8"><PrimaryLink>Start tracking</PrimaryLink></div>
                 </div>
-
-                <div className="rounded-2xl border border-[#0d402e] bg-[#021810] p-5 shadow-xs">
-                  <div className="flex items-center justify-between border-b border-[#0d402e] pb-3">
-                    <span className="text-xs font-bold text-white">Today's Rituals</span>
-                    <span className="text-xs font-semibold text-emerald-400">4 / 4 Completed</span>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-between rounded-xl bg-[#05261b] border border-[#0d402e] p-2.5 text-xs">
+                <div className="bg-[#021810] border-l border-[#0d402e] p-6 space-y-3">
+                  <p className="text-xs font-bold text-white border-b border-[#0d402e] pb-2.5">Today's Rituals &amp; Goals</p>
+                  {[
+                    { label: "Read 30 mins technical paper", streak: "🔥 14 days", done: true },
+                    { label: "Complete 1 Roadmap lesson", streak: "🔥 21 days", done: true },
+                    { label: "Evening review &amp; reflection", streak: "🔥 7 days", done: true },
+                    { label: "Deep Work: AI Engineering Focus", streak: "4x/week", done: false },
+                  ].map((h) => (
+                    <div key={h.label} className="flex items-center justify-between rounded-xl bg-[#05261b] border border-[#0d402e] p-2.5 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-black text-[9px] font-bold">
-                          ✓
+                        <span className={`grid size-4 place-items-center rounded-full text-[9px] font-bold ${ h.done ? "bg-emerald-500 text-black" : "border border-[#0d402e] text-zinc-500" }`}>
+                          {h.done ? "✓" : ""}
                         </span>
-                        <span className="font-medium text-white">Read 30 mins technical paper</span>
+                        <span className={`font-medium ${ h.done ? "text-white" : "text-zinc-400" }`} dangerouslySetInnerHTML={{ __html: h.label }} />
                       </div>
-                      <span className="text-[11px] text-zinc-400">🔥 14 days</span>
+                      <span className="text-[11px] text-zinc-400">{h.streak}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-[#05261b] border border-[#0d402e] p-2.5 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-black text-[9px] font-bold">
-                          ✓
-                        </span>
-                        <span className="font-medium text-white">Complete 1 Roadmap lesson</span>
-                      </div>
-                      <span className="text-[11px] text-zinc-400">🔥 21 days</span>
+                  ))}
+                  <div className="pt-3 border-t border-[#0d402e]">
+                    <p className="text-[11px] text-zinc-400 font-semibold">Goal: Ship Personal AI Project</p>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#0a3324]">
+                      <div className="h-full w-[62%] rounded-full bg-emerald-500" />
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-[#05261b] border border-[#0d402e] p-2.5 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-black text-[9px] font-bold">
-                          ✓
-                        </span>
-                        <span className="font-medium text-white">Evening review & reflection</span>
-                      </div>
-                      <span className="text-[11px] text-zinc-400">🔥 7 days</span>
-                    </div>
+                    <p className="mt-1 text-[10px] text-zinc-500">62% — 5 of 8 milestones done</p>
                   </div>
                 </div>
               </div>
             )}
-          </Reveal>
+
+            {/* ── In-Context Learning ── */}
+            {activeTab === "incontext" && (
+              <div className="grid gap-0 lg:grid-cols-[1fr_1.4fr]">
+                <div className="p-8 md:p-10 flex flex-col justify-center">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Feature 06 · Document Intelligence</span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
+                    Chat with your PDFs, videos, and lecture slides.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
+                    Upload any document and Remi learns from it instantly — summarize chapters, extract theorems, generate flashcards, and ask questions grounded in your exact material.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Deep PDF reading with exact page citations</li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> YouTube &amp; video transcript summarization</li>
+                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Active-recall flashcard generation from your content</li>
+                  </ul>
+                  <div className="mt-8"><PrimaryLink>Upload a document</PrimaryLink></div>
+                </div>
+                <div className="bg-[#021810] border-l border-[#0d402e] p-6 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-[#0d402e] pb-2.5">
+                    <FileSearch className="size-3.5 text-emerald-400" />
+                    <span className="text-xs font-bold text-white">attention_is_all_you_need.pdf</span>
+                    <span className="ml-auto text-[10px] text-emerald-400 font-semibold">68 pages indexed</span>
+                  </div>
+                  <div className="rounded-xl bg-[#05261b] border border-[#0d402e] p-3.5">
+                    <p className="text-[11px] text-zinc-400 font-semibold">You asked:</p>
+                    <p className="mt-1 text-xs text-white">What is the core idea behind multi-head self-attention?</p>
+                  </div>
+                  <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3.5">
+                    <p className="text-[11px] text-emerald-400 font-semibold">Remi · Page 4 citation</p>
+                    <p className="mt-1 text-xs text-zinc-200 leading-relaxed">
+                      Multi-head attention runs <em>h</em> parallel attention functions on different linear projections of Q, K, V — allowing the model to jointly attend to information from different representation subspaces.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button className="rounded-lg bg-[#05261b] border border-[#0d402e] px-3 py-1.5 text-[11px] text-zinc-300 font-medium">Generate flashcards</button>
+                    <button className="rounded-lg bg-[#05261b] border border-[#0d402e] px-3 py-1.5 text-[11px] text-zinc-300 font-medium">Add to notebook</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
