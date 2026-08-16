@@ -6,38 +6,39 @@ import {
   BookOpen,
   CalendarHeart,
   Check,
-  ChevronRight,
-  CircleHelp,
   Compass,
+  FileSearch,
   FileText,
   Focus,
-  GraduationCap,
-  Leaf,
   Menu,
+  Music,
+  Play,
   Sparkles,
   X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import remiLogo from "@/assets/remi.png";
-import heroImage from "@/assets/hero-study.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Remainder — a warm notebook with an AI learning coach" },
+      { title: "Remispace — A quiet sanctuary for deep learning & structured roadmaps" },
       {
         name: "description",
         content:
-          "Track your days, build habits, and let Remi turn any topic into a study roadmap you actually finish — all inside one calm workspace.",
+          "Block-based notes, habit rituals, intelligent PDF research, and structured study roadmaps with Remi — a calm AI learning coach designed for lifelong learners.",
       },
-      { property: "og:title", content: "Remainder — a warm notebook with an AI learning coach" },
+      {
+        property: "og:title",
+        content: "Remispace — A quiet sanctuary for deep learning & structured roadmaps",
+      },
       {
         property: "og:description",
         content:
-          "Notes, habits, goals and focused learning sessions, with an encouraging AI coach called Remi.",
+          "Notes, habits, goals, ambient focus sessions, and structured study roadmaps in one warm, distraction-free workspace.",
       },
     ],
   }),
@@ -54,36 +55,13 @@ function Reveal({ children, className = "" }: { children: ReactNode; className?:
       variants={fade}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, amount: 0.18 }}
+      viewport={{ once: true, amount: 0.15 }}
       transition={{ duration: reduced ? 0 : 0.55, ease: "easeOut" }}
     >
       {children}
     </motion.div>
   );
 }
-
-const features = [
-  {
-    icon: BookHeart,
-    title: "A notebook that bends",
-    body: "Nested pages, checklists, toggles and little databases — structure only where you want it.",
-  },
-  {
-    icon: CalendarHeart,
-    title: "Days you can see",
-    body: "Habit streaks, mood check-ins and progress rings that make small effort feel visible.",
-  },
-  {
-    icon: Compass,
-    title: "Roadmaps, not rabbit holes",
-    body: "Remi breaks any topic into phases and drops the steps straight into your tracker.",
-  },
-  {
-    icon: Leaf,
-    title: "Focus that stays put",
-    body: "Open resources inside Remainder, jot notes beside them, and finish with a gentle summary.",
-  },
-];
 
 function PrimaryLink({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
@@ -123,7 +101,7 @@ function SectionTitle({
         </p>
       )}
       <h2
-        className={`text-balance text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl ${
+        className={`text-balance text-4xl font-bold leading-[1.15] tracking-tight md:text-5xl font-display ${
           inverse ? "text-primary-foreground" : "text-foreground"
         }`}
       >
@@ -142,122 +120,162 @@ function SectionTitle({
   );
 }
 
-function WorkspacePreview() {
+/* -------------------------------------------------------------------------- */
+/* Interactive Workspace Showcase Mockup                                      */
+/* -------------------------------------------------------------------------- */
+function WorkspaceShowcase() {
   const reduced = useReducedMotion();
-  const nav = ["Home", "Learn", "Notes", "Goals", "Habits", "Focus", "Reflections"];
+  const nav = [
+    { label: "Dashboard", icon: BookHeart },
+    { label: "Roadmaps", icon: Compass },
+    { label: "Documents", icon: FileSearch },
+    { label: "Habits", icon: CalendarHeart },
+    { label: "Focus Studio", icon: Focus },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 32 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0 : 0.8, delay: 0.18 }}
-      className="relative mt-14 overflow-hidden rounded-3xl border border-border/80 bg-card/60 p-2.5 shadow-lift backdrop-blur-xl md:p-4"
+      className="relative mt-12 overflow-hidden rounded-3xl border border-border/80 bg-card/70 p-2.5 shadow-lift backdrop-blur-xl md:p-4 text-left"
     >
-      <div className="flex min-h-[440px] overflow-hidden rounded-2xl border border-border bg-background text-left md:min-h-[500px]">
-        <aside className="hidden w-[170px] shrink-0 border-r border-border bg-muted/30 p-4 md:block">
-          <div className="flex items-center gap-2">
-            <img src={remiLogo} alt="Remi logo" className="size-6 rounded-lg object-cover" />
-            <span className="font-display font-bold text-sm">Remainder</span>
+      <div className="flex min-h-[460px] overflow-hidden rounded-2xl border border-border bg-background md:min-h-[520px]">
+        {/* Left Sidebar */}
+        <aside className="hidden w-[190px] shrink-0 border-r border-border bg-muted/20 p-4 md:block">
+          <div className="flex items-center gap-2.5">
+            <img src={remiLogo} alt="Remispace logo" className="size-6 rounded-lg object-cover" />
+            <span className="font-display font-bold text-sm text-foreground">Remispace</span>
           </div>
-          <div className="mt-7 space-y-1">
+
+          <div className="mt-6 space-y-1">
             {nav.map((item, i) => (
               <div
-                key={item}
-                className={`flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs ${
-                  i === 0
+                key={item.label}
+                className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium ${
+                  i === 1
                     ? "bg-primary/15 font-semibold text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <span className="size-1.5 rounded-full bg-current opacity-60" />
-                {item}
+                <item.icon className="size-3.5" />
+                {item.label}
               </div>
             ))}
           </div>
-          <div className="mt-8 rounded-2xl bg-accent/60 p-3">
-            <p className="text-[10px] font-medium text-muted-foreground">Your steady week</p>
-            <p className="mt-1 text-xl font-bold tracking-tight text-foreground">4h 28m</p>
+
+          <div className="mt-8 rounded-2xl bg-card border border-border/70 p-3 shadow-xs">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Weekly Momentum
+            </p>
+            <p className="mt-1 text-xl font-bold tracking-tight text-foreground">5h 42m</p>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-              <div className="h-full w-[72%] rounded-full bg-primary" />
+              <div className="h-full w-[84%] rounded-full bg-primary" />
             </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground">4 of 5 habits on streak 🔥</p>
           </div>
         </aside>
 
+        {/* Center Main Stage */}
         <div className="min-w-0 flex-1 p-5 md:p-7">
-          <p className="text-xs text-muted-foreground">Today's Reflection</p>
-          <h3 className="mt-1 text-xl font-bold tracking-tight text-foreground md:text-2xl">
-            Good evening, learner.
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <Compass className="size-3.5" /> Active Curriculum
+            </span>
+            <span className="text-xs text-muted-foreground">Updated 10m ago</span>
+          </div>
+
+          <h3 className="mt-3 text-xl font-bold tracking-tight text-foreground md:text-2xl font-display">
+            Machine Learning & Attention Architectures
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground">A little progress is still momentum.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Phase 2 of 4 · Deep Sequence Models & Transformers
+          </p>
 
           <div className="mt-6 rounded-2xl border border-border bg-card p-4 md:p-5 shadow-xs">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold text-primary uppercase tracking-wider">
-                  TODAY'S FOCUS
+                <p className="text-[11px] font-bold text-primary uppercase tracking-wider">
+                  CURRENT LESSON
                 </p>
-                <p className="mt-1.5 font-bold text-foreground">Learn Transformers</p>
+                <p className="mt-1 font-bold text-foreground">Self-Attention & Multi-Head Projections</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Attention mechanisms · Lesson 04
+                  Formula: Attention(Q,K,V) = softmax((QK^T) / sqrt(d_k)) * V
                 </p>
               </div>
-              <div className="grid size-11 place-items-center rounded-full border-4 border-primary/20 border-t-primary text-xs font-bold text-primary">
-                42%
+              <div className="grid size-12 place-items-center rounded-full border-4 border-primary/20 border-t-primary text-xs font-bold text-primary">
+                68%
               </div>
             </div>
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted">
-              <motion.div
-                className="h-full rounded-full bg-primary"
-                initial={{ width: 0 }}
-                whileInView={{ width: "42%" }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.2 }}
-              />
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-lg bg-muted/60 px-2.5 py-1 text-[11px] font-medium text-foreground">
+                ✓ Query, Key & Value Vectors
+              </span>
+              <span className="rounded-lg bg-muted/60 px-2.5 py-1 text-[11px] font-medium text-foreground">
+                ✓ Scaled Dot-Product
+              </span>
+              <span className="rounded-lg bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                → Multi-Head Stacking
+              </span>
             </div>
-            <button className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
-              Continue lesson <ChevronRight className="size-3.5" />
-            </button>
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border p-3.5 bg-card/40">
-              <BookOpen className="size-4 text-primary" />
-              <p className="mt-2 text-xs font-semibold text-foreground">Review flashcards</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">12 cards ready</p>
+            <div className="rounded-2xl border border-border p-3.5 bg-card/50">
+              <FileSearch className="size-4 text-primary" />
+              <p className="mt-2 text-xs font-semibold text-foreground">Research Paper Attached</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                "Attention Is All You Need" (Vaswani et al.)
+              </p>
             </div>
-            <div className="rounded-2xl border border-border p-3.5 bg-card/40">
+            <div className="rounded-2xl border border-border p-3.5 bg-card/50">
               <Focus className="size-4 text-primary" />
-              <p className="mt-2 text-xs font-semibold text-foreground">45 min focus session</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">A quiet space awaits</p>
+              <p className="mt-2 text-xs font-semibold text-foreground">Ambient Study Session</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                25m Pomodoro · Rainy Café Audio
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="hidden w-[220px] shrink-0 border-l border-border bg-muted/20 p-4 lg:block">
+        {/* Right Remi Coach Panel */}
+        <div className="hidden w-[240px] shrink-0 border-l border-border bg-muted/20 p-4 lg:block">
           <div className="flex items-center gap-2">
             <img src={remiLogo} alt="Remi" className="size-7 rounded-full object-cover" />
-            <p className="text-xs font-bold text-foreground">Remi Coach</p>
-            <span className="ml-auto size-2 rounded-full bg-emerald-500" />
+            <div>
+              <p className="text-xs font-bold text-foreground">Remi Coach</p>
+              <p className="text-[10px] text-emerald-500 font-medium">● Online & Ready</p>
+            </div>
           </div>
-          <div className="mt-4 rounded-2xl bg-card border border-border/70 p-3 text-xs leading-relaxed text-muted-foreground">
-            "Twelve minutes today is still momentum. Want me to shrink tomorrow's step so the streak
-            survives?"
+
+          <div className="mt-4 rounded-2xl bg-card border border-border/80 p-3.5 text-xs leading-relaxed text-muted-foreground shadow-xs">
+            "You mastered Scaled Dot-Product faster than usual. Ready to see how multi-head projections allow the network to attend to information from different representation subspaces?"
           </div>
-          <button className="mt-3 w-full rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground shadow-xs press">
-            Continue learning
-          </button>
-          <button className="mt-2 w-full py-1 text-xs text-muted-foreground hover:text-foreground">
-            Not today
-          </button>
+
+          <div className="mt-3 space-y-2">
+            <button className="w-full rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground shadow-xs press">
+              Start 15m Interactive Lesson
+            </button>
+            <button className="w-full rounded-xl border border-border bg-background py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors">
+              Ask a question about this paper
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Main Landing Component                                                     */
+/* -------------------------------------------------------------------------- */
 function Landing() {
   const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
-  const [tab, setTab] = useState("Plan");
+  const [activeTab, setActiveTab] = useState<
+    "roadmaps" | "documents" | "focus" | "notes" | "habits"
+  >("roadmaps");
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -267,76 +285,73 @@ function Landing() {
     });
   }, [navigate]);
 
-  const tabContent: Record<string, { heading: string; text: string; items: string[] }> = {
-    Plan: {
-      heading: "Turn any goal into a path.",
-      text: "Remi gently turns your ambition into a sequence you can actually begin.",
-      items: ["Foundations", "Supervised Learning", "Neural Networks", "Deep Learning", "Projects"],
+  const features = [
+    {
+      icon: Compass,
+      title: "Intelligent Study Roadmaps",
+      body: "Remi transforms any ambition—from mastering quantum mechanics to learning Spanish—into structured milestones, checkpoints, and bite-sized daily lessons.",
     },
-    Learn: {
-      heading: "Lessons with room to think.",
-      text: "Explanations, examples, key concepts, and practice—paced for understanding.",
-      items: [
-        "Clear explanation",
-        "Worked examples",
-        "Key concepts",
-        "Practice questions",
-        "Review",
-      ],
+    {
+      icon: FileSearch,
+      title: "Document & PDF Intelligence",
+      body: "Upload textbooks, research papers, and lecture slides. Interactively summarize, extract key theorems, search across pages, and test yourself with flashcards.",
     },
-    Understand: {
-      heading: "Bring your materials along.",
-      text: "Ask questions of papers, PDFs, and lectures with context kept close.",
-      items: [
-        "Pre-reading brief",
-        "Key claims",
-        "Important concepts",
-        "Questions",
-        "Source references",
-      ],
+    {
+      icon: Focus,
+      title: "Ambient Focus Studio",
+      body: "Enter distraction-free flow with customizable Pomodoro timers, real-time meteorological weather, and relaxing ambient audio soundscapes.",
     },
-    Practice: {
-      heading: "Remember what matters.",
-      text: "Let Remi shape light review sessions from the work you've already done.",
-      items: ["Flashcards", "Adaptive quizzes", "Exercises", "Revision session", "Gentle recap"],
+    {
+      icon: BookOpen,
+      title: "Sensory Block-Based Notes",
+      body: "A clean, beautiful canvas with full KaTeX math equation rendering, code blocks, toggleable callouts, and handcrafted pastel color themes.",
     },
-  };
+    {
+      icon: CalendarHeart,
+      title: "Habit Rituals & Momentum",
+      body: "Build lasting routines without the guilt. Visual habit heatmaps, streak preservation, and daily task management keep you grounded.",
+    },
+    {
+      icon: Sparkles,
+      title: "Remi AI Learning Companion",
+      body: "An encouraging coach with persistent memory that remembers your past questions, schedule, and learning style across every session.",
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-primary/20">
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <img
               src={remiLogo}
-              alt="Remi, the Remainder coach"
-              width={36}
-              height={36}
-              className="size-9 rounded-xl object-cover shadow-xs"
+              alt="Remispace logo"
+              width={34}
+              height={34}
+              className="size-8.5 rounded-xl object-cover shadow-xs"
             />
-            <span className="font-display text-xl font-bold tracking-tight">Remainder</span>
+            <span className="font-display text-xl font-bold tracking-tight text-foreground">
+              Remispace
+            </span>
           </div>
 
           <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground md:flex">
             <a href="#features" className="transition-colors hover:text-foreground">
               Features
             </a>
+            <a href="#interactive-preview" className="transition-colors hover:text-foreground">
+              Explore
+            </a>
             <a href="#how-it-works" className="transition-colors hover:text-foreground">
               How it works
-            </a>
-            <a href="#remi" className="transition-colors hover:text-foreground">
-              AI Coach
             </a>
             <a href="#pricing" className="transition-colors hover:text-foreground">
               Pricing
             </a>
-            <a href="#workspace" className="transition-colors hover:text-foreground">
-              Workspace
-            </a>
           </nav>
 
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2.5 md:flex">
             <Button asChild variant="ghost" className="rounded-2xl font-medium">
               <Link to="/auth" search={{ mode: "signin" }}>
                 Sign in
@@ -344,7 +359,7 @@ function Landing() {
             </Button>
             <Button asChild className="rounded-2xl px-5 font-semibold press">
               <Link to="/auth" search={{ mode: "signup" }}>
-                Start your notebook
+                Start for free
               </Link>
             </Button>
           </div>
@@ -365,15 +380,18 @@ function Landing() {
               <a href="#features" onClick={() => setMenu(false)}>
                 Features
               </a>
+              <a href="#interactive-preview" onClick={() => setMenu(false)}>
+                Explore
+              </a>
               <a href="#how-it-works" onClick={() => setMenu(false)}>
                 How it works
               </a>
-              <a href="#remi" onClick={() => setMenu(false)}>
-                AI Coach
+              <a href="#pricing" onClick={() => setMenu(false)}>
+                Pricing
               </a>
               <Button asChild className="rounded-2xl w-full">
                 <Link to="/auth" search={{ mode: "signup" }}>
-                  Start your notebook
+                  Start your workspace
                 </Link>
               </Button>
             </nav>
@@ -382,20 +400,24 @@ function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="mx-auto grid max-w-7xl gap-12 px-6 pt-12 pb-20 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+      <section className="mx-auto max-w-6xl px-6 pt-16 pb-20 text-center">
         <Reveal>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground border border-border/60">
-            <Sparkles className="size-3.5 text-primary" /> Calm productivity, gently coached
+            <Sparkles className="size-3.5 text-primary" /> A calm sanctuary for deep learning
           </span>
-          <h1 className="mt-6 text-balance text-5xl font-bold leading-[1.08] tracking-tight md:text-6xl text-foreground">
-            Everything you're learning, in one warm place.
+
+          <h1 className="mx-auto mt-6 max-w-4xl text-balance text-5xl font-bold leading-[1.08] tracking-tight md:text-6xl lg:text-7xl text-foreground font-display">
+            The thoughtful workspace for everything you're learning.
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Remainder is part notebook, part daily tracker, part learning coach. Write freely, keep
-            your streaks, and let Remi turn "I want to learn this" into a plan that fits your week.
+
+          <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground md:text-xl">
+            Remispace combines structured study roadmaps, intelligent PDF research, habit rituals,
+            and ambient focus studios with Remi—a calm AI learning coach who turns complex
+            disciplines into daily momentum.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <PrimaryLink>Start your notebook</PrimaryLink>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
+            <PrimaryLink>Start your learning workspace</PrimaryLink>
             <Button
               asChild
               size="lg"
@@ -403,293 +425,516 @@ function Landing() {
               className="rounded-2xl px-7 font-medium press border-border"
             >
               <Link to="/auth" search={{ mode: "signin" }}>
-                I already have one
+                Sign in to existing
               </Link>
             </Button>
           </div>
+
+          <p className="mt-4 text-xs text-muted-foreground">
+            Free forever tier · No credit card required · Instant setup
+          </p>
         </Reveal>
 
-        <Reveal>
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 shadow-2xl ring-1 ring-white/10 dark:ring-white/10">
-            <img
-              src={heroImage}
-              alt="Remispace Study Place interface"
-              className="w-full h-auto object-cover"
-            />
-          </div>
-        </Reveal>
+        {/* Main Workspace Showcase */}
+        <WorkspaceShowcase />
       </section>
 
-      {/* 4 Feature Pillars */}
-      <section id="features" className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature) => (
-            <article key={feature.title} className="card-soft p-6 bg-card border border-border">
-              <feature.icon className="size-6 text-primary" />
-              <h2 className="mt-4 font-display text-lg font-bold text-foreground">
-                {feature.title}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.body}</p>
-            </article>
+      {/* 6 Core Feature Pillars */}
+      <section id="features" className="mx-auto max-w-6xl px-6 py-20 border-t border-border/60">
+        <SectionTitle
+          eyebrow="Crafted for deep thinking"
+          title="Everything you need to master complex subjects."
+          body="Traditional note apps are passive containers. Generic AI chatbots lose your context. Remispace unites structure, materials, and coaching into one harmonious rhythm."
+        />
+
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((f) => (
+            <Reveal
+              key={f.title}
+              className="group rounded-3xl border border-border bg-card p-7 shadow-soft transition hover:-translate-y-1 hover:shadow-lift"
+            >
+              <div className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                <f.icon className="size-5.5" />
+              </div>
+              <h3 className="mt-5 font-display text-xl font-bold text-foreground">{f.title}</h3>
+              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{f.body}</p>
+            </Reveal>
           ))}
         </div>
       </section>
 
-      {/* Connected Workspace Interactive Section */}
-      <section id="workspace" className="mx-auto max-w-6xl px-6 py-16">
-        <SectionTitle
-          eyebrow="One connected workspace"
-          title="Your entire learning journey, in one place."
-          body="A clear path for the bigger picture, and a gentle plan for the next hour."
-        />
-        <WorkspacePreview />
-      </section>
+      {/* Interactive Feature Deep Dive (Tabbed Showcase) */}
+      <section id="interactive-preview" className="bg-muted/30 border-y border-border px-6 py-20">
+        <div className="mx-auto max-w-6xl">
+          <SectionTitle
+            center
+            eyebrow="Interactive Experience"
+            title="Explore how Remispace powers your daily study."
+            body="Click through each core module below to see how Remispace organizes your thoughts, materials, and focus."
+          />
 
-      {/* Remi AI Tabs */}
-      <section id="remi" className="mx-auto max-w-6xl px-6 py-20">
-        <SectionTitle
-          eyebrow="Meet Remi"
-          title="An AI companion that learns how you learn."
-          body="Remi isn't another chatbot waiting for your next prompt. It coordinates helpful capabilities to help you understand, organize, practice, and apply what you're learning."
-        />
-        <Reveal className="mt-10 overflow-hidden rounded-3xl border border-border bg-card shadow-lift">
-          <div className="flex overflow-x-auto border-b border-border px-4 pt-3 md:px-8">
-            {Object.keys(tabContent).map((name) => (
+          {/* Tab Navigation */}
+          <div className="mt-10 flex flex-wrap justify-center gap-2">
+            {[
+              { id: "roadmaps", label: "Study Roadmaps", icon: Compass },
+              { id: "documents", label: "Document AI & PDFs", icon: FileSearch },
+              { id: "focus", label: "Focus Studio & Audio", icon: Focus },
+              { id: "notes", label: "Notes & KaTeX Math", icon: BookOpen },
+              { id: "habits", label: "Habits & Rituals", icon: CalendarHeart },
+            ].map((t) => (
               <button
-                key={name}
+                key={t.id}
                 type="button"
-                onClick={() => setTab(name)}
-                className={`relative px-5 py-3 text-sm font-semibold transition-colors ${
-                  tab === name ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                onClick={() => setActiveTab(t.id as typeof activeTab)}
+                className={`press flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition-all ${
+                  activeTab === t.id
+                    ? "bg-primary text-primary-foreground shadow-soft"
+                    : "bg-card border border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {name}
-                {tab === name && (
-                  <motion.span
-                    layoutId="tab"
-                    className="absolute inset-x-3 bottom-0 h-0.5 bg-primary rounded-full"
-                  />
-                )}
+                <t.icon className="size-4" />
+                {t.label}
               </button>
             ))}
           </div>
-          {(() => {
-            const activeContent = tabContent[tab] ?? tabContent["Plan"]!;
-            return (
-              <div className="grid gap-8 p-6 md:grid-cols-2 md:p-10">
+
+          {/* Tab Content Display */}
+          <Reveal className="mt-8 overflow-hidden rounded-3xl border border-border bg-card p-6 md:p-10 shadow-lift">
+            {activeTab === "roadmaps" && (
+              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                    Remi · {tab}
-                  </p>
-                  <h3 className="mt-3 text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-                    {activeContent.heading}
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Module 01 · Structured Mastery
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                    Transform any subject into a step-by-step curriculum.
                   </h3>
                   <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-                    {activeContent.text}
+                    Whether you're preparing for technical interviews, learning machine learning, or
+                    studying history, Remi decomposes the syllabus into phases, milestones, and
+                    actionable daily lessons that prevent overwhelm.
                   </p>
-                  <div className="mt-6">
-                    <PrimaryLink>Explore Remi</PrimaryLink>
+                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Automatic checkpoint & quiz
+                      generation
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Adaptive pacing based on your
+                      learning speed
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Directly connected to your daily
+                      task list
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Build your first roadmap</PrimaryLink>
                   </div>
                 </div>
-                <div className="rounded-2xl bg-muted/40 border border-border/80 p-5">
-                  <div className="flex items-center gap-2.5">
-                    <img src={remiLogo} alt="" className="size-8 rounded-full object-cover" />
-                    <div>
-                      <p className="text-xs font-bold text-foreground">
-                        Remi is preparing your space
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">Built around your goal</p>
-                    </div>
+
+                <div className="rounded-2xl border border-border bg-background p-5 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <span className="text-xs font-bold text-foreground">Curriculum Preview</span>
+                    <span className="text-[11px] text-primary font-semibold">Phase 1 / 4 Complete</span>
                   </div>
-                  <div className="mt-4 space-y-2">
-                    {activeContent.items.map((item, i) => (
-                      <motion.div
-                        key={item}
-                        initial={{ opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.06 }}
-                        className="flex items-center gap-3 rounded-xl bg-card border border-border px-3.5 py-2.5 text-xs font-medium text-foreground"
-                      >
-                        <span
-                          className={`grid size-5 place-items-center rounded-full text-[10px] ${
-                            i < 2
-                              ? "bg-primary/20 text-primary font-bold"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {i < 2 ? <Check className="size-3" /> : i + 1}
-                        </span>
-                        {item}
-                        <ChevronRight className="ml-auto size-4 text-muted-foreground/60" />
-                      </motion.div>
-                    ))}
+                  <div className="mt-4 space-y-2.5">
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-medium text-foreground flex items-center justify-between">
+                      <span>✓ 1. Mathematical Foundations & Linear Algebra</span>
+                      <span className="text-[10px] text-emerald-600 font-bold uppercase">Passed</span>
+                    </div>
+                    <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-xs font-semibold text-primary flex items-center justify-between">
+                      <span>→ 2. Loss Functions & Gradient Descent Optimization</span>
+                      <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-md">
+                        Active
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                      <span>3. Neural Network Backpropagation from Scratch</span>
+                      <span className="text-[10px] text-muted-foreground">Upcoming</span>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                      <span>4. Transformers & Multi-Head Self Attention</span>
+                      <span className="text-[10px] text-muted-foreground">Upcoming</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            );
-          })()}
-        </Reveal>
-      </section>
+            )}
 
-      {/* How it works */}
-      <section id="how-it-works" className="bg-primary/10 border-y border-border px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <SectionTitle
-            eyebrow="How it works"
-            title="A place to begin, and a reason to return."
-            body="The path is simple. The care is in how it adapts to you."
-          />
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {[
-              [
-                "01",
-                "Tell Remi what you're trying to accomplish.",
-                "I want to learn machine learning & system design.",
-              ],
-              ["02", "Remi creates your path.", "Roadmap → Lessons → Materials → Practice → Goals"],
-              ["03", "Show up and make progress.", "Focus → Learn → Practice → Reflect → Continue"],
-            ].map(([num, title, desc]) => (
-              <Reveal key={num} className="rounded-2xl border border-border bg-card p-6 shadow-xs">
-                <p className="text-xs font-bold tracking-widest text-primary">{num}</p>
-                <h3 className="mt-4 text-lg font-bold text-foreground">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{desc}</p>
-              </Reveal>
-            ))}
-          </div>
-          <div className="mt-10">
-            <PrimaryLink>Start your journey</PrimaryLink>
-          </div>
+            {activeTab === "documents" && (
+              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Module 02 · Deep Document Research
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                    Interactive PDF reader with theorem extraction.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                    Upload textbooks, lecture slide decks, and dense academic papers. Remi indexes
+                    your materials, allowing you to ask questions with exact page references,
+                    generate pre-reading briefs, and extract formulas into your notes.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Instant document synthesis &
+                      chapter summaries
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Page-by-page citations with inline
+                      snippets
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> 1-click flashcard deck generation
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Try Document AI</PrimaryLink>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-background p-5 shadow-xs">
+                  <div className="flex items-center gap-2 border-b border-border pb-3">
+                    <FileText className="size-4 text-primary" />
+                    <span className="text-xs font-bold text-foreground">
+                      Paper: Deep Residual Learning for Image Recognition.pdf
+                    </span>
+                  </div>
+                  <div className="mt-4 rounded-xl bg-card border border-border p-3 text-xs leading-relaxed text-muted-foreground">
+                    <span className="font-semibold text-foreground">Key Concept Extracted:</span>
+                    "Residual mapping allows layers to fit residual functions instead of unreferenced ones, preventing the degradation problem in deep networks."
+                  </div>
+                  <div className="mt-3 rounded-xl bg-primary/10 border border-primary/20 p-3 text-xs text-primary font-medium">
+                    💡 Remi generated 8 review flashcards for this section.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "focus" && (
+              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Module 03 · Ambient Focus Studio
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                    Distraction-free flow state for deep work.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                    Silence the noise of the internet. The Focus Studio provides customizable
+                    Pomodoro intervals, real-time local weather updates, calming background audio,
+                    and end-of-session reflection logs.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Fullscreen deep work mode with
+                      countdown
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Ambient soundscapes: Rain, Coffee
+                      Shop, Forest, White Noise
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Live weather integration & gentle
+                      breaks
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Open Focus Studio</PrimaryLink>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-background p-6 text-center shadow-xs">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    POMODORO INTERVAL
+                  </span>
+                  <div className="mt-3 text-5xl font-extrabold tracking-tight text-foreground font-mono">
+                    25:00
+                  </div>
+                  <p className="mt-2 text-xs text-primary font-semibold">
+                    Rainy Afternoon · 22°C Overcast
+                  </p>
+                  <div className="mt-6 flex justify-center gap-3">
+                    <button className="rounded-xl bg-primary px-6 py-2.5 text-xs font-bold text-primary-foreground shadow-soft press flex items-center gap-1.5">
+                      <Play className="size-3.5 fill-current" /> Start Focus
+                    </button>
+                    <button className="rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors flex items-center gap-1.5">
+                      <Music className="size-3.5" /> Ambient Audio
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "notes" && (
+              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Module 04 · Mathematical Canvas
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                    Block-based notebook with native KaTeX rendering.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                    A calm, fluid text editor that handles equations, syntax-highlighted code,
+                    nested subpages, and interactive toggle lists effortlessly. Never compromise
+                    between beauty and technical rigor.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Instant LaTeX math rendering with
+                      KaTeX
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> 10+ handcrafted sensory color
+                      themes
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Seamless inline Remi assistant
+                      prompts
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Start your notebook</PrimaryLink>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-background p-5 font-mono text-xs shadow-xs text-foreground">
+                  <div className="border-b border-border pb-2 text-muted-foreground flex items-center justify-between">
+                    <span>linear_algebra_notes.md</span>
+                    <span className="text-[10px]">KaTeX Enabled</span>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-primary font-bold"># Eigenvalues & Eigenvectors</p>
+                    <p className="text-muted-foreground font-sans">
+                      A non-zero vector v is an eigenvector of matrix A with eigenvalue λ if:
+                    </p>
+                    <div className="rounded-lg bg-card border border-border p-2.5 text-center text-foreground font-sans text-sm">
+                      A v = λ v ⟺ (A - λ I)v = 0
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "habits" && (
+              <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Module 05 · Habit Rituals & Streaks
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl font-display">
+                    Visible momentum that celebrates small efforts.
+                  </h3>
+                  <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                    Big achievements are simply daily rituals stacked over time. Remispace's habit
+                    tracker offers visual completion heatmaps, streak shields, and intelligent
+                    rescheduling so missing one day never derails your long-term consistency.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-foreground">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Daily check-ins with reflection
+                      prompts
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Streak preservation & gentle
+                      reminders
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="size-4.5 text-primary" /> Weekly completion analytics &
+                      insights
+                    </li>
+                  </ul>
+                  <div className="mt-8">
+                    <PrimaryLink>Track your habits</PrimaryLink>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-background p-5 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <span className="text-xs font-bold text-foreground">Today's Rituals</span>
+                    <span className="text-xs font-semibold text-emerald-500">4 / 4 Completed</span>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-between rounded-xl bg-card border border-border p-2.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                          ✓
+                        </span>
+                        <span className="font-medium text-foreground">Read 30 mins technical paper</span>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">🔥 14 days</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl bg-card border border-border p-2.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                          ✓
+                        </span>
+                        <span className="font-medium text-foreground">Complete 1 Roadmap lesson</span>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">🔥 21 days</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl bg-card border border-border p-2.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="grid size-4 place-items-center rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                          ✓
+                        </span>
+                        <span className="font-medium text-foreground">Evening review & reflection</span>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">🔥 7 days</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Reveal>
         </div>
       </section>
 
-      {/* Philosophy & Target audience */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
+      {/* How it works 3-Step Journey */}
+      <section id="how-it-works" className="mx-auto max-w-6xl px-6 py-20">
         <SectionTitle
           center
-          eyebrow="Made for the work that matters"
-          title="Small steps. Deep work. Real progress."
+          eyebrow="The Remispace Methodology"
+          title="A quiet cadence for lasting knowledge."
+          body="How ambitious ideas transform into accomplished milestones."
         />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
           {[
-            [
-              GraduationCap,
-              "Learn a new skill",
-              "Build a structured path from beginner to advanced.",
-            ],
-            [FileText, "Master academic material", "Make papers, PDFs, and lectures interactive."],
-            [CircleHelp, "Prepare for interviews", "Practice questions with a clear, useful plan."],
-            [Leaf, "Build better habits", "Create sustainable routines without guilt."],
-          ].map(([Icon, title, body]) => {
-            const I = Icon as typeof Leaf;
-            return (
-              <Reveal
-                key={title as string}
-                className="group rounded-2xl border border-border bg-card p-6 shadow-soft transition hover:-translate-y-1"
-              >
-                <I className="size-6 text-primary" />
-                <h3 className="mt-4 font-bold text-foreground">{title as string}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {body as string}
-                </p>
-              </Reveal>
-            );
-          })}
+            {
+              step: "01",
+              title: "Frame your ambition",
+              desc: "Tell Remi what you want to master—from complex academic subjects to new technical frameworks. Remi structures the journey into clear phases.",
+            },
+            {
+              step: "02",
+              title: "Learn with contextual materials",
+              desc: "Bring your textbooks, slide decks, or papers. Remi generates interactive lessons, mathematical breakdowns, and active recall practice.",
+            },
+            {
+              step: "03",
+              title: "Sustain steady momentum",
+              desc: "Enter the ambient focus studio, preserve your daily habit streaks, and watch your knowledge compound week over week.",
+            },
+          ].map((item) => (
+            <Reveal key={item.step} className="rounded-3xl border border-border bg-card p-8 shadow-xs">
+              <span className="text-xs font-bold tracking-widest text-primary font-mono">
+                {item.step}
+              </span>
+              <h3 className="mt-4 text-xl font-bold text-foreground font-display">{item.title}</h3>
+              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+            </Reveal>
+          ))}
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="mx-auto max-w-6xl px-6 py-20">
+      {/* Transparent Pricing Section */}
+      <section id="pricing" className="mx-auto max-w-6xl px-6 py-20 border-t border-border/60">
         <SectionTitle
           center
-          eyebrow="Pricing"
-          title="Simple, transparent plans."
-          body="Start for free, upgrade when you need more power and limits."
+          eyebrow="Simple, Honest Pricing"
+          title="Invest in your focus and mastery."
+          body="Start for free with generous daily limits. Upgrade to Pro for unlimited AI coach conversations and high-capacity document processing."
         />
+
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {/* Free Tier */}
-          <Reveal className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-            <h3 className="text-xl font-bold text-foreground">Free Trial</h3>
-            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-foreground">
-              ₹0<span className="ml-1 text-xl font-medium text-muted-foreground">/ forever</span>
+          <Reveal className="rounded-3xl border border-border bg-card p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-foreground font-display">Free Trial</h3>
+              <p className="mt-1 text-xs text-muted-foreground">For curious minds getting started</p>
+              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-foreground">
+                ₹0<span className="ml-1 text-base font-normal text-muted-foreground">/ forever</span>
+              </div>
+              <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> 20 daily messages with Remi
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> 2 Active Study Roadmaps
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> 5 Notebooks & canvases
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> 15MB file upload limit
+                </li>
+              </ul>
             </div>
-            <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> 20 daily messages with Remi
-              </li>
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> 2 Roadmaps per week
-              </li>
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> 5 Notebooks per week
-              </li>
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> 15MB file upload limit
-              </li>
-            </ul>
             <div className="mt-8">
-              <Button asChild variant="outline" className="w-full rounded-xl border-border">
+              <Button asChild variant="outline" className="w-full rounded-2xl border-border">
                 <Link to="/auth" search={{ mode: "signup" }}>
-                  Get Started
+                  Get Started Free
                 </Link>
               </Button>
             </div>
           </Reveal>
 
           {/* Weekly Tier */}
-          <Reveal className="relative rounded-2xl border-2 border-primary bg-card p-8 shadow-md">
-            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-0 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-              Most Popular
+          <Reveal className="relative rounded-3xl border-2 border-primary bg-card p-8 shadow-lift flex flex-col justify-between">
+            <div className="absolute top-0 right-6 -translate-y-1/2 rounded-full bg-primary px-3.5 py-1 text-xs font-bold text-primary-foreground shadow-xs">
+              Most Flexible
             </div>
-            <h3 className="text-xl font-bold text-foreground">Weekly Premium</h3>
-            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-foreground">
-              ₹99<span className="ml-1 text-xl font-medium text-muted-foreground">/ week</span>
+            <div>
+              <h3 className="text-xl font-bold text-foreground font-display">Weekly Pro</h3>
+              <p className="mt-1 text-xs text-muted-foreground">For intensive study sprints & exams</p>
+              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-foreground">
+                ₹99<span className="ml-1 text-base font-normal text-muted-foreground">/ week</span>
+              </div>
+              <ul className="mt-8 space-y-4 text-sm text-foreground">
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> <strong>Unlimited</strong> messages with Remi
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> 10 Active Study Roadmaps
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> 15 Notebooks & canvases
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> 50MB file upload limit
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> Live real-time search & weather
+                </li>
+              </ul>
             </div>
-            <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> Unlimited messages with Remi
-              </li>
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> 10 Roadmaps per week
-              </li>
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> 15 Notebooks per week
-              </li>
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> 50MB file upload limit
-              </li>
-            </ul>
             <div className="mt-8">
-              <Button asChild className="w-full rounded-xl">
+              <Button asChild className="w-full rounded-2xl press">
                 <Link to="/auth" search={{ mode: "signup" }}>
-                  Upgrade Now
+                  Upgrade with Razorpay
                 </Link>
               </Button>
             </div>
           </Reveal>
 
           {/* Monthly Tier */}
-          <Reveal className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-            <h3 className="text-xl font-bold text-foreground">Monthly Premium</h3>
-            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-foreground">
-              ₹399<span className="ml-1 text-xl font-medium text-muted-foreground">/ month</span>
+          <Reveal className="rounded-3xl border border-border bg-card p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-foreground font-display">Monthly Pro</h3>
+              <p className="mt-1 text-xs text-muted-foreground">For dedicated lifelong learners</p>
+              <div className="mt-5 flex items-baseline text-4xl font-extrabold text-foreground">
+                ₹399<span className="ml-1 text-base font-normal text-muted-foreground">/ month</span>
+              </div>
+              <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> All Weekly Pro Features
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> Save ~10% compared to weekly
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> Highest priority response latency
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" /> Priority email support
+                </li>
+              </ul>
             </div>
-            <ul className="mt-8 space-y-4 text-sm text-muted-foreground">
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> All Weekly Features
-              </li>
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> Save ~10% over weekly
-              </li>
-              <li className="flex items-center">
-                <Check className="mr-3 size-4 text-primary" /> Priority Support
-              </li>
-            </ul>
             <div className="mt-8">
-              <Button
-                asChild
-                variant="outline"
-                className="w-full rounded-xl border-border bg-background"
-              >
+              <Button asChild variant="outline" className="w-full rounded-2xl border-border">
                 <Link to="/auth" search={{ mode: "signup" }}>
                   Subscribe Monthly
                 </Link>
@@ -697,50 +942,75 @@ function Landing() {
             </div>
           </Reveal>
         </div>
-        <Reveal className="mt-12 rounded-2xl bg-primary p-8 text-primary-foreground max-w-5xl mx-auto shadow-xl">
+
+        {/* Enterprise Banner */}
+        <Reveal className="mt-12 rounded-3xl bg-primary p-8 text-primary-foreground max-w-5xl mx-auto shadow-lift">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h2 className="text-2xl font-bold">Enterprise & Teams</h2>
-              <p className="mt-2 text-primary-foreground/80">
-                Need BYOK (Bring Your Own Key) or dedicated enterprise rate limits?
+              <h3 className="text-2xl font-bold font-display">Institutions & Study Groups</h3>
+              <p className="mt-1.5 text-sm text-primary-foreground/85">
+                Need Bring Your Own Key (BYOK) support, custom rate limits, or volume team licensing?
               </p>
             </div>
-            <button className="whitespace-nowrap rounded-xl bg-background px-6 py-3 text-sm font-semibold text-foreground shadow-sm hover:bg-muted transition-colors">
-              Contact Sales
-            </button>
+            <Button
+              asChild
+              variant="secondary"
+              className="rounded-2xl px-6 font-semibold shadow-xs whitespace-nowrap press"
+            >
+              <a href="mailto:aajprabhash@gmail.com?subject=Remispace Enterprise Inquiry">
+                Contact Founder
+              </a>
+            </Button>
           </div>
         </Reveal>
       </section>
 
-      {/* Call to action footer banner */}
-      <section className="bg-primary/15 border-t border-border px-6 py-20 text-center">
+      {/* Call to Action Final Banner */}
+      <section className="bg-primary/10 border-t border-border px-6 py-24 text-center">
         <Reveal>
-          <p className="text-xs font-bold uppercase tracking-widest text-primary">Remainder</p>
-          <h2 className="mx-auto mt-4 max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight md:text-5xl text-foreground">
+          <span className="text-xs font-bold uppercase tracking-widest text-primary">Remispace</span>
+          <h2 className="mx-auto mt-4 max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight md:text-5xl text-foreground font-display">
             You don't need to do everything today.
             <br />
-            <span className="text-primary font-normal">You just need a place to begin.</span>
+            <span className="text-primary font-normal">You just need a quiet place to begin.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
-            Remainder helps you turn ambitious goals into small, meaningful steps—and keeps you
-            moving without the pressure.
+            Join students, researchers, and engineers building real learning momentum with Remispace.
           </p>
           <div className="mt-8">
-            <PrimaryLink>Start with Remi</PrimaryLink>
+            <PrimaryLink>Start your workspace today</PrimaryLink>
           </div>
         </Reveal>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-background px-6 py-10">
-        <div className="mx-auto max-w-6xl flex flex-col justify-between gap-6 md:flex-row md:items-center">
-          <div className="flex items-center gap-2.5">
-            <img src={remiLogo} alt="Remi" className="size-7 rounded-lg object-cover" />
-            <span className="font-display font-bold text-foreground">Remainder</span>
+      {/* Classic Editorial Footer */}
+      <footer className="border-t border-border bg-background px-6 py-12">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col justify-between gap-8 md:flex-row md:items-center">
+            <div className="flex items-center gap-3">
+              <img src={remiLogo} alt="Remispace" className="size-7 rounded-xl object-cover" />
+              <span className="font-display font-bold text-foreground text-lg">Remispace</span>
+            </div>
+
+            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
+              <a href="#features" className="hover:text-foreground transition-colors">
+                Features
+              </a>
+              <a href="#interactive-preview" className="hover:text-foreground transition-colors">
+                Modules
+              </a>
+              <a href="#pricing" className="hover:text-foreground transition-colors">
+                Pricing
+              </a>
+              <Link to="/auth" search={{ mode: "signin" }} className="hover:text-foreground transition-colors">
+                Sign in
+              </Link>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              © 2026 Remispace. Crafted for deep learning & focused thought.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Remainder — made for slow, steady progress. © 2026 Remainder.
-          </p>
         </div>
       </footer>
     </main>
