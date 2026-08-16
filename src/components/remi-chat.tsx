@@ -767,18 +767,17 @@ export function RemiChat({
                 <h1 className={`mt-4 font-display font-bold ${compact ? "text-xl" : "text-3xl"}`}>
                   Hi, I'm Remi.
                 </h1>
-                <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-muted-foreground">
-                  Ask me to build a detailed roadmap, research a topic, or plan your week. Attach
-                  documents or images to save them to your workspace library.
+                <p className="mx-auto mt-2 max-w-xl text-sm sm:text-base leading-relaxed text-muted-foreground">
+                  Your autonomous learning partner—ask me to generate structured study roadmaps, synthesize research documents, build KaTeX math notebooks, or guide your daily focus.
                 </p>
                 {suggestions.length > 0 && (
-                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <div className="mt-5 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
                     {suggestions.map((s) => (
                       <button
                         key={s}
                         type="button"
                         onClick={() => void submit(s)}
-                        className="press rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                        className="press rounded-full border border-border bg-card/60 px-4 py-2 text-xs sm:text-sm font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground hover:border-primary/40 shadow-xs"
                       >
                         {s}
                       </button>

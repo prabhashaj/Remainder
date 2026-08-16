@@ -101,9 +101,10 @@ function ConversationThread() {
           initialMessages={initial}
           seed={seed}
           suggestions={[
-            "Build me a detailed roadmap for learning React",
-            "What should I focus on today?",
-            "Find the best free Python tutorials",
+            "Create a 4-week roadmap for Machine Learning & Neural Networks",
+            "Generate a study notebook on Backpropagation with math formulas",
+            "Summarize key theorems from my uploaded document",
+            "Plan today's study schedule and focus priorities",
           ]}
           onSeedConsumed={() =>
             navigate({

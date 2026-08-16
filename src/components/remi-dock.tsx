@@ -184,7 +184,11 @@ function DockChat({
         initialMessages={initial}
         compact
         topic={topic}
-        suggestions={["Plan a detailed roadmap for me", "What should I do today?"]}
+        suggestions={[
+          "Create a study roadmap for me",
+          "Generate a study notebook with formulas",
+          "What should I focus on today?",
+        ]}
       />
     </div>
   );
