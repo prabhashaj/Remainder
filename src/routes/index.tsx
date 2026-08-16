@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import remiLogo from "@/assets/remi.png";
 import studyspaceImg from "@/assets/Studyspace.png";
 import dashboardImg from "@/assets/Remispace_dashboard.png";
+import roadmapsImg from "@/assets/roadmaps.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -309,47 +310,13 @@ export default function Landing() {
           <div className="mt-8 overflow-hidden rounded-3xl border border-[#0d402e] bg-[#042419] shadow-2xl">
             {/* ── Roadmaps ── */}
             {activeTab === "roadmaps" && (
-              <div className="grid gap-0 lg:grid-cols-[1fr_1.4fr]">
-                <div className="p-8 md:p-10 flex flex-col justify-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Feature 01 · Structured Mastery</span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    AI-generated learning roadmaps, phase by phase.
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    Tell Remi what you want to master — from machine learning to quantum mechanics — and it builds a full curriculum with phases, topics, sub-topics, lessons, checkpoints, and flashcards.
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Multi-phase structured curricula from any subject</li>
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Auto-generated checkpoints and active-recall quizzes</li>
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Linked to daily tasks, study sessions, and progress</li>
-                  </ul>
-                  <div className="mt-8"><PrimaryLink>Build your first roadmap</PrimaryLink></div>
-                </div>
-                <div className="bg-[#021810] border-l border-[#0d402e] p-6 space-y-3">
-                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-medium text-white flex items-center justify-between">
-                    <span>✓ Phase 1: Mathematical Foundations &amp; Linear Algebra</span>
-                    <span className="text-[10px] text-emerald-400 font-bold">PASSED</span>
-                  </div>
-                  <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/15 p-4 text-xs font-semibold text-emerald-300 flex items-center justify-between">
-                    <span>→ Phase 2: Loss Functions &amp; Gradient Descent</span>
-                    <span className="text-[10px] bg-emerald-500 text-black px-2 py-0.5 rounded-md font-bold">Active</span>
-                  </div>
-                  <div className="rounded-xl border border-[#0d402e] bg-[#05261b] p-4 text-xs font-medium text-zinc-400 flex items-center justify-between">
-                    <span>Phase 3: Neural Network Backpropagation</span>
-                    <span className="text-[10px] text-zinc-500">Upcoming</span>
-                  </div>
-                  <div className="rounded-xl border border-[#0d402e] bg-[#05261b] p-4 text-xs font-medium text-zinc-400 flex items-center justify-between">
-                    <span>Phase 4: Transformers &amp; Multi-Head Attention</span>
-                    <span className="text-[10px] text-zinc-500">Upcoming</span>
-                  </div>
-                  <div className="mt-2 pt-3 border-t border-[#0d402e] flex items-center justify-between text-[11px] text-zinc-400">
-                    <span>Overall progress</span>
-                    <span>12 / 91 sub-topics</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[#0a3324]">
-                    <div className="h-full w-[13%] rounded-full bg-emerald-500" />
-                  </div>
-                </div>
+              <div className="overflow-hidden rounded-3xl">
+                <img
+                  src={roadmapsImg}
+                  alt="Remispace AI Learning Roadmaps"
+                  className="w-full object-cover object-top"
+                  loading="lazy"
+                />
               </div>
             )}
 
