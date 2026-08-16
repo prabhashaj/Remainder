@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -8,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-
-import { ArrowLeft } from "lucide-react";
 
 type AuthSearch = { mode: "signin" | "signup" };
 
@@ -91,36 +90,48 @@ function AuthPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12 relative">
+    <main className="flex min-h-screen items-center justify-center bg-[#021810] text-[#f4f4f5] px-4 py-12 relative selection:bg-emerald-500/30 font-sans">
       <Link
         to="/"
-        className="absolute left-6 top-6 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        className="absolute left-6 top-6 flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="size-4" />
         Back to home
       </Link>
       <div className="w-full max-w-md">
         <Link to="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <img src={remiLogo} alt="Remispace" width={44} height={44} className="size-11" />
-          <span className="font-display text-2xl font-bold">Remispace</span>
+          <img
+            src={remiLogo}
+            alt="Remispace"
+            width={44}
+            height={44}
+            className="size-11 rounded-xl object-cover shadow-xs"
+          />
+          <span className="font-display text-2xl font-bold text-white tracking-tight">Remispace</span>
         </Link>
 
-        <div className="panel-soft p-7">
+        <div className="rounded-3xl border border-[#0d402e] bg-[#042419] p-8 shadow-2xl">
           {sentConfirmation ? (
             <div className="space-y-3 text-center">
-              <h1 className="font-display text-xl font-semibold">One last step</h1>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                We sent a confirmation link to <span className="font-medium">{email}</span>. Open it
-                and you'll land right in your notebook.
+              <h1 className="font-display text-xl font-bold text-white">One last step</h1>
+              <p className="text-sm leading-relaxed text-zinc-300">
+                We sent a confirmation link to <span className="font-semibold text-emerald-400">{email}</span>. Open it
+                and you'll land right in your workspace.
               </p>
             </div>
           ) : (
             <Tabs defaultValue={mode === "signin" ? "signin" : "signup"}>
-              <TabsList className="grid w-full grid-cols-2 rounded-2xl">
-                <TabsTrigger value="signup" className="rounded-xl">
+              <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-[#021810] p-1 border border-[#0d402e]">
+                <TabsTrigger
+                  value="signup"
+                  className="rounded-xl py-2.5 text-xs font-semibold data-[state=active]:bg-emerald-500 data-[state=active]:text-black data-[state=active]:font-bold data-[state=inactive]:text-zinc-400 data-[state=inactive]:hover:text-white transition-all"
+                >
                   Create account
                 </TabsTrigger>
-                <TabsTrigger value="signin" className="rounded-xl">
+                <TabsTrigger
+                  value="signin"
+                  className="rounded-xl py-2.5 text-xs font-semibold data-[state=active]:bg-emerald-500 data-[state=active]:text-black data-[state=active]:font-bold data-[state=inactive]:text-zinc-400 data-[state=inactive]:hover:text-white transition-all"
+                >
                   Sign in
                 </TabsTrigger>
               </TabsList>
@@ -128,13 +139,18 @@ function AuthPage() {
               <TabsContent value="signup" className="mt-6">
                 <form onSubmit={signUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">What should Remi call you?</Label>
+                    <Label
+                      htmlFor="name"
+                      className="text-xs font-semibold uppercase tracking-wider text-emerald-400"
+                    >
+                      What should Remi call you?
+                    </Label>
                     <Input
                       id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ada"
-                      className="rounded-2xl"
+                      className="rounded-2xl border-[#0d402e] bg-[#021810] text-white placeholder:text-zinc-600 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
                     />
                   </div>
                   <EmailPassword
@@ -143,8 +159,12 @@ function AuthPage() {
                     setEmail={setEmail}
                     setPassword={setPassword}
                   />
-                  <Button type="submit" disabled={busy} className="press w-full rounded-2xl">
-                    {busy ? "Creating…" : "Create my notebook"}
+                  <Button
+                    type="submit"
+                    disabled={busy}
+                    className="press w-full rounded-2xl bg-emerald-500 py-3 text-sm font-bold text-black shadow-lg shadow-emerald-500/10 hover:bg-emerald-400 transition-all"
+                  >
+                    {busy ? "Creating…" : "Create my workspace"}
                   </Button>
                 </form>
               </TabsContent>
@@ -157,7 +177,11 @@ function AuthPage() {
                     setEmail={setEmail}
                     setPassword={setPassword}
                   />
-                  <Button type="submit" disabled={busy} className="press w-full rounded-2xl">
+                  <Button
+                    type="submit"
+                    disabled={busy}
+                    className="press w-full rounded-2xl bg-emerald-500 py-3 text-sm font-bold text-black shadow-lg shadow-emerald-500/10 hover:bg-emerald-400 transition-all"
+                  >
                     {busy ? "Signing in…" : "Sign in"}
                   </Button>
                 </form>
@@ -167,16 +191,16 @@ function AuthPage() {
 
           {!sentConfirmation && (
             <>
-              <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="h-px flex-1 bg-border" />
+              <div className="my-6 flex items-center gap-3 text-xs text-zinc-500">
+                <span className="h-px flex-1 bg-[#0d402e]" />
                 or
-                <span className="h-px flex-1 bg-border" />
+                <span className="h-px flex-1 bg-[#0d402e]" />
               </div>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={google}
-                className="press w-full rounded-2xl"
+                className="press w-full rounded-2xl border border-[#0d402e] bg-[#062b1e] py-3 text-sm font-semibold text-zinc-200 hover:bg-[#093828] hover:text-white transition-colors"
               >
                 Continue with Google
               </Button>
@@ -202,7 +226,12 @@ function EmailPassword({
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label
+          htmlFor="email"
+          className="text-xs font-semibold uppercase tracking-wider text-emerald-400"
+        >
+          Email
+        </Label>
         <Input
           id="email"
           type="email"
@@ -210,11 +239,16 @@ function EmailPassword({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="rounded-2xl"
+          className="rounded-2xl border-[#0d402e] bg-[#021810] text-white placeholder:text-zinc-600 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label
+          htmlFor="password"
+          className="text-xs font-semibold uppercase tracking-wider text-emerald-400"
+        >
+          Password
+        </Label>
         <Input
           id="password"
           type="password"
@@ -223,7 +257,7 @@ function EmailPassword({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="rounded-2xl"
+          className="rounded-2xl border-[#0d402e] bg-[#021810] text-white placeholder:text-zinc-600 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
         />
       </div>
     </>
