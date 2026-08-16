@@ -132,19 +132,19 @@ export function getDocumentTools(
                 let fileData: Blob | null = null;
                 let dlErr: Error | null = null;
 
-                const { data: dData, error: dErr } = await supabase.storage
+                const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+                const { data: adminData, error: adminErr } = await supabaseAdmin.storage
                   .from("materials")
                   .download(doc.storage_path);
 
-                if (!dErr && dData) {
-                  fileData = dData;
+                if (!adminErr && adminData) {
+                  fileData = adminData;
                 } else {
-                  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-                  const { data: adminData, error: adminErr } = await supabaseAdmin.storage
+                  const { data: dData, error: dErr } = await supabase.storage
                     .from("materials")
                     .download(doc.storage_path);
-                  if (!adminErr && adminData) {
-                    fileData = adminData;
+                  if (!dErr && dData) {
+                    fileData = dData;
                   } else {
                     dlErr = adminErr
                       ? new Error(adminErr.message)

@@ -511,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMaterialChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/upload-document': {
+      id: '/api/upload-document'
+      path: '/api/upload-document'
+      fullPath: '/api/upload-document'
+      preLoaderRoute: typeof ApiUploadDocumentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/conversation/': {
       id: '/_authenticated/conversation/'
       path: '/conversation'
@@ -565,13 +572,6 @@ declare module '@tanstack/react-router' {
       path: '/api/webhooks/razorpay'
       fullPath: '/api/webhooks/razorpay'
       preLoaderRoute: typeof ApiWebhooksRazorpayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/upload-document': {
-      id: '/api/upload-document'
-      path: '/api/upload-document'
-      fullPath: '/api/upload-document'
-      preLoaderRoute: typeof ApiUploadDocumentRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

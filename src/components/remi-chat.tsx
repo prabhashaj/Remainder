@@ -541,19 +541,25 @@ export function RemiChat({
       mime_type: file.type || (isPdf ? "application/pdf" : "text/plain"),
     });
 
-    // 3. Trigger server-side background text extraction & vector embedding
-    void triggerDocumentExtractionFn({
-      data: {
-        resourceId: resource.id,
-        storagePath,
-      },
-    });
+    // 3. Trigger server-side text extraction and async vector embedding
+    let hasText = true;
+    try {
+      const extRes = await triggerDocumentExtractionFn({
+        data: {
+          resourceId: resource.id,
+          storagePath,
+        },
+      });
+      hasText = extRes ? (extRes.textLength ?? 0) > 0 : true;
+    } catch (e) {
+      console.warn("Extraction trigger error:", e);
+    }
 
     return {
       resourceId: resource.id,
       title: resource.title,
       kind: resource.kind,
-      hasText: true,
+      hasText,
     };
   }
 

@@ -349,11 +349,19 @@ export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const targetClient = context.supabase ?? supabaseAdmin;
 
-      const { data: fileData, error: downloadErr } = await targetClient.storage
+      // 1. Download file using supabaseAdmin (service role key bypasses Storage RLS)
+      let { data: fileData, error: downloadErr } = await supabaseAdmin.storage
         .from("materials")
         .download(data.storagePath);
+
+      if (downloadErr || !fileData) {
+        const userDl = await (context.supabase ?? supabaseAdmin).storage
+          .from("materials")
+          .download(data.storagePath);
+        fileData = userDl.data;
+        downloadErr = userDl.error;
+      }
 
       if (downloadErr || !fileData) {
         console.error("Failed to download material for extraction:", downloadErr);
@@ -361,6 +369,7 @@ export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
       }
 
       const buffer = Buffer.from(await fileData.arrayBuffer());
+      const targetClient = supabaseAdmin;
       let text = "";
 
       const lowerPath = data.storagePath.toLowerCase();
