@@ -11,6 +11,7 @@ import {
   searchPapersServer,
   searchDocsServer,
 } from "@/lib/academic-tools.server";
+import { getLiveWeatherServer } from "@/lib/weather.server";
 
 export function getResearchTools(
   supabase: ReturnType<typeof createClient<Database>>,
@@ -86,6 +87,32 @@ export function getResearchTools(
           traceId,
           threadId,
           { query },
+        ),
+    }),
+
+    getWeather: tool({
+      description:
+        "Get live, real-time weather conditions, current temperature, humidity, wind, cloud cover, and forecasts for any city or location in the world. Use ALWAYS when asked about the weather, temperature, or forecast for any place.",
+      inputSchema: z.object({
+        location: z.string().describe("City, region, or place name (e.g. 'Hyderabad', 'Tokyo', 'London')"),
+      }),
+      execute: async ({ location }: { location: string }) =>
+        wrapTool(
+          "getWeather",
+          async () => {
+            const weather = await getLiveWeatherServer(location);
+            return {
+              ...weather,
+              sources_markdown: `1. [**${weather.source.name}**](${weather.source.url}) — *${weather.source.domain}*`,
+              citation_instruction:
+                "State the current condition, temperature (°C/°F), humidity, wind, and forecast accurately, and append the Open-Meteo source link in your '### Sources' section.",
+            };
+          },
+          supabase,
+          userId,
+          traceId,
+          threadId,
+          { location },
         ),
     }),
 

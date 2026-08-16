@@ -94,6 +94,7 @@ Tool Delegation:
 - editNotebook: Use when asked to edit a notebook page, append content, or add visual diagrams to a notebook.
 - saveMemory: ALWAYS use this tool proactively whenever the user mentions ANY preference, working style, skill level, career goal, life aspiration, or shares a durable fact about themselves (e.g., "I know basic Python", "I want to build a startup"). Do NOT wait for them to explicitly ask you to save it; save it quietly in the background.
 - getCurrentTime: Use whenever the user asks for the current time or date, either locally or in a specific timezone.
+- getWeather: Use ALWAYS whenever asked about weather conditions, current temperature, humidity, wind, or forecasts for any city or location in the world.
 
 Roadmap & Diagnostic Assessment Rules:
 - **Adaptive Diagnostic Assessment Before Creating Roadmaps:**

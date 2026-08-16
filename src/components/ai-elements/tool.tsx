@@ -56,6 +56,7 @@ const getToolName = (toolName: string, isRunning: boolean) => {
     saveMemory: { active: "Saving memory note", done: "Saved memory note" },
     readDocument: { active: "Reading document", done: "Read document" },
     getCurrentTime: { active: "Checking time", done: "Checked time" },
+    getWeather: { active: "Checking live weather", done: "Checked live weather" },
     delegateToPlanner: { active: "Building learning plan", done: "Built learning plan" },
   };
 
