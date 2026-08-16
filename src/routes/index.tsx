@@ -896,9 +896,6 @@ function Landing() {
                 <li className="flex items-center gap-3">
                   <Check className="size-4 text-primary" /> 50MB file upload limit
                 </li>
-                <li className="flex items-center gap-3">
-                  <Check className="size-4 text-primary" /> Live real-time search & weather
-                </li>
               </ul>
             </div>
             <div className="mt-8">
