@@ -269,6 +269,17 @@ export function sortVoices(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice
   });
 }
 
+const SERVER_SNAPSHOT: SpeechState = {
+  status: "idle",
+  activeId: null,
+  currentChunkIndex: 0,
+  totalChunks: 0,
+  rate: 0.92,
+  selectedVoiceName: "",
+  voices: [],
+  isSupported: false,
+};
+
 /**
  * Core Speech Engine Singleton
  */
@@ -282,6 +293,9 @@ class SpeechEngine {
   private voices: SpeechSynthesisVoice[] = [];
   private isSupported = false;
 
+  // Cached snapshot reference to prevent infinite re-render loops with useSyncExternalStore
+  private snapshot: SpeechState = SERVER_SNAPSHOT;
+
   // Active utterance reference retention to prevent V8/WebKit garbage-collection bugs
   private activeUtterances = new Set<SpeechSynthesisUtterance>();
   private keepAliveInterval: ReturnType<typeof setInterval> | null = null;
@@ -291,6 +305,7 @@ class SpeechEngine {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       this.isSupported = true;
       this.initStorage();
+      this.syncSnapshot();
       this.initVoices();
     }
   }
@@ -316,6 +331,7 @@ class SpeechEngine {
     if (!this.isSupported) return;
 
     const load = () => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
       const list = window.speechSynthesis.getVoices();
       if (list && list.length > 0) {
         this.voices = sortVoices(list);
@@ -325,7 +341,7 @@ class SpeechEngine {
             this.selectedVoiceName = defaultVoice.name;
           }
         }
-        this.notify();
+        this.syncSnapshot();
       }
     };
 
@@ -344,7 +360,17 @@ class SpeechEngine {
     setTimeout(load, 1500);
   }
 
-  private notify() {
+  private syncSnapshot() {
+    this.snapshot = {
+      status: this.status,
+      activeId: this.activeId,
+      currentChunkIndex: this.currentChunkIndex,
+      totalChunks: this.currentChunks.length,
+      rate: this.rate,
+      selectedVoiceName: this.selectedVoiceName,
+      voices: this.voices,
+      isSupported: this.isSupported,
+    };
     this.listeners.forEach((listener) => listener());
   }
 
@@ -356,16 +382,11 @@ class SpeechEngine {
   };
 
   public getSnapshot = (): SpeechState => {
-    return {
-      status: this.status,
-      activeId: this.activeId,
-      currentChunkIndex: this.currentChunkIndex,
-      totalChunks: this.currentChunks.length,
-      rate: this.rate,
-      selectedVoiceName: this.selectedVoiceName,
-      voices: this.voices,
-      isSupported: this.isSupported,
-    };
+    return this.snapshot;
+  };
+
+  public getServerSnapshot = (): SpeechState => {
+    return SERVER_SNAPSHOT;
   };
 
   public getDefaultVoice(): SpeechSynthesisVoice | null {
@@ -396,7 +417,7 @@ class SpeechEngine {
         window.localStorage.setItem(VOICE_STORAGE_KEY, voiceName);
       }
     } catch {}
-    this.notify();
+    this.syncSnapshot();
   }
 
   public setRate(rate: number) {
@@ -411,7 +432,7 @@ class SpeechEngine {
     if (this.status === "playing") {
       this.speakCurrentChunk();
     } else {
-      this.notify();
+      this.syncSnapshot();
     }
   }
 
@@ -529,7 +550,7 @@ class SpeechEngine {
 
     utterance.onstart = () => {
       this.status = "playing";
-      this.notify();
+      this.syncSnapshot();
     };
 
     utterance.onend = () => {
@@ -567,7 +588,7 @@ class SpeechEngine {
       }
     }, 20);
 
-    this.notify();
+    this.syncSnapshot();
   }
 
   public pause() {
@@ -575,7 +596,7 @@ class SpeechEngine {
     this.status = "paused";
     this.stopKeepAlive();
     window.speechSynthesis.pause();
-    this.notify();
+    this.syncSnapshot();
   }
 
   public resume() {
@@ -589,7 +610,7 @@ class SpeechEngine {
       // If browser resume is unresponsive, continue chunk playback directly
       this.speakCurrentChunk();
     }
-    this.notify();
+    this.syncSnapshot();
   }
 
   public stop() {
@@ -605,7 +626,7 @@ class SpeechEngine {
     this.activeId = null;
     this.currentChunks = [];
     this.currentChunkIndex = 0;
-    this.notify();
+    this.syncSnapshot();
   }
 
   private finish() {
@@ -615,7 +636,7 @@ class SpeechEngine {
     this.activeId = null;
     this.currentChunks = [];
     this.currentChunkIndex = 0;
-    this.notify();
+    this.syncSnapshot();
   }
 
   /**
@@ -657,7 +678,11 @@ export const speechService = new SpeechEngine();
  * React hook to interact with the Speech Engine with zero tearing and instant state syncing.
  */
 export function useSpeech() {
-  const state = useSyncExternalStore(speechService.subscribe, speechService.getSnapshot);
+  const state = useSyncExternalStore(
+    speechService.subscribe,
+    speechService.getSnapshot,
+    speechService.getServerSnapshot
+  );
 
   return {
     ...state,
