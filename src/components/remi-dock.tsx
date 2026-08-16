@@ -185,10 +185,8 @@ function DockChat({
         compact
         topic={topic}
         suggestions={[
-          "Build me a structured roadmap for Data Science from scratch",
-          "Generate a notebook on Gradient Descent with math formulas",
-          "Summarize my uploaded PDF and create flashcards",
-          "Set up 3 daily habits and a weekly study goal for me",
+          "Create a roadmap to learn Agentic AI",
+          "Explain what is photosynthesis",
         ]}
       />
     </div>

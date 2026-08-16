@@ -405,10 +405,8 @@ export function RemiChat({
   onSeedConsumed,
   compact = false,
   suggestions = [
-    "Build me a structured roadmap for Data Science from scratch",
-    "Generate a notebook on Gradient Descent with math formulas",
-    "Summarize my uploaded PDF and create flashcards",
-    "Set up 3 daily habits and a weekly study goal for me",
+    "Create a roadmap to learn Agentic AI",
+    "Explain what is photosynthesis",
   ],
   showTranscript = true,
   topic = null,
@@ -773,7 +771,7 @@ export function RemiChat({
                   Hi, I'm Remi.
                 </h1>
                 <p className="mx-auto mt-2 max-w-xl text-sm sm:text-base leading-relaxed text-muted-foreground">
-                  Build study roadmaps, read and synthesize PDFs, generate rich math and note pages, plan habits and goals, or organize your tasks — all in one structured workspace.
+                  Your dedicated AI learning companion. Ask complex questions, build multi-phase roadmaps, generate rich notebooks with formulas, or plan your daily study rhythm.
                 </p>
                 {suggestions.length > 0 && (
                   <div className="mt-5 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
