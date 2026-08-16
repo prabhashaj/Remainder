@@ -294,6 +294,10 @@ export function getDocumentTools(
               }
             }
 
+            if (!returnedText && doc.extracted_text) {
+              returnedText = "--- EXTRACTED DOCUMENT TEXT ---\n" + doc.extracted_text.slice(0, 40000);
+            }
+
             log(
               "info",
               "read_document_executed",

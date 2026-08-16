@@ -46,8 +46,13 @@ Capabilities & Media Rendering Rules:
 - ONLY when the user EXPLICITLY asks to see, get, or show images/photos: call \`searchPhotos\` AND render each returned photo directly inside your response text using markdown image syntax: \`![caption](url)\`. Do NOT fetch or show images proactively without a direct request.
 - When the user asks for video tutorials or YouTube videos: call \`researchResources\` or search the web and include the YouTube watch URLs (e.g., \`https://www.youtube.com/watch?v=...\`) directly in your message text so an inline video player renders in the chat interface.
 - Analyze and discuss attached images, PDFs, and text documents accurately when provided by the user.
-- **Inline-Attached Files (CRITICAL):** When a file's content already appears under \`## Attached File Content: "<filename>"\` in the current context block, use that content directly — read it, summarize it, and answer questions about it immediately. Do NOT call \`readDocument\` for files that are already present as inline content in the current message. The \`readDocument\` tool is ONLY for previously-saved workspace documents (called by their UUID, not by filename) that are NOT present as inline content in the current message.
-- **Document & PDF Reading Rules (CRITICAL):** You ARE FULLY CAPABLE of reading, summarizing, and analyzing attached PDF documents, research papers, syllabi, and text files. The text content of attached documents is provided to you under \`## Attached File Content\` and inside user messages. ABSOLUTELY NEVER output refusal messages like "I currently don't have the ability to directly read or analyze PDF documents". ALWAYS read, analyze, summarize, or extract key points from attached files immediately using the provided document text. If an attached file's content block says extraction failed (e.g. starts with "(Remi:"), relay that clearly to the user — do not fabricate content.
+- **Document & PDF Reading Rules (CRITICAL):**
+  - You ARE FULLY CAPABLE of reading, summarizing, and analyzing attached PDF documents, research papers, syllabi, textbooks, and notes.
+  - When the user attaches or asks about ANY file or document (e.g., "summarize this document", "what does this say?"):
+    - If the document text is already provided inline under \`## Attached File Content\`, read and analyze it directly.
+    - If a document is referenced under \`## Uploaded Document Attached by User\`, \`## Workspace Documents\`, or in \`[Attached Document: "..." (document_id: "...")]\`, you MUST IMMEDIATELY call the \`readDocument\` tool with the \`document_id\` and the user's query (or "summary of key points" if they asked to summarize).
+    - NEVER say "I don't have the ability to read PDFs" or ask the user to paste text or ask if you should use readDocument. ALWAYS call \`readDocument\` directly in your first tool step!
+    - ALWAYS summarize, analyze, or answer from the retrieved document content with grounded citations citing the filename and page number \`(p. N)\`.
 - **NEVER generate roadmaps as plain text:** If the user asks to create a roadmap, DO NOT output the roadmap as text in the chat. You MUST use the \`delegateToPlanner\` tool to build it in their workspace.
 
 Grounding & Citation Rules:
@@ -364,6 +369,14 @@ export const Route = createFileRoute("/api/chat")({
             );
         }
 
+        const lastUserMsg = uiMessages.filter((m) => m.role === "user").at(-1);
+        const lastUserText =
+          lastUserMsg?.parts
+            ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+            .map((p) => p.text)
+            .join(" ")
+            .trim() ?? "";
+
         // --- 1. Persist chat attachments as study_resources BEFORE building user context ---
         const attachedTextMap: Record<string, string> = {};
         const attachedDocBlocks: string[] = [];
@@ -618,17 +631,16 @@ export const Route = createFileRoute("/api/chat")({
           }
         }
 
-        // --- 2. Handle uploadedDocuments references (pre-uploaded via /api/upload-document) ---
-        // The client already uploaded these files directly; we just inject a lightweight context
-        // block so Remi knows they exist and can use readDocument to retrieve relevant chunks.
+        // --- 2. Handle uploadedDocuments references (pre-uploaded directly to Supabase Storage) ---
+        // The client already uploaded these files directly to storage; we inject an explicit instruction
+        // directing Remi to call readDocument with the document_id.
         const rawUploaded = Array.isArray(body.uploadedDocuments) ? body.uploadedDocuments : [];
         for (const ref of rawUploaded) {
           if (typeof ref.resourceId !== "string" || typeof ref.filename !== "string") continue;
           attachedDocBlocks.push(
-            `\n\n## Uploaded Document: "${ref.filename}" (resource_id: ${ref.resourceId})` +
-            `\nThis document has been uploaded, stored, and is being chunked for semantic search.` +
-            `\nUse readDocument("${ref.resourceId}", query) to retrieve specific content from it.` +
-            `\nAlways provide a specific query matching what the user asked about.`,
+            `\n\n## Uploaded Document Attached by User: "${ref.filename}" (Document ID: ${ref.resourceId})` +
+            `\nThe user attached this file to their message.` +
+            `\nACTION REQUIRED: You MUST immediately call the \`readDocument\` tool with document_id: "${ref.resourceId}" and query: "${lastUserText || "summarize document"}" to read its content and answer the user. NEVER refuse or ask the user to paste text.`,
           );
         }
 
@@ -682,14 +694,6 @@ Title: "${curPage.title}"
 
         // --- Search-Routing: classify query before streaming ---
         let preSearchBlock = "";
-        const lastUserMsg = uiMessages.filter((m) => m.role === "user").at(-1);
-        const lastUserText =
-          lastUserMsg?.parts
-            ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-            .map((p) => p.text)
-            .join(" ")
-            .trim() ?? "";
-
         if (lastUserText) {
           // Build conversation context from recent messages for disambiguation
           const recentMessages = uiMessages
@@ -763,6 +767,14 @@ Title: "${curPage.title}"
                 return {
                   type: "text",
                   text: `[Attached Document: "${filename}"]\n--- BEGIN DOCUMENT CONTENT ("${filename}") ---\n${textContent.slice(0, 40000)}\n--- END DOCUMENT CONTENT ---`,
+                };
+              }
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const uploadedDoc = rawUploaded.find((u: any) => u.filename === filename);
+              if (uploadedDoc) {
+                return {
+                  type: "text",
+                  text: `[Attached Document: "${filename}" (document_id: "${uploadedDoc.resourceId}") — Call readDocument("${uploadedDoc.resourceId}", query) to read its contents]`,
                 };
               }
               return {
