@@ -229,7 +229,11 @@ function LessonPage() {
       ) : hasContent ? (
         <article className="mt-8">
           <MessageResponse>{item.content ?? ""}</MessageResponse>
-          <SpeechAndCopyToolbar text={item.content ?? ""} className="mt-4" />
+          <SpeechAndCopyToolbar
+            text={item.content ?? ""}
+            id={`lesson-${item.id}`}
+            className="mt-4"
+          />
         </article>
       ) : (
         <div className="panel-soft mt-8 px-6 py-10 text-center">

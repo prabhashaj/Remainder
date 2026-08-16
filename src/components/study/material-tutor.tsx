@@ -68,7 +68,11 @@ export function MaterialTutor({ resourceId }: { resourceId: string }) {
                   return (
                     <>
                       <MessageResponse>{text}</MessageResponse>
-                      <SpeechAndCopyToolbar text={text} className="mt-2" />
+                      <SpeechAndCopyToolbar
+                        text={text}
+                        id={`tutor-${message.id}`}
+                        className="mt-2"
+                      />
                     </>
                   );
                 })()}

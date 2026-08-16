@@ -1,5 +1,15 @@
-import { Check, Copy, Volume2, VolumeX, Pause, Play, Settings2, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+  Check,
+  Copy,
+  Volume2,
+  VolumeX,
+  Pause,
+  Play,
+  Settings2,
+  Sparkles,
+  Volume1,
+} from "lucide-react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,222 +22,93 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  cleanTextForSpeech,
+  speechService,
+  useSpeech,
+  VOICE_STORAGE_KEY,
+  RATE_STORAGE_KEY,
+} from "@/lib/speech-service";
 
-const VOICE_STORAGE_KEY = "remispace-preferred-voice";
-const RATE_STORAGE_KEY = "remispace-preferred-rate";
+// Re-export cleaner and helpers for backward compatibility
+export { cleanTextForSpeech, VOICE_STORAGE_KEY, RATE_STORAGE_KEY };
 
-/**
- * Clean markdown formatting tags so speech synthesis speaks natural plain text.
- */
-export function cleanTextForSpeech(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/```[\s\S]*?```/g, "") // Remove code blocks
-    .replace(/`([^`]+)`/g, "$1") // Remove inline code ticks
-    .replace(/#+\s+/g, "") // Remove markdown headers
-    .replace(/\*\*([^*]+)\*\*/g, "$1") // Remove bold
-    .replace(/\*([^*]+)\*/g, "$1") // Remove italics
-    .replace(/!\[.*?\]\(.*?\)/g, "") // Remove images
-    .replace(/\[([^\]]+)\]\(.*?\)/g, "$1") // Remove link syntax
-    .replace(/>\s+/g, "") // Remove blockquotes
-    .replace(/[-*+]\s+/g, "") // Remove list bullets
-    .replace(/\$\$/g, "") // Remove display math tags
-    .replace(/\$/g, "") // Remove inline math tags
-    .trim();
-}
-
-function getVoiceRank(voice: SpeechSynthesisVoice): number {
-  const name = voice.name.toLowerCase();
-  const lang = voice.lang.replace("_", "-").toLowerCase();
-  const isIndianLang = lang.includes("in") || name.includes("india");
-
-  // 1. Microsoft Neerja Natural (Female, Soft Neural)
-  if (name.includes("neerja")) return 1;
-
-  // 2. Microsoft Prabhat Natural (Male, Professional Neural)
-  if (name.includes("prabhat")) return 2;
-
-  // 3. Google English (India) (Neural Wavenet)
-  if (name.includes("google") && isIndianLang) return 3;
-
-  // 4. Apple Veena & Rishi (Natural Neural)
-  if (name.includes("veena") || name.includes("rishi")) return 4;
-
-  // 5. Other Indian English / Neural voices
-  if (isIndianLang && (name.includes("natural") || name.includes("neural"))) return 5;
-  if (isIndianLang) return 6;
-
-  // 6. Other natural/neural English voices
-  if (name.includes("natural") || name.includes("neural")) return 7;
-
-  return 8;
-}
-
-/**
- * Returns available browser voices sorted with high-quality Indian English voices first.
- */
 export function getSortedVoices(): SpeechSynthesisVoice[] {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return [];
-  const voices = window.speechSynthesis.getVoices();
-  if (!voices || voices.length === 0) return [];
+  return speechService.getSnapshot().voices;
+}
 
-  return [...voices].sort((a, b) => {
-    const rankA = getVoiceRank(a);
-    const rankB = getVoiceRank(b);
-    if (rankA !== rankB) return rankA - rankB;
-    return a.name.localeCompare(b.name);
-  });
+export function getDefaultIndianVoice(): SpeechSynthesisVoice | null {
+  return speechService.getDefaultVoice();
 }
 
 /**
- * Gets default preferred Indian voice
+ * Generate a deterministic identifier for any text content so independent
+ * message buttons on the same page don't clash.
  */
-export function getDefaultIndianVoice(): SpeechSynthesisVoice | null {
-  const voices = getSortedVoices();
-  if (voices.length === 0) return null;
-
-  // Check stored voice preference
-  if (typeof window !== "undefined") {
-    const storedName = window.localStorage.getItem(VOICE_STORAGE_KEY);
-    if (storedName) {
-      const found = voices.find((v) => v.name === storedName);
-      if (found) return found;
-    }
+function getSpeechId(text: string, customId?: string): string {
+  if (customId) return customId;
+  let hash = 0;
+  for (let i = 0; i < Math.min(text.length, 120); i++) {
+    hash = (hash << 5) - hash + text.charCodeAt(i);
+    hash |= 0;
   }
-
-  return voices[0] ?? null;
+  return `msg_${Math.abs(hash)}_${text.length}`;
 }
 
-export function ReadAloudButton({ text, className }: { text: string; className?: string }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoiceName, setSelectedVoiceName] = useState<string>("");
-  const [rate, setRate] = useState<number>(0.92);
+export function ReadAloudButton({
+  text,
+  className,
+  id,
+}: {
+  text: string;
+  className?: string | undefined;
+  id?: string | undefined;
+}) {
+  const speechId = getSpeechId(text, id);
+  const {
+    status,
+    activeId,
+    currentChunkIndex,
+    totalChunks,
+    rate,
+    selectedVoiceName,
+    voices,
+    isSupported,
+    toggle,
+    stop,
+    setRate,
+    setVoice,
+    previewVoice,
+  } = useSpeech();
 
-  // Load voices and stored settings
-  useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  const isActive = activeId === speechId;
+  const isPlaying = isActive && status === "playing";
+  const isPaused = isActive && status === "paused";
 
-    const updateVoices = () => {
-      const available = getSortedVoices();
-      setVoices(available);
-
-      const storedVoice = window.localStorage.getItem(VOICE_STORAGE_KEY);
-      const defaultVoice = getDefaultIndianVoice();
-
-      if (storedVoice && available.some((v) => v.name === storedVoice)) {
-        setSelectedVoiceName(storedVoice);
-      } else if (defaultVoice) {
-        setSelectedVoiceName(defaultVoice.name);
-      }
-
-      const storedRate = window.localStorage.getItem(RATE_STORAGE_KEY);
-      if (storedRate) {
-        const parsed = parseFloat(storedRate);
-        if (!isNaN(parsed)) setRate(parsed);
-      }
-    };
-
-    updateVoices();
-    window.speechSynthesis.onvoiceschanged = updateVoices;
-    return () => {
-      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null;
-    };
-  }, []);
-
-  // Stop speaking on unmount
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
-
-  const handleSelectVoice = useCallback((voiceName: string) => {
-    setSelectedVoiceName(voiceName);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(VOICE_STORAGE_KEY, voiceName);
-    }
-  }, []);
-
-  const handleSelectRate = useCallback((newRate: number) => {
-    setRate(newRate);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(RATE_STORAGE_KEY, String(newRate));
-    }
-  }, []);
-
-  const handleStop = useCallback((e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    setIsPlaying(false);
-    setIsPaused(false);
-  }, []);
-
-  const handleTogglePlay = useCallback(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      toast.error("Text-to-speech is not supported in this browser.");
-      return;
-    }
-
-    const synth = window.speechSynthesis;
-
-    if (isPlaying) {
-      if (isPaused) {
-        synth.resume();
-        setIsPaused(false);
-      } else {
-        synth.pause();
-        setIsPaused(true);
-      }
-      return;
-    }
-
-    synth.cancel();
-
-    const clean = cleanTextForSpeech(text);
-    if (!clean) {
+  const handleToggle = useCallback(() => {
+    if (!text || !text.trim()) {
       toast.error("No text available to read aloud.");
       return;
     }
+    toggle(text, speechId);
+  }, [text, speechId, toggle]);
 
-    const utterance = new SpeechSynthesisUtterance(clean);
-    const available = getSortedVoices();
-    const chosenVoice =
-      available.find((v) => v.name === selectedVoiceName) || getDefaultIndianVoice();
+  const handleStop = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      stop();
+    },
+    [stop]
+  );
 
-    if (chosenVoice) {
-      utterance.voice = chosenVoice;
-      utterance.lang = chosenVoice.lang;
-    } else {
-      utterance.lang = "en-IN";
-    }
-
-    utterance.rate = rate;
-    utterance.pitch = 1.0;
-
-    utterance.onstart = () => {
-      setIsPlaying(true);
-      setIsPaused(false);
-    };
-
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setIsPaused(false);
-    };
-
-    utterance.onerror = (e) => {
-      console.error("SpeechSynthesis error:", e);
-      setIsPlaying(false);
-      setIsPaused(false);
-    };
-
-    synth.speak(utterance);
-  }, [text, isPlaying, isPaused, selectedVoiceName, rate]);
+  const handlePreviewVoice = useCallback(
+    (e: React.MouseEvent, voice: SpeechSynthesisVoice) => {
+      e.stopPropagation();
+      previewVoice(voice);
+    },
+    [previewVoice]
+  );
 
   return (
     <div className="inline-flex items-center gap-1">
@@ -238,28 +119,32 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
               type="button"
               variant="ghost"
               size="sm"
-              onClick={handleTogglePlay}
-              className={`press rounded-xl gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors ${
+              onClick={handleToggle}
+              className={`press rounded-xl gap-1.5 px-2.5 py-1 text-xs font-medium transition-all ${
                 isPlaying
-                  ? "bg-primary/15 text-primary hover:bg-primary/20"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-primary/15 text-primary shadow-xs ring-1 ring-primary/20 hover:bg-primary/20"
+                  : isPaused
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
               } ${className ?? ""}`}
             >
               {isPlaying ? (
-                isPaused ? (
-                  <>
-                    <Play className="size-3.5 fill-primary text-primary" />
-                    <span>Resume</span>
-                  </>
-                ) : (
-                  <>
-                    <Pause className="size-3.5 fill-primary text-primary" />
-                    <span className="flex items-center gap-1">
-                      <span>Reading</span>
-                      <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+                <>
+                  <Pause className="size-3.5 fill-primary text-primary" />
+                  <span className="flex items-center gap-1.5">
+                    <span>Reading</span>
+                    <span className="flex items-end gap-0.5 h-3">
+                      <span className="w-0.5 h-2 bg-primary rounded-full animate-pulse" />
+                      <span className="w-0.5 h-3 bg-primary rounded-full animate-pulse [animation-delay:150ms]" />
+                      <span className="w-0.5 h-1.5 bg-primary rounded-full animate-pulse [animation-delay:300ms]" />
                     </span>
-                  </>
-                )
+                  </span>
+                </>
+              ) : isPaused ? (
+                <>
+                  <Play className="size-3.5 fill-amber-600 dark:fill-amber-400 text-amber-600 dark:text-amber-400" />
+                  <span>Resume</span>
+                </>
               ) : (
                 <>
                   <Volume2 className="size-3.5 text-primary" />
@@ -271,16 +156,19 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
           <TooltipContent side="top">
             <p>
               {isPlaying
-                ? isPaused
-                  ? "Resume reading"
+                ? totalChunks > 1
+                  ? `Pause reading (Section ${currentChunkIndex + 1} of ${totalChunks})`
                   : "Pause reading"
-                : "Listen in clear Indian voice (en-IN)"}
+                : isPaused
+                  ? "Resume reading"
+                  : "Listen with natural voice"}
             </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
-      {isPlaying && (
+      {/* Stop Button */}
+      {isActive && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -289,7 +177,7 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
                 variant="ghost"
                 size="icon-sm"
                 onClick={handleStop}
-                className="h-7 w-7 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                className="h-7 w-7 rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
               >
                 <VolumeX className="size-3.5" />
               </Button>
@@ -308,31 +196,39 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="h-7 w-7 rounded-xl text-muted-foreground/70 hover:bg-muted hover:text-foreground"
+            className="h-7 w-7 rounded-xl text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
           >
             <Settings2 className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-72 rounded-2xl p-2 shadow-xl">
-          <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
-            Voice & Speed Controls
+        <DropdownMenuContent align="start" className="w-76 rounded-2xl p-2.5 shadow-xl">
+          <DropdownMenuLabel className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+            <span>Voice & Audio Settings</span>
+            <Sparkles className="size-3 text-primary/70" />
           </DropdownMenuLabel>
-          <DropdownMenuSeparator className="my-1" />
+          <DropdownMenuSeparator className="my-1.5" />
 
           {/* Speed Selector */}
           <div className="px-2 py-1.5">
-            <span className="text-xs font-medium text-foreground block mb-1.5">Speech Speed</span>
-            <div className="flex gap-1">
-              {[0.8, 0.92, 1.0, 1.15].map((r) => (
+            <span className="text-xs font-medium text-foreground block mb-2">Speech Speed</span>
+            <div className="grid grid-cols-4 gap-1">
+              {[
+                { r: 0.8, label: "0.8x" },
+                { r: 0.92, label: "0.9x Clear" },
+                { r: 1.0, label: "1.0x" },
+                { r: 1.2, label: "1.2x" },
+              ].map(({ r, label }) => (
                 <button
                   key={r}
                   type="button"
-                  onClick={() => handleSelectRate(r)}
-                  className={`flex-1 rounded-lg py-1 text-xs font-semibold transition-colors ${
-                    rate === r ? "bg-primary text-primary-foreground" : "bg-muted/60 hover:bg-muted"
+                  onClick={() => setRate(r)}
+                  className={`rounded-lg py-1.5 text-[11px] font-semibold transition-all ${
+                    rate === r
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
-                  {r === 0.92 ? "0.9x Clear" : `${r}x`}
+                  {label}
                 </button>
               ))}
             </div>
@@ -345,39 +241,66 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
             <span className="text-xs font-medium text-foreground block mb-1">Select Voice</span>
           </div>
 
-          <div className="max-h-48 overflow-y-auto space-y-0.5 pr-1">
+          <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
             {voices.length === 0 ? (
-              <div className="px-2 py-2 text-xs text-muted-foreground">
-                Default Indian English (en-IN)
+              <div className="px-2 py-2 text-xs text-muted-foreground italic">
+                Browser default voice (en)
               </div>
             ) : (
-              voices.slice(0, 10).map((v) => {
-                const isSelected = v.name === selectedVoiceName;
+              voices.slice(0, 14).map((v) => {
+                const isSelected =
+                  v.name === selectedVoiceName || (!selectedVoiceName && v === voices[0]);
                 const isIndian =
                   v.lang.toLowerCase().includes("in") || v.name.toLowerCase().includes("india");
                 const isNatural =
                   v.name.toLowerCase().includes("natural") ||
+                  v.name.toLowerCase().includes("neural") ||
                   v.name.toLowerCase().includes("neerja") ||
-                  v.name.toLowerCase().includes("prabhat");
+                  v.name.toLowerCase().includes("prabhat") ||
+                  v.name.toLowerCase().includes("wavenet");
 
                 return (
                   <DropdownMenuItem
                     key={v.name}
-                    onClick={() => handleSelectVoice(v.name)}
-                    className={`rounded-xl px-2.5 py-1.5 text-xs font-medium cursor-pointer flex items-center justify-between gap-2 ${
-                      isSelected ? "bg-primary/15 text-primary font-semibold" : ""
+                    onClick={() => setVoice(v.name)}
+                    className={`rounded-xl px-2.5 py-1.5 text-xs font-medium cursor-pointer flex items-center justify-between gap-2 transition-colors ${
+                      isSelected
+                        ? "bg-primary/15 text-primary font-semibold"
+                        : "hover:bg-muted/80 text-foreground"
                     }`}
                   >
                     <div className="min-w-0 flex-1 truncate">
-                      <span className="truncate block">{v.name}</span>
-                      <span className="text-[10px] text-muted-foreground block">{v.lang}</span>
-                    </div>
-                    {isNatural && (
-                      <span className="shrink-0 text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold">
-                        Neural
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="truncate">{v.name.replace(/(Microsoft|Google|Apple)\s*/i, "")}</span>
+                        {isIndian && (
+                          <span className="shrink-0 text-[9px] bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded-md font-semibold">
+                            IN
+                          </span>
+                        )}
+                        {isNatural && (
+                          <span className="shrink-0 text-[9px] bg-primary/20 text-primary px-1.5 py-0.2 rounded-md font-semibold">
+                            Neural
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground block truncate">
+                        {v.lang}
                       </span>
-                    )}
-                    {isSelected && <Check className="size-3.5 text-primary shrink-0" />}
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Test voice preview button */}
+                      <button
+                        type="button"
+                        onClick={(e) => handlePreviewVoice(e, v)}
+                        title="Preview voice"
+                        className="size-6 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-primary/20 hover:text-primary transition-colors"
+                      >
+                        <Volume1 className="size-3.5" />
+                      </button>
+
+                      {isSelected && <Check className="size-3.5 text-primary shrink-0 ml-0.5" />}
+                    </div>
                   </DropdownMenuItem>
                 );
               })
@@ -389,7 +312,13 @@ export function ReadAloudButton({ text, className }: { text: string; className?:
   );
 }
 
-export function CopyButton({ text, className }: { text: string; className?: string }) {
+export function CopyButton({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string | undefined;
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -399,7 +328,7 @@ export function CopyButton({ text, className }: { text: string; className?: stri
       setCopied(true);
       toast.success("Copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       toast.error("Failed to copy text");
     }
   }, [text]);
@@ -431,19 +360,27 @@ export function CopyButton({ text, className }: { text: string; className?: stri
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">
-          <p>{copied ? "Copied!" : "Copy message to clipboard"}</p>
+          <p>{copied ? "Copied!" : "Copy text to clipboard"}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
 
-export function SpeechAndCopyToolbar({ text, className }: { text: string; className?: string }) {
+export function SpeechAndCopyToolbar({
+  text,
+  className,
+  id,
+}: {
+  text: string;
+  className?: string | undefined;
+  id?: string | undefined;
+}) {
   if (!text || !text.trim()) return null;
 
   return (
     <div className={`flex items-center gap-1.5 pt-2 border-t border-border/40 ${className ?? ""}`}>
-      <ReadAloudButton text={text} />
+      <ReadAloudButton text={text} id={id} />
       <CopyButton text={text} />
     </div>
   );

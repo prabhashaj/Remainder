@@ -864,7 +864,11 @@ export function RemiChat({
                                 {message.role === "assistant" && (
                                   <>
                                     <ChatVideoEmbeds text={group.text} />
-                                    <SpeechAndCopyToolbar text={group.text} className="mt-2" />
+                                    <SpeechAndCopyToolbar
+                                      text={group.text}
+                                      id={`${message.id}-${gIdx}`}
+                                      className="mt-2"
+                                    />
                                   </>
                                 )}
                               </div>
