@@ -571,23 +571,21 @@ export function RemiChat({
     const pageMatch = pathname.match(/\/page\/([^/]+)/);
     const activePageId = pageMatch ? pageMatch[1] : undefined;
 
-    // Two-tier attachment handling:
-    //  - Images (< 1 MB): keep as inline base64 for vision-model compatibility
-    //  - PDFs and large files: pre-upload via /api/upload-document to avoid
-    //    hitting Vercel's 4.5 MB serverless request body limit
     const inlineAttachments: Array<{ filename: string; mimeType: string; dataUrl: string }> = [];
     const uploadedRefs: Array<{ resourceId: string; title: string; kind: string; filename: string }> = [];
+    const sanitizedFiles: FileUIPart[] = [];
 
     const IMAGE_INLINE_LIMIT = 1 * 1024 * 1024; // 1 MB
 
-    for (const f of files.filter((fi) => fi.url)) {
+    for (const f of files.filter((fi) => fi.url || fi.filename)) {
       const isImage = (f.mediaType ?? "").startsWith("image/");
       const lowerName = (f.filename ?? "").toLowerCase();
       const isPdf = lowerName.endsWith(".pdf") || f.mediaType === "application/pdf";
 
-      // Try to get the raw File object from the blob URL so we know actual size
-      let rawFile: File | null = null;
-      if (f.url.startsWith("blob:")) {
+      // Try to get the raw File object from the blob URL or sourceFile
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let rawFile: File | null = (f as any).sourceFile ?? null;
+      if (!rawFile && f.url && f.url.startsWith("blob:")) {
         try {
           const res = await fetch(f.url);
           const blob = await res.blob();
@@ -602,61 +600,57 @@ export function RemiChat({
 
       if (useInline && !isPdf) {
         // Small image: send inline as base64
-        const dataUrl = await blobUrlToDataUrl(f.url);
+        const dataUrl = f.url?.startsWith("data:") ? f.url : await blobUrlToDataUrl(f.url ?? "");
         if (dataUrl && dataUrl.startsWith("data:")) {
           inlineAttachments.push({
             filename: f.filename ?? "image",
             mimeType: f.mediaType ?? "image/jpeg",
             dataUrl,
           });
+          sanitizedFiles.push({
+            type: "file",
+            ...(f.filename ? { filename: f.filename } : {}),
+            mediaType: f.mediaType ?? "image/jpeg",
+            url: dataUrl,
+          });
         }
       } else {
-        // PDF or large file: pre-upload via dedicated route
-        if (!rawFile) {
-          // If we couldn't get the File from blob, fall back to inline for small files
-          const dataUrl = await blobUrlToDataUrl(f.url);
-          if (dataUrl && dataUrl.startsWith("data:")) {
-            inlineAttachments.push({
-              filename: f.filename ?? "file",
-              mimeType: f.mediaType ?? "application/octet-stream",
-              dataUrl,
-            });
-          }
-          continue;
-        }
-
-        toast.loading(`Uploading ${f.filename ?? "file"}…`, { id: "doc-upload" });
-        try {
-          const result = await preUploadDocument(rawFile);
-          toast.dismiss("doc-upload");
-          if (result) {
-            uploadedRefs.push({
-              resourceId: result.resourceId,
-              title: result.title,
-              kind: result.kind,
-              filename: f.filename ?? "file",
-            });
-            if (!result.hasText) {
-              toast.warning(
-                `"${f.filename}" was uploaded but no text could be extracted. It may be a scanned or image-only PDF.`,
-                { duration: 6000 },
-              );
-            } else {
+        // PDF or large file: direct-to-storage upload via presigned URL
+        if (rawFile) {
+          toast.loading(`Uploading ${f.filename ?? "file"}…`, { id: "doc-upload" });
+          try {
+            const result = await preUploadDocument(rawFile);
+            toast.dismiss("doc-upload");
+            if (result) {
+              uploadedRefs.push({
+                resourceId: result.resourceId,
+                title: result.title,
+                kind: result.kind,
+                filename: f.filename ?? "file",
+              });
               toast.success(`"${f.filename}" uploaded and processed.`, { duration: 3000 });
             }
+          } catch (uploadErr) {
+            toast.dismiss("doc-upload");
+            toast.error(
+              `Failed to upload "${f.filename}": ${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)}`,
+            );
+            // Don't abort the whole submit — just skip this file
           }
-        } catch (uploadErr) {
-          toast.dismiss("doc-upload");
-          toast.error(
-            `Failed to upload "${f.filename}": ${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)}`,
-          );
-          // Don't abort the whole submit — just skip this file
         }
+
+        // Pass sanitized file to UI so chat bubble shows the badge, but URL is empty so ZERO bytes are sent in HTTP JSON body!
+        sanitizedFiles.push({
+          type: "file",
+          filename: f.filename ?? "document.pdf",
+          mediaType: f.mediaType || "application/pdf",
+          url: "",
+        });
       }
     }
 
     await sendMessage(
-      { text: trimmed || "(attached files)", files },
+      { text: trimmed || "(attached files)", files: sanitizedFiles },
       {
         body: {
           threadId,

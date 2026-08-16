@@ -811,20 +811,24 @@ export const PromptInput = ({
       }
 
       try {
-        // Convert blob URLs to data URLs asynchronously
+        // Convert blob URLs to data URLs asynchronously ONLY for images (< 1 MB) for inline vision preview.
+        // For PDFs, textbooks, and large documents, preserve the blob URL / sourceFile so they can be
+        // uploaded directly to Supabase Storage without generating megabytes of base64 strings in memory.
         const convertedFiles: FileUIPart[] = await Promise.all(
           files.map(async ({ id: _id, sourceFile, ...item }) => {
-            if (sourceFile) {
-              const dataUrl = await convertFileToDataUrl(sourceFile);
-              if (dataUrl) return { ...item, url: dataUrl };
-            }
-            if (item.url?.startsWith("blob:")) {
-              const dataUrl = await convertBlobUrlToDataUrl(item.url);
-              // If conversion failed, keep the original blob URL
-              return {
-                ...item,
-                url: dataUrl ?? item.url,
-              };
+            const isImage = (item.mediaType ?? "").startsWith("image/");
+            if (isImage) {
+              if (sourceFile && sourceFile.size < 1024 * 1024) {
+                const dataUrl = await convertFileToDataUrl(sourceFile);
+                if (dataUrl) return { ...item, url: dataUrl };
+              }
+              if (item.url?.startsWith("blob:")) {
+                const dataUrl = await convertBlobUrlToDataUrl(item.url);
+                return {
+                  ...item,
+                  url: dataUrl ?? item.url,
+                };
+              }
             }
             return item;
           }),
