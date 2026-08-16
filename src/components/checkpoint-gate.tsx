@@ -111,7 +111,9 @@ export function CheckpointGate({
                 <ShieldCheck className="size-5" />
               </div>
               <div>
-                <h4 className="font-display text-base font-bold text-foreground">Quick Self-Check</h4>
+                <h4 className="font-display text-base font-bold text-foreground">
+                  Quick Self-Check
+                </h4>
                 <p className="text-xs text-muted-foreground">
                   Answer all questions correctly to complete this lesson.
                 </p>

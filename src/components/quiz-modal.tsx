@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { generateQuizForItem, submitQuizAttempt } from "@/lib/quiz.functions";
 import type { QuizQuestion } from "@/lib/agents/quiz-generator.server";
 import { checkMcqCorrect, cleanOptionText, getOptionLetterUpper } from "@/lib/quiz-eval";
+import { MessageResponse } from "@/components/ai-elements/message";
 
 type QuestionState = {
   question: QuizQuestion;
@@ -197,7 +198,11 @@ export function QuizModal({
                     <div className="space-y-2.5 pl-8">
                       {question.options.map((opt, optIdx) => {
                         const selected = userAns === opt;
-                        const optIsCorrect = checkMcqCorrect(opt, question.correct_answer, question.options);
+                        const optIsCorrect = checkMcqCorrect(
+                          opt,
+                          question.correct_answer,
+                          question.options,
+                        );
                         let optionStyle =
                           "border border-border/80 bg-muted/40 text-foreground hover:bg-muted/80";
 

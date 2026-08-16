@@ -40,6 +40,7 @@ export function getDocumentTools(
               cleanInput,
             );
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let bestDoc: any = null;
 
             // 1. Try exact UUID match first
@@ -101,7 +102,7 @@ export function getDocumentTools(
                 return {
                   success: false,
                   error: `Could not match document '${document_id}'. Available documents: ${allDocs
-                    .map((d: any) => `"${d.title}"`)
+                    .map((d: { title: string }) => `"${d.title}"`)
                     .join(", ")}`,
                 };
               }
@@ -121,7 +122,7 @@ export function getDocumentTools(
                 const { data: dData, error: dErr } = await supabase.storage
                   .from("materials")
                   .download(doc.storage_path);
-                
+
                 if (!dErr && dData) {
                   fileData = dData;
                 } else {
@@ -132,7 +133,11 @@ export function getDocumentTools(
                   if (!adminErr && adminData) {
                     fileData = adminData;
                   } else {
-                    dlErr = adminErr ? new Error(adminErr.message) : dErr ? new Error(dErr.message) : null;
+                    dlErr = adminErr
+                      ? new Error(adminErr.message)
+                      : dErr
+                        ? new Error(dErr.message)
+                        : null;
                   }
                 }
 
@@ -223,13 +228,16 @@ export function getDocumentTools(
                 returnedText +=
                   "--- STORED DOCUMENT CHUNKS ---\n" +
                   dbChunks
-                    .map((c: any, i: number) => `--- CHUNK ${i + 1} ---\n${c.content}`)
+                    .map(
+                      (c: { content: string }, i: number) => `--- CHUNK ${i + 1} ---\n${c.content}`,
+                    )
                     .join("\n\n");
               }
             }
 
             return {
               success: true,
+              document_id: doc.id,
               title: doc.title,
               kind: doc.kind,
               status: doc.status,
@@ -237,6 +245,7 @@ export function getDocumentTools(
               key_points: doc.key_points,
               extracted_text: returnedText || "Document exists but contains no text content.",
               semantic_search_used: !!semanticContext,
+              citation_note: `Source: "${doc.title}" (document_id: ${doc.id}). Page numbers are tagged as "--- Page N ---" in the content above.`,
             };
           },
           supabase,

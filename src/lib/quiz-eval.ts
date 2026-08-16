@@ -8,7 +8,7 @@
  */
 export function cleanOptionText(text: string): string {
   if (!text) return "";
-  return text.trim().replace(/^([a-dA-D1-4])[\.\)\:\s]\s*/, "");
+  return text.trim().replace(/^([a-dA-D1-4])[.):\s]\s*/, "");
 }
 
 /**
@@ -42,7 +42,7 @@ export function checkMcqCorrect(
 
   // Helper to extract option letter and cleaned text body
   const parseStr = (s: string) => {
-    const match = s.trim().match(/^([a-d])[\.\)\:\s]\s*(.*)$/i);
+    const match = s.trim().match(/^([a-d])[.):\s]\s*(.*)$/i);
     if (match) {
       return { letter: match[1]!.toLowerCase(), body: match[2]!.trim().toLowerCase() };
     }

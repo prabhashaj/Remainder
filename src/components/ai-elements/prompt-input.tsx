@@ -243,13 +243,13 @@ export const PromptInputProvider = ({
 
     setAttachmentFiles((prev) => [
       ...prev,
-        ...incoming.map((file) => ({
-          filename: file.name,
-          id: nanoid(),
-          mediaType: file.type,
-          sourceFile: file,
-          type: "file" as const,
-          url: URL.createObjectURL(file),
+      ...incoming.map((file) => ({
+        filename: file.name,
+        id: nanoid(),
+        mediaType: file.type,
+        sourceFile: file,
+        type: "file" as const,
+        url: URL.createObjectURL(file),
       })),
     ]);
   }, []);

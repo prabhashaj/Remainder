@@ -381,8 +381,16 @@ export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
 
       if (text && text.trim().length > 0) {
         const { saveDocumentTextAndEmbed } = await import("@/lib/document-processor.server");
-        await saveDocumentTextAndEmbed(targetClient, data.resourceId, text, undefined, context.userId);
-        console.log(`[DocumentExtraction] Successfully extracted ${text.length} chars for ${data.resourceId}`);
+        await saveDocumentTextAndEmbed(
+          targetClient,
+          data.resourceId,
+          text,
+          undefined,
+          context.userId,
+        );
+        console.log(
+          `[DocumentExtraction] Successfully extracted ${text.length} chars for ${data.resourceId}`,
+        );
         return { success: true, textLength: text.length };
       }
 

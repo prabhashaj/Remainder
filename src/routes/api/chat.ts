@@ -46,8 +46,15 @@ Capabilities & Media Rendering Rules:
 - ONLY when the user EXPLICITLY asks to see, get, or show images/photos: call \`searchPhotos\` AND render each returned photo directly inside your response text using markdown image syntax: \`![caption](url)\`. Do NOT fetch or show images proactively without a direct request.
 - When the user asks for video tutorials or YouTube videos: call \`researchResources\` or search the web and include the YouTube watch URLs (e.g., \`https://www.youtube.com/watch?v=...\`) directly in your message text so an inline video player renders in the chat interface.
 - Analyze and discuss attached images, PDFs, and text documents accurately when provided by the user.
-- **Document & PDF Reading Rules (CRITICAL):** You ARE FULLY CAPABLE of reading, summarizing, and analyzing attached PDF documents, research papers, syllabi, and text files. The text content of attached documents is provided to you under \`## Attached File Content\` and inside user messages. ABSOLUTELY NEVER output refusal messages like "I currently don't have the ability to directly read or analyze PDF documents". ALWAYS read, analyze, summarize, or extract key points from attached files immediately using the provided document text.
+- **Inline-Attached Files (CRITICAL):** When a file's content already appears under \`## Attached File Content: "<filename>"\` in the current context block, use that content directly — read it, summarize it, and answer questions about it immediately. Do NOT call \`readDocument\` for files that are already present as inline content in the current message. The \`readDocument\` tool is ONLY for previously-saved workspace documents (called by their UUID, not by filename) that are NOT present as inline content in the current message.
+- **Document & PDF Reading Rules (CRITICAL):** You ARE FULLY CAPABLE of reading, summarizing, and analyzing attached PDF documents, research papers, syllabi, and text files. The text content of attached documents is provided to you under \`## Attached File Content\` and inside user messages. ABSOLUTELY NEVER output refusal messages like "I currently don't have the ability to directly read or analyze PDF documents". ALWAYS read, analyze, summarize, or extract key points from attached files immediately using the provided document text. If an attached file's content block says extraction failed (e.g. starts with "(Remi:"), relay that clearly to the user — do not fabricate content.
 - **NEVER generate roadmaps as plain text:** If the user asks to create a roadmap, DO NOT output the roadmap as text in the chat. You MUST use the \`delegateToPlanner\` tool to build it in their workspace.
+
+Grounding & Citation Rules:
+- Every factual claim drawn from a document (inline-attached or via \`readDocument\`) must be traceable to its source. Reference the filename or title and, when available, the page number (pages are marked \`--- Page N ---\` in extracted text — cite them as "(filename, p. N)").
+- If the requested information is genuinely not present in the provided document content, say so explicitly: "This information isn't covered in the provided material" — do not fill the gap from general knowledge when a specific document was the intended source.
+- For \`readDocument\` results, the tool returns a \`citation_note\` field — use its document_id and title when citing.
+- For web search results (webSearch, researchResources, searchArxiv, searchPapers), always include source URL or title as an inline citation \`[Source Name](URL)\` for every retrieved fact. Never present search-derived claims as unsourced assertions.
 
 Tool Delegation:
 - createTask: Use to instantly create a new task for the user.
@@ -380,10 +387,28 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
             if (!base64Data) continue;
-            
+
+            // Early size check from base64 length estimate (avoids full buffer allocation for oversized files)
+            const estimatedBytes = Math.ceil(base64Data.length * 0.75);
+            const MAX_FILE_SIZE_EARLY = limits.maxFileSizeMb * 1024 * 1024;
+            if (estimatedBytes > MAX_FILE_SIZE_EARLY) {
+              log(
+                "warn",
+                "attachment_blocked_size_early",
+                {
+                  filename: att.filename,
+                  estimatedMb: (estimatedBytes / (1024 * 1024)).toFixed(1),
+                },
+                { userId, traceId },
+              );
+              continue;
+            }
+
             const buffer = Buffer.from(base64Data, "base64");
             const rawMime =
-              typeof att.mimeType === "string" && att.mimeType && att.mimeType !== "application/octet-stream"
+              typeof att.mimeType === "string" &&
+              att.mimeType &&
+              att.mimeType !== "application/octet-stream"
                 ? att.mimeType
                 : dataUrlMime;
 
@@ -467,7 +492,7 @@ export const Route = createFileRoute("/api/chat")({
 
             const safeName = att.filename.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/\.+/g, ".");
             const storagePath = `${userId}/${Date.now()}-${safeName}`;
-            
+
             // Use the request-scoped client for the normal upload path. It carries the
             // signed-in user's JWT, so it works with the Storage/RLS policies even when
             // a Vercel deployment does not have the service-role secret configured.
@@ -478,17 +503,20 @@ export const Route = createFileRoute("/api/chat")({
                 upsert: true,
               });
 
-            if (uploadErr && (uploadErr.message.includes("not found") || uploadErr.message.includes("does not exist") || uploadErr.message.includes("Bucket"))) {
+            if (
+              uploadErr &&
+              (uploadErr.message.includes("not found") ||
+                uploadErr.message.includes("does not exist") ||
+                uploadErr.message.includes("Bucket"))
+            ) {
               // This is only a compatibility fallback for projects created before the
               // materials-bucket migration. New deployments provision it in Supabase.
               const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
               await supabaseAdmin.storage.createBucket("materials", { public: false });
-              const retry = await supabase.storage
-                .from("materials")
-                .upload(storagePath, buffer, {
-                  contentType: mime,
-                  upsert: true,
-                });
+              const retry = await supabase.storage.from("materials").upload(storagePath, buffer, {
+                contentType: mime,
+                upsert: true,
+              });
               uploadErr = retry.error;
             }
 
@@ -511,14 +539,13 @@ export const Route = createFileRoute("/api/chat")({
               extractedText = buffer.toString("utf-8");
             }
 
-            // Fallback for real PDFs that failed extraction or text files with .pdf extension
+            // If extraction produced nothing, tell the model explicitly — don't inject raw bytes
             if ((!extractedText || extractedText.trim().length === 0) && buffer.length > 0) {
-              const raw = buffer.toString("utf-8");
-              if (!/\0/.test(raw.slice(0, 1000))) {
-                extractedText = raw;
-              } else {
-                extractedText = "(Error: Could not extract readable text from this PDF. It might be a scanned image or corrupted.)";
-              }
+              extractedText =
+                `(Remi: The text content of "${att.filename}" could not be extracted. ` +
+                `It may be a scanned image, a secured/encrypted PDF, or a format that doesn't contain a text layer. ` +
+                `Please inform the user clearly that you cannot read this specific file's content, ` +
+                `and suggest they paste the text directly if they need you to analyze it.)`;
             }
 
             // Insert study_resources row

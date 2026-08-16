@@ -68,7 +68,35 @@ export async function deleteStudyResource(resource: StudyResource) {
 
 /** Uploads a document to the private materials bucket under the user's folder. */
 export async function uploadMaterial(file: File): Promise<string> {
-  const allowedExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".txt", ".md", ".csv", ".json", ".doc", ".docx"];
+  const allowedExtensions = [
+    ".pdf",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".txt",
+    ".md",
+    ".csv",
+    ".json",
+    ".doc",
+    ".docx",
+  ];
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "application/json",
+    "application/octet-stream",
+    "application/x-pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
   const lowerName = file.name.toLowerCase();
   const hasAllowedExt = allowedExtensions.some((ext) => lowerName.endsWith(ext));
 

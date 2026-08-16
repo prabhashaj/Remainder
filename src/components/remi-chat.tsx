@@ -732,7 +732,7 @@ export function RemiChat({
               <AttachButton />
               <VoiceInputButton textareaRef={textareaRef} />
             </div>
-            <PromptInputSubmit status={status} disabled={busy} />
+            <PromptInputSubmit status={status} onStop={stop} disabled={status === "submitted"} />
           </PromptInputFooter>
         </PromptInput>
         {usageData && usageData.daily && (

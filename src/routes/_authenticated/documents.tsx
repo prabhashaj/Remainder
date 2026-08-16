@@ -206,7 +206,9 @@ function DocumentsPage() {
       toast.success("Document added — processing text & chunks...");
 
       // 1. Immediately trigger server-side extraction, chunking & embedding
-      const extRes = await runTriggerExtraction({ data: { resourceId: created.id, storagePath: path } });
+      const extRes = await runTriggerExtraction({
+        data: { resourceId: created.id, storagePath: path },
+      });
       refreshResources();
 
       if (extRes.success && (extRes.textLength ?? 0) > 0) {
