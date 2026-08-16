@@ -4,12 +4,6 @@ import { toast } from "sonner";
 import { getBillingData, createCheckoutSession, cancelSubscription } from "@/lib/billing.functions";
 import { useEffect } from "react";
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
 export function BillingSection() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["billing"], queryFn: () => getBillingData() });
@@ -27,32 +21,35 @@ export function BillingSection() {
 
   const checkoutMut = useMutation({
     mutationFn: createCheckoutSession,
-    onSuccess: (sessionData: any) => {
+    onSuccess: (sessionData: { subscriptionId: string; planName: string; amount: number }) => {
       if (!data?.razorpayKeyId) {
         toast.error("Razorpay is not configured");
+        return;
+      }
+
+      if (!window.Razorpay) {
+        toast.error("Razorpay SDK not loaded");
         return;
       }
 
       const options = {
         key: data.razorpayKeyId,
         subscription_id: sessionData.subscriptionId,
-        name: "Remainder AI",
+        name: "Remispace",
         description: sessionData.planName,
-        handler: function (response: any) {
+        handler: function () {
           toast.success("Subscription activated successfully! It may take a minute to update.");
-          // We rely on the webhook to actually update the database.
-          // Re-fetch after a delay or just wait.
           setTimeout(() => qc.invalidateQueries({ queryKey: ["billing"] }), 2000);
         },
         theme: {
-          color: "#4f46e5",
+          color: "#f43f5e",
         },
       };
 
       const rzp = new window.Razorpay(options);
       rzp.open();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to initialize checkout");
     },
   });

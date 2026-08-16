@@ -4,8 +4,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { upgradeToProFn } from "@/lib/billing.functions";
+import { createRazorpayOrderFn, verifyRazorpayPaymentFn } from "@/lib/billing.functions";
 import { isSubscriptionPremium } from "@/lib/limits";
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 export const Route = createFileRoute("/_authenticated/pricing")({
   component: PricingPage,
@@ -13,7 +26,8 @@ export const Route = createFileRoute("/_authenticated/pricing")({
 
 function PricingPage() {
   const qc = useQueryClient();
-  const runUpgrade = useServerFn(upgradeToProFn);
+  const createOrder = useServerFn(createRazorpayOrderFn);
+  const verifyPayment = useServerFn(verifyRazorpayPaymentFn);
   const [upgrading, setUpgrading] = useState(false);
 
   const { data: subscription } = useQuery({
@@ -35,19 +49,83 @@ function PricingPage() {
 
   const handleSubscribe = async (tier: "weekly" | "monthly") => {
     setUpgrading(true);
-    toast.loading("Activating Pro subscription…", { id: "upgrade" });
+    toast.loading("Opening secure checkout…", { id: "checkout" });
+
     try {
-      await runUpgrade({ data: { tier } });
-      await qc.invalidateQueries({ queryKey: ["subscription"] });
-      await qc.invalidateQueries({ queryKey: ["planUsage"] });
-      toast.dismiss("upgrade");
-      toast.success("🎉 You are now a Remispace Pro user! 50MB uploads and unlimited features are unlocked.", {
-        duration: 8000,
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        throw new Error("Unable to load Razorpay checkout SDK. Please check your internet connection.");
+      }
+
+      const order = await createOrder({ data: { tier } });
+      toast.dismiss("checkout");
+
+      const options = {
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Remispace",
+        description: `${order.planName} Subscription`,
+        image: "/favicon.png",
+        order_id: order.orderId,
+        prefill: {
+          email: order.userEmail,
+        },
+        theme: {
+          color: "#f43f5e",
+        },
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          toast.loading("Verifying your payment…", { id: "verify" });
+          try {
+            await verifyPayment({
+              data: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                tier,
+              },
+            });
+            await qc.invalidateQueries({ queryKey: ["subscription"] });
+            await qc.invalidateQueries({ queryKey: ["planUsage"] });
+            toast.dismiss("verify");
+            toast.success("🎉 Payment successful! You are now a Remispace Pro user.", {
+              duration: 8000,
+            });
+          } catch (verifyErr) {
+            toast.dismiss("verify");
+            toast.error(
+              verifyErr instanceof Error
+                ? verifyErr.message
+                : "Payment verification failed. Please contact support.",
+            );
+          } finally {
+            setUpgrading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setUpgrading(false);
+          },
+        },
+      };
+
+      if (!window.Razorpay) {
+        throw new Error("Razorpay SDK is not available.");
+      }
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (response) => {
+        toast.error(response.error?.description || "Payment failed. Please try again.");
+        setUpgrading(false);
       });
+      rzp.open();
     } catch (err) {
-      toast.dismiss("upgrade");
-      toast.error(err instanceof Error ? err.message : "Failed to activate Pro subscription");
-    } finally {
+      toast.dismiss("checkout");
+      toast.error(err instanceof Error ? err.message : "Failed to open payment gateway");
       setUpgrading(false);
     }
   };
@@ -120,7 +198,7 @@ function PricingPage() {
               className="mt-8 w-full rounded-md bg-primary py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {upgrading
-                ? "Activating…"
+                ? "Opening Checkout…"
                 : isPremium && subscription?.tier === "weekly"
                   ? "✓ Active Plan"
                   : "Upgrade to Weekly Pro"}
@@ -150,7 +228,7 @@ function PricingPage() {
               className="mt-8 w-full rounded-md border border-border bg-background py-2 text-sm font-semibold hover:bg-muted transition-colors disabled:opacity-50"
             >
               {upgrading
-                ? "Activating…"
+                ? "Opening Checkout…"
                 : isPremium && subscription?.tier === "monthly"
                   ? "✓ Active Plan"
                   : "Upgrade to Monthly Pro"}

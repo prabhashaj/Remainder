@@ -117,6 +117,112 @@ export const getPlanUsage = createServerFn({ method: "GET" })
     }
   });
 
+export const createRazorpayOrderFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { tier: "weekly" | "monthly" }) => data)
+  .handler(async ({ context, data }) => {
+    const { userId, claims } = context;
+    const tier = data.tier;
+    const amountInr = tier === "weekly" ? 99 : 399;
+    const amountPaise = amountInr * 100;
+
+    try {
+      const order = await razorpay.orders.create({
+        amount: amountPaise,
+        currency: "INR",
+        receipt: `rcpt_${userId.slice(0, 8)}_${Date.now()}`,
+        notes: {
+          user_id: userId,
+          tier,
+          email: typeof claims.email === "string" ? claims.email : "",
+        },
+      });
+
+      log("info", "razorpay_order_created", { orderId: order.id, tier, amountInr }, { userId });
+
+      return {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: process.env["RAZORPAY_KEY_ID"] || "rzp_live_TQQWHZEUiH2mK6",
+        tier,
+        planName: tier === "weekly" ? "Weekly Premium" : "Monthly Premium",
+        userEmail: typeof claims.email === "string" ? claims.email : "",
+      };
+    } catch (err) {
+      log("error", "razorpay_order_creation_failed", { error: String(err) }, { userId });
+      throw new Error(err instanceof Error ? err.message : "Failed to create payment order");
+    }
+  });
+
+export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (data: {
+      razorpay_order_id: string;
+      razorpay_payment_id: string;
+      razorpay_signature: string;
+      tier: "weekly" | "monthly";
+    }) => data,
+  )
+  .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const crypto = await import("node:crypto");
+    const { userId } = context;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, tier } = data;
+
+    const secret = process.env["RAZORPAY_KEY_SECRET"] || "eZG0VCtEwBfcMpgU98QEs9u7";
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
+      log(
+        "warn",
+        "razorpay_payment_signature_mismatch",
+        { razorpay_order_id, razorpay_payment_id },
+        { userId },
+      );
+      throw new Error("Invalid payment signature. Verification failed.");
+    }
+
+    // Set validity period (7 days for weekly, 30 days for monthly)
+    const now = new Date();
+    const periodEnd = new Date(now.getTime() + (tier === "weekly" ? 7 : 30) * 24 * 60 * 60 * 1000);
+
+    const { data: existing } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          tier,
+          status: "active",
+          current_period_end: periodEnd.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin.from("subscriptions").insert({
+        user_id: userId,
+        tier,
+        status: "active",
+        current_period_end: periodEnd.toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(error.message);
+    }
+
+    log("info", "razorpay_subscription_activated", { tier, razorpay_payment_id }, { userId });
+    return { success: true };
+  });
+
 export const upgradeToProFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { tier?: "weekly" | "monthly" | "pro" } | undefined) => data)
