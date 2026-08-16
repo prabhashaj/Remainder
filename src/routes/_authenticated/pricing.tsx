@@ -1,35 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createRazorpayOrderFn, verifyRazorpayPaymentFn } from "@/lib/billing.functions";
 import { isSubscriptionPremium } from "@/lib/limits";
 
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") return resolve(false);
-    if (window.Razorpay) return resolve(true);
+async function ensureRazorpayLoaded(maxWaitMs = 5000): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (window.Razorpay) return true;
 
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[src*="checkout.razorpay.com"]',
-    );
-    if (existing) {
-      if (window.Razorpay) return resolve(true);
-      existing.addEventListener("load", () => resolve(Boolean(window.Razorpay)));
-      existing.addEventListener("error", () => resolve(false));
-      setTimeout(() => resolve(Boolean(window.Razorpay)), 600);
-      return;
-    }
-
-    const script = document.createElement("script");
+  // Check if script exists, if not create it
+  let script = document.querySelector<HTMLScriptElement>('script[src*="checkout.razorpay.com"]');
+  if (!script) {
+    script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
-    script.onload = () => resolve(Boolean(window.Razorpay));
-    script.onerror = () => resolve(false);
+    script.crossOrigin = "anonymous";
     document.head.appendChild(script);
-  });
+  }
+
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    if (window.Razorpay) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  return Boolean(window.Razorpay);
 }
 
 export const Route = createFileRoute("/_authenticated/pricing")({
@@ -41,6 +39,11 @@ function PricingPage() {
   const createOrder = useServerFn(createRazorpayOrderFn);
   const verifyPayment = useServerFn(verifyRazorpayPaymentFn);
   const [upgrading, setUpgrading] = useState(false);
+
+  // Pre-load SDK on page mount
+  useEffect(() => {
+    ensureRazorpayLoaded().catch(() => {});
+  }, []);
 
   const { data: subscription } = useQuery({
     queryKey: ["subscription"],
@@ -64,9 +67,9 @@ function PricingPage() {
     toast.loading("Opening secure checkout…", { id: "checkout" });
 
     try {
-      const loaded = await loadRazorpayScript();
+      const loaded = await ensureRazorpayLoaded();
       if (!loaded) {
-        throw new Error("Unable to load Razorpay checkout SDK. Please check your internet connection.");
+        throw new Error("Unable to load Razorpay checkout SDK. Please ensure adblockers or browser privacy shields are disabled.");
       }
 
       const order = await createOrder({ data: { tier } });
