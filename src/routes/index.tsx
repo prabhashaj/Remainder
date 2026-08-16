@@ -2,30 +2,25 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
-  BookHeart,
   BookOpen,
   CalendarHeart,
   Check,
   ChevronRight,
   Compass,
-  CornerDownLeft,
   FileSearch,
   FileText,
   Focus,
-  Maximize2,
   Menu,
   MessageSquareText,
-  Mic,
   Music,
-  Paperclip,
   Play,
-  Plus,
   Sparkles,
   X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import remiLogo from "@/assets/remi.png";
+import studyspaceImg from "@/assets/Studyspace.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -120,193 +115,24 @@ function SectionTitle({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Exact Remispace Dashboard & Remi AI Assistant Showcase Mockup             */
+/* Workspace Screenshot Showcase                                              */
 /* -------------------------------------------------------------------------- */
 function WorkspaceShowcase() {
   const reduced = useReducedMotion();
-  const sidebarNav = [
-    { label: "Dashboard", icon: BookHeart, active: true },
-    { label: "Tasks", icon: Check, active: false },
-    { label: "Habits", icon: CalendarHeart, active: false },
-    { label: "Goals", icon: Compass, active: false },
-    { label: "Roadmaps", icon: FileSearch, active: false },
-    { label: "Documents", icon: FileText, active: false },
-    { label: "Conversations", icon: MessageSquareText, hasChevron: true, active: false },
-  ];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 32 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0 : 0.8, delay: 0.18 }}
-      className="relative mt-12 overflow-hidden rounded-3xl border border-[#0d402e] bg-[#021810] p-2.5 shadow-2xl backdrop-blur-xl md:p-4 text-left text-zinc-100 font-sans"
+      className="relative mt-12 overflow-hidden rounded-3xl border border-[#0d402e] shadow-2xl"
     >
-      <div className="flex min-h-[580px] overflow-hidden rounded-2xl border border-[#0d402e] bg-[#031c13] text-zinc-100">
-        {/* Left Sidebar */}
-        <aside className="hidden w-[210px] shrink-0 border-r border-[#0d402e] bg-[#021810] p-4 md:flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <img src={remiLogo} alt="Remispace" className="size-6 rounded-lg object-cover" />
-              <span className="font-display font-bold text-sm text-white">Remispace</span>
-              <span className="rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] font-bold px-1.5 py-0.2 tracking-wider">
-                PRO
-              </span>
-            </div>
-
-            <div className="mt-6 space-y-1">
-              {sidebarNav.map((item) => (
-                <div
-                  key={item.label}
-                  className={`flex items-center justify-between rounded-xl px-2.5 py-2 text-xs font-medium transition-colors ${
-                    item.active
-                      ? "bg-[#063826] text-white font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <item.icon className="size-3.5" />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.hasChevron && <ChevronRight className="size-3 text-zinc-500" />}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-7">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-medium px-2.5">
-                <span>Notebook</span>
-                <span className="cursor-pointer hover:text-white font-bold">+</span>
-              </div>
-              <div className="mt-2 space-y-1 text-[11px] text-zinc-400">
-                <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-[#072a1e] truncate">
-                  <span>📁</span>
-                  <span className="truncate">CS50AI Lecture Notes: Int...</span>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-[#072a1e] truncate">
-                  <span>📁</span>
-                  <span className="truncate">Backpropagation in Neur...</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-[11px] text-zinc-500 flex items-center gap-2 pt-4 border-t border-[#0d402e]">
-            <span>⚙️ Settings</span>
-          </div>
-        </aside>
-
-        {/* Main Viewport */}
-        <div className="min-w-0 flex-1 p-5 md:p-7 flex flex-col justify-between bg-[#031e14]">
-          <div className="space-y-4">
-            {/* Top Bar Header */}
-            <div className="flex items-center justify-between border-b border-[#0d402e]/60 pb-3.5">
-              <div className="flex items-center gap-3">
-                <span className="cursor-pointer text-zinc-400">◫</span>
-                <div className="flex items-center gap-2 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1.5 text-xs text-zinc-400">
-                  <FileSearch className="size-3 text-zinc-500" />
-                  <span>Search</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1 text-xs text-zinc-300">
-                  <BookOpen className="size-3 text-emerald-400" />
-                  <span>Study Place</span>
-                </div>
-                <div className="flex items-center gap-1.5 rounded-full bg-[#06291d] border border-[#0d402e] px-3 py-1 text-xs text-zinc-300">
-                  <Focus className="size-3 text-emerald-400" />
-                  <span>Focus</span>
-                </div>
-                <div className="grid size-7 place-items-center rounded-full bg-[#093828] border border-[#0d402e] text-xs font-bold text-emerald-400">
-                  PR
-                </div>
-              </div>
-            </div>
-
-            {/* Top Action Banner (Next Best Action Card) */}
-            <div className="rounded-2xl border border-[#0d402e] bg-[#042419] p-3.5 px-4 flex items-center justify-between shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="grid size-7 place-items-center rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <Compass className="size-3.5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                    NEXT BEST ACTION · DAILY HABIT
-                  </p>
-                  <p className="text-xs sm:text-sm font-medium text-white">
-                    Deep Work: AI Engineering Focus (4x/week)
-                  </p>
-                </div>
-              </div>
-
-              <button className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-bold text-black hover:bg-emerald-400 transition-colors flex items-center gap-1 shrink-0">
-                Log habit <ArrowRight className="size-3.5" />
-              </button>
-            </div>
-
-            {/* Main Remi AI Assistant Panel */}
-            <div className="rounded-2xl border border-[#0d402e] bg-[#042419] p-5 sm:p-7 shadow-xs flex flex-col justify-between">
-              {/* Remi Header */}
-              <div className="flex items-center justify-between border-b border-[#0d402e]/60 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="grid size-5 place-items-center rounded-full bg-emerald-500/20 text-emerald-400">
-                    <Sparkles className="size-3" />
-                  </div>
-                  <span className="font-display font-bold text-sm text-white">Remi</span>
-                </div>
-                <div className="flex items-center gap-2 text-zinc-500 text-xs">
-                  <Plus className="size-3.5 hover:text-white cursor-pointer" />
-                  <Maximize2 className="size-3.5 hover:text-white cursor-pointer" />
-                </div>
-              </div>
-
-              {/* Remi Central Greeting */}
-              <div className="py-6 sm:py-8 text-center">
-                <img
-                  src={remiLogo}
-                  alt="Remi"
-                  className="mx-auto size-14 object-cover"
-                />
-                <h3 className="mt-3 font-display text-xl sm:text-2xl font-bold text-white">
-                  Hi, I'm Remi.
-                </h3>
-                <p className="mx-auto mt-2 max-w-lg text-xs sm:text-sm leading-relaxed text-zinc-400">
-                  Build study roadmaps, read and synthesize PDFs, generate rich math and note
-                  pages, plan habits and goals, or organize your tasks — all in one structured
-                  workspace.
-                </p>
-
-                {/* Suggestions Pills */}
-                <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
-                  <span className="rounded-full border border-[#0d402e] bg-[#021810] px-3.5 py-1.5 text-xs text-zinc-300">
-                    Build a study roadmap for this topic
-                  </span>
-                  <span className="rounded-full border border-[#0d402e] bg-[#021810] px-3.5 py-1.5 text-xs text-zinc-300">
-                    Generate a notebook with formulas
-                  </span>
-                  <span className="rounded-full border border-[#0d402e] bg-[#021810] px-3.5 py-1.5 text-xs text-zinc-300">
-                    Add tasks and habits for today
-                  </span>
-                </div>
-              </div>
-
-              {/* Bottom Input Box */}
-              <div className="rounded-2xl border border-emerald-500/50 bg-[#021810] p-3 shadow-inner">
-                <p className="text-xs text-zinc-500">What do you want to create or ask?</p>
-                <div className="mt-3 flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-3 text-zinc-500">
-                    <Paperclip className="size-4 hover:text-zinc-300 cursor-pointer" />
-                    <Mic className="size-4 hover:text-zinc-300 cursor-pointer" />
-                  </div>
-                  <div className="grid size-6 place-items-center rounded-full bg-emerald-500 text-black">
-                    <CornerDownLeft className="size-3.5 stroke-[2.5]" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <img
+        src={studyspaceImg}
+        alt="Remispace workspace — Dashboard with Remi AI assistant"
+        className="w-full object-cover object-top"
+        loading="lazy"
+      />
     </motion.div>
   );
 }
