@@ -102,10 +102,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: "Notes, habits, goals and an AI learning coach in one soft, focused workspace.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://remispace.in" },
+      { property: "og:site_name", content: "Remispace" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "canonical", href: "https://remispace.in" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
