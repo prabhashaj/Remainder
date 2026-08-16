@@ -8,6 +8,7 @@ import studyspaceImg from "@/assets/Studyspace.png";
 import roadmapsImg from "@/assets/roadmaps.png";
 import tasksImg from "@/assets/tasks.png";
 import remichatImg from "@/assets/remichat.png";
+import notebookImg from "@/assets/Notebbok.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -286,7 +287,7 @@ export default function Landing() {
           <div className="mt-10 flex flex-wrap justify-center gap-2">
             {[
               { id: "roadmaps", label: "Roadmaps" },
-              { id: "notebook",  label: "Notebook" },
+              { id: "notebook",  label: "Notebooks" },
               { id: "remi",      label: "Remi Agent" },
               { id: "study",     label: "Study Space" },
               { id: "habits",    label: "Habits · Goals · Tasks" },
@@ -321,43 +322,15 @@ export default function Landing() {
               </div>
             )}
 
-            {/* ── Notebook ── */}
+            {/* ── Notebooks ── */}
             {activeTab === "notebook" && (
-              <div className="grid gap-0 lg:grid-cols-[1fr_1.4fr]">
-                <div className="p-8 md:p-10 flex flex-col justify-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Feature 02 · Mathematical Canvas</span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Block-based notes with live mathematical equation rendering.
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    A calm, fluid editor that handles equations, syntax-highlighted code, nested subpages, and toggle lists effortlessly. Remi can generate entire notebooks from a single prompt.
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Instant mathematical formula &amp; equation formatting</li>
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> 10+ handcrafted sensory color themes</li>
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> AI-generated notebooks from any topic or PDF</li>
-                  </ul>
-                  <div className="mt-8"><PrimaryLink>Start your notebook</PrimaryLink></div>
-                </div>
-                <div className="bg-[#021810] border-l border-[#0d402e] p-6 font-mono text-xs text-white space-y-3">
-                  <div className="border-b border-[#0d402e] pb-2 text-zinc-400 flex items-center justify-between">
-                    <span>linear_algebra_notes.md</span>
-                    <span className="text-[10px] text-emerald-400">Math Formulas Enabled</span>
-                  </div>
-                  <p className="text-emerald-400 font-bold text-sm"># Eigenvalues &amp; Eigenvectors</p>
-                  <p className="text-zinc-300 font-sans text-sm leading-relaxed">A non-zero vector <strong>v</strong> is an eigenvector of matrix <strong>A</strong> with eigenvalue <strong>λ</strong> if:</p>
-                  <div className="rounded-xl bg-[#05261b] border border-[#0d402e] p-3.5 text-center text-white font-sans text-base font-semibold">
-                    A v = λ v &nbsp;⟺&nbsp; (A − λI)v = 0
-                  </div>
-                  <p className="text-zinc-300 font-sans text-sm leading-relaxed mt-1">To find eigenvalues, solve the <em>characteristic equation</em>:</p>
-                  <div className="rounded-xl bg-[#05261b] border border-[#0d402e] p-3.5 text-center text-white font-sans text-base font-semibold">
-                    det(A − λI) = 0
-                  </div>
-                  <div className="pt-2 flex items-center gap-2 text-[10px] text-zinc-500">
-                    <span className="rounded bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 font-sans">Remi</span>
-                    <span>Generated from CS50 Linear Algebra lecture notes</span>
-                  </div>
-                </div>
+              <div className="overflow-hidden rounded-3xl">
+                <img
+                  src={notebookImg}
+                  alt="Remispace Notebooks — Mathematical canvas"
+                  className="w-full object-cover object-top"
+                  loading="lazy"
+                />
               </div>
             )}
 

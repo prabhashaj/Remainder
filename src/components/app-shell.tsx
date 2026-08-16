@@ -276,7 +276,7 @@ function WorkspaceSidebar() {
         )}
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[13px]">Notebook</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[13px]">Notebooks</SidebarGroupLabel>
           <SidebarGroupAction title="New page" onClick={() => void addPage(null)}>
             <Plus className="size-4" />
           </SidebarGroupAction>
