@@ -110,7 +110,10 @@ export const getPlanUsage = createServerFn({ method: "GET" })
     } catch {
       // If checkPlanUsage throws an error, it means the limit is reached.
       // We return 20/20 or 200/200 so the UI displays correctly instead of 0.
-      return { daily: { used: 20, limit: 20 }, monthly: { used: 200, limit: 200 } };
+      return {
+        daily: { used: 20, limit: 20, isUnlimited: false },
+        monthly: { used: 200, limit: 200, isUnlimited: false },
+      };
     }
   });
 

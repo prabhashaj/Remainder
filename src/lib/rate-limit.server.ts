@@ -67,14 +67,8 @@ export async function checkPlanUsage(
     .eq("user_id", userId)
     .maybeSingle();
 
-  let dailyLimit = 20; // Default Free Tier Limit
-  let monthlyLimit = 200; // Default Free Tier Monthly Limit
-
-  if (subData && subData.status === "active" && subData.plans) {
-    const plan = subData.plans as any;
-    dailyLimit = plan.daily_message_limit ?? dailyLimit;
-    monthlyLimit = plan.monthly_message_limit ?? monthlyLimit;
-  }
+  const { isSubscriptionPremium } = await import("./limits");
+  const isPremium = isSubscriptionPremium(subData);
 
   // We use UTC midnight to avoid timezone edge cases.
   const todayStartUtc = new Date();
@@ -98,6 +92,23 @@ export async function checkPlanUsage(
     .eq("event_type", eventType)
     .gte("created_at", monthStartUtc.toISOString());
 
+  if (isPremium) {
+    return {
+      daily: { used: dailyCount || 0, limit: 999999, isUnlimited: true },
+      monthly: { used: monthlyCount || 0, limit: 999999, isUnlimited: true },
+    };
+  }
+
+  let dailyLimit = 20; // Default Free Tier Limit
+  let monthlyLimit = 200; // Default Free Tier Monthly Limit
+
+  if (subData && subData.status === "active" && subData.plans) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const plan = subData.plans as any;
+    dailyLimit = plan.daily_message_limit ?? dailyLimit;
+    monthlyLimit = plan.monthly_message_limit ?? monthlyLimit;
+  }
+
   if (dailyCount !== null && dailyCount >= dailyLimit) {
     throw new Error("403: Plan Daily Limit Exceeded");
   }
@@ -110,8 +121,8 @@ export async function checkPlanUsage(
   // to avoid double-recording in rate_limit_events
 
   return {
-    daily: { used: dailyCount || 0, limit: dailyLimit },
-    monthly: { used: monthlyCount || 0, limit: monthlyLimit },
+    daily: { used: dailyCount || 0, limit: dailyLimit, isUnlimited: false },
+    monthly: { used: monthlyCount || 0, limit: monthlyLimit, isUnlimited: false },
   };
 }
 

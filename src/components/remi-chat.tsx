@@ -930,7 +930,7 @@ export function RemiChat({
             <PromptInputSubmit status={status} onStop={stop} disabled={status === "submitted"} />
           </PromptInputFooter>
         </PromptInput>
-        {usageData && usageData.daily && (
+        {!isPremium && usageData && usageData.daily && !usageData.daily.isUnlimited && (
           <div className="text-center mt-2 text-xs text-muted-foreground">
             {usageData.daily.used} / {usageData.daily.limit} daily messages used.
           </div>
