@@ -7,6 +7,7 @@ import remiLogo from "@/assets/remi.png";
 import studyspaceImg from "@/assets/Studyspace.png";
 import dashboardImg from "@/assets/Remispace_dashboard.png";
 import roadmapsImg from "@/assets/roadmaps.png";
+import tasksImg from "@/assets/tasks.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -386,48 +387,13 @@ export default function Landing() {
 
             {/* ── Habits · Goals · Tasks ── */}
             {activeTab === "habits" && (
-              <div className="grid gap-0 lg:grid-cols-[1fr_1.4fr]">
-                <div className="p-8 md:p-10 flex flex-col justify-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Feature 05 · Habit Rituals &amp; Momentum</span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Habits, goals, and tasks — all wired together.
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    Track daily habits with streak preservation, break long-term goals into milestones with progress bars, and manage tasks linked to your roadmap — all from one calm dashboard.
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Daily habit check-ins with visual streak tracking</li>
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Long-term goals broken into measurable milestones</li>
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Tasks with due dates linked to your study rhythm</li>
-                  </ul>
-                  <div className="mt-8"><PrimaryLink>Start tracking</PrimaryLink></div>
-                </div>
-                <div className="bg-[#021810] border-l border-[#0d402e] p-6 space-y-3">
-                  <p className="text-xs font-bold text-white border-b border-[#0d402e] pb-2.5">Today's Rituals &amp; Goals</p>
-                  {[
-                    { label: "Read 30 mins technical paper", streak: "🔥 14 days", done: true },
-                    { label: "Complete 1 Roadmap lesson", streak: "🔥 21 days", done: true },
-                    { label: "Evening review &amp; reflection", streak: "🔥 7 days", done: true },
-                    { label: "Deep Work: AI Engineering Focus", streak: "4x/week", done: false },
-                  ].map((h) => (
-                    <div key={h.label} className="flex items-center justify-between rounded-xl bg-[#05261b] border border-[#0d402e] p-2.5 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className={`grid size-4 place-items-center rounded-full text-[9px] font-bold ${ h.done ? "bg-emerald-500 text-black" : "border border-[#0d402e] text-zinc-500" }`}>
-                          {h.done ? "✓" : ""}
-                        </span>
-                        <span className={`font-medium ${ h.done ? "text-white" : "text-zinc-400" }`} dangerouslySetInnerHTML={{ __html: h.label }} />
-                      </div>
-                      <span className="text-[11px] text-zinc-400">{h.streak}</span>
-                    </div>
-                  ))}
-                  <div className="pt-3 border-t border-[#0d402e]">
-                    <p className="text-[11px] text-zinc-400 font-semibold">Goal: Ship Personal AI Project</p>
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#0a3324]">
-                      <div className="h-full w-[62%] rounded-full bg-emerald-500" />
-                    </div>
-                    <p className="mt-1 text-[10px] text-zinc-500">62% — 5 of 8 milestones done</p>
-                  </div>
-                </div>
+              <div className="overflow-hidden rounded-3xl">
+                <img
+                  src={tasksImg}
+                  alt="Remispace Habits, Goals, and Daily Tasks"
+                  className="w-full object-cover object-top"
+                  loading="lazy"
+                />
               </div>
             )}
 
