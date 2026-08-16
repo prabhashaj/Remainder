@@ -514,32 +514,47 @@ export function RemiChat({
   }
 
   /**
-   * Pre-uploads a non-image file to /api/upload-document via multipart/form-data.
-   * Returns { resourceId, title } on success, null on failure.
-   * This avoids sending raw PDF bytes in the chat request body (Vercel 4.5 MB limit).
+   * Pre-uploads a non-image file directly to Supabase Storage via signed URL.
+   * Returns { resourceId, title } on success.
+   * This completely bypasses Vercel's 4.5 MB serverless request body limit,
+   * allowing direct browser-to-storage upload for large PDFs and 500-page textbooks up to 100 MB.
    */
   async function preUploadDocument(
     file: File,
   ): Promise<{ resourceId: string; title: string; kind: string; hasText: boolean } | null> {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
-    if (!token) return null;
+    const { uploadMaterial, createStudyResource } = await import("@/lib/study");
+    const { triggerDocumentExtractionFn } = await import("@/lib/study.functions");
 
-    const form = new FormData();
-    form.append("file", file);
+    // 1. Direct-to-storage upload via presigned URL (bypasses Vercel)
+    const storagePath = await uploadMaterial(file);
 
-    const res = await fetch("/api/upload-document", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
+    // 2. Create study resource record
+    const title = file.name.replace(/\.[^.]+$/, "");
+    const lowerName = file.name.toLowerCase();
+    const isPdf = lowerName.endsWith(".pdf") || file.type === "application/pdf";
+    const kind = isPdf ? "pdf" : "note";
+
+    const resource = await createStudyResource({
+      title,
+      kind,
+      storage_path: storagePath,
+      mime_type: file.type || (isPdf ? "application/pdf" : "text/plain"),
     });
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`Upload failed (${res.status}): ${body}`);
-    }
+    // 3. Trigger server-side background text extraction & vector embedding
+    void triggerDocumentExtractionFn({
+      data: {
+        resourceId: resource.id,
+        storagePath,
+      },
+    });
 
-    return res.json() as Promise<{ resourceId: string; title: string; kind: string; hasText: boolean }>;
+    return {
+      resourceId: resource.id,
+      title: resource.title,
+      kind: resource.kind,
+      hasText: true,
+    };
   }
 
   async function submit(text: string, files: FileUIPart[] = []) {

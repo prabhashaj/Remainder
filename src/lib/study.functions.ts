@@ -380,18 +380,21 @@ export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
       }
 
       if (text && text.trim().length > 0) {
+        const pageMatches = text.match(/^--- Page \d+ ---/gm);
+        const pageCount = pageMatches ? pageMatches.length : undefined;
+
         const { saveDocumentTextAndEmbed } = await import("@/lib/document-processor.server");
         await saveDocumentTextAndEmbed(
           targetClient,
           data.resourceId,
           text,
-          undefined,
+          pageCount,
           context.userId,
         );
         console.log(
-          `[DocumentExtraction] Successfully extracted ${text.length} chars for ${data.resourceId}`,
+          `[DocumentExtraction] Successfully extracted ${text.length} chars (${pageCount ?? 1} pages) for ${data.resourceId}`,
         );
-        return { success: true, textLength: text.length };
+        return { success: true, textLength: text.length, pageCount: pageCount ?? null };
       }
 
       console.warn(`[DocumentExtraction] No extractable text found for ${data.resourceId}`);

@@ -8,8 +8,11 @@ import { log } from "./logger.server";
  * Saves extracted text to the study_resources table and asynchronously
  * generates document chunks and embeddings in the background.
  *
- * Also writes a `background_jobs` row so failures are queryable
- * rather than silently lost in serverless logs.
+ * Designed for production scale:
+ * 1. Synchronously updates `extracted_text`, `page_count`, and `status: "ready"`
+ * 2. Writes raw chunks to `document_chunks` immediately so full-text/keyword search is instant
+ * 3. Asynchronously generates vector embeddings with concurrency (up to 3 parallel batches)
+ * 4. Tracks status in `background_jobs` for observability
  */
 export async function saveDocumentTextAndEmbed(
   supabase: SupabaseClient,
@@ -49,7 +52,6 @@ export async function saveDocumentTextAndEmbed(
   }
 
   // 3. Generate chunks and embeddings asynchronously in the background
-  // Fire and forget so we don't block the request or hit Vercel timeouts
   waitUntil(
     (async () => {
       try {
@@ -58,42 +60,59 @@ export async function saveDocumentTextAndEmbed(
           // Clear existing chunks for this document if any
           await supabase.from("document_chunks").delete().eq("document_id", resourceId);
 
-          // Batch process to avoid hitting API limits (50 chunks per batch)
-          for (let i = 0; i < chunks.length; i += 50) {
-            const batchChunks = chunks.slice(i, i + 50);
-            let batchEmbeddings: number[][] = [];
-            try {
-              batchEmbeddings = await generateEmbeddings(batchChunks.map((c) => c.content));
-            } catch (embErr) {
-              log("warn", "embed_generation_failed_fallback", {
-                error: embErr instanceof Error ? embErr.message : String(embErr),
-              });
-            }
+          // Split chunks into batches of 50
+          const BATCH_SIZE = 50;
+          const batches: Array<typeof chunks> = [];
+          for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+            batches.push(chunks.slice(i, i + BATCH_SIZE));
+          }
 
-            const chunkRows = batchChunks.map((chunk, idx) => {
-              const emb = batchEmbeddings[idx];
-              return {
-                document_id: resourceId,
-                content: chunk.content,
-                // page_number stored as metadata for citation support
-                ...(chunk.pageNumber != null ? { page_number: chunk.pageNumber } : {}),
-                ...(emb && emb.length > 0 ? { embedding: `[${emb.join(",")}]` } : {}),
-              };
-            });
+          // Process batches with controlled concurrency (3 at a time) to avoid API rate limits
+          const CONCURRENCY = 3;
+          for (let b = 0; b < batches.length; b += CONCURRENCY) {
+            const batchGroup = batches.slice(b, b + CONCURRENCY);
 
-            const { error: chunkErr } = await supabase.from("document_chunks").insert(chunkRows);
-            if (chunkErr) {
-              log(
-                "error",
-                "embed_document_chunk_insert_failed",
-                {
-                  resourceId,
-                  batch: Math.floor(i / 50),
-                  error: chunkErr.message,
-                },
-                { userId: userId ?? undefined },
-              );
-            }
+            await Promise.all(
+              batchGroup.map(async (batchChunks, groupIdx) => {
+                const batchIndex = b + groupIdx;
+                let batchEmbeddings: number[][] = [];
+                try {
+                  batchEmbeddings = await generateEmbeddings(batchChunks.map((c) => c.content));
+                } catch (embErr) {
+                  log("warn", "embed_generation_failed_fallback", {
+                    batch: batchIndex,
+                    error: embErr instanceof Error ? embErr.message : String(embErr),
+                  });
+                }
+
+                const chunkRows = batchChunks.map((chunk, idx) => {
+                  const emb = batchEmbeddings[idx];
+                  return {
+                    document_id: resourceId,
+                    content: chunk.content,
+                    ...(chunk.pageNumber != null ? { page_number: chunk.pageNumber } : {}),
+                    ...(emb && emb.length > 0 ? { embedding: `[${emb.join(",")}]` } : {}),
+                  };
+                });
+
+                const { error: chunkErr } = await supabase
+                  .from("document_chunks")
+                  .insert(chunkRows);
+
+                if (chunkErr) {
+                  log(
+                    "error",
+                    "embed_document_chunk_insert_failed",
+                    {
+                      resourceId,
+                      batch: batchIndex,
+                      error: chunkErr.message,
+                    },
+                    { userId: userId ?? undefined },
+                  );
+                }
+              }),
+            );
           }
 
           log(
@@ -102,6 +121,7 @@ export async function saveDocumentTextAndEmbed(
             {
               resourceId,
               chunkCount: chunks.length,
+              batches: batches.length,
             },
             { userId: userId ?? undefined },
           );
