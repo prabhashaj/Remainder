@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, Menu, Sparkles, X } from "lucide-react";
+import { ArrowRight, Check, Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import remiLogo from "@/assets/remi.png";
@@ -237,11 +237,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="mx-auto max-w-6xl px-6 pt-16 pb-20 text-center">
         <Reveal>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#052b1e] px-4 py-1.5 text-xs font-bold text-emerald-400 border border-[#0d402e]">
-            <Sparkles className="size-3.5 text-emerald-400" /> A calm sanctuary for deep learning
-          </span>
-
-          <h1 className="mx-auto mt-6 max-w-4xl text-balance text-5xl font-bold leading-[1.08] tracking-tight md:text-6xl lg:text-7xl text-white font-display">
+          <h1 className="mx-auto max-w-4xl text-balance text-5xl font-bold leading-[1.08] tracking-tight md:text-6xl lg:text-7xl text-white font-display">
             The thoughtful workspace for everything you're learning.
           </h1>
 
