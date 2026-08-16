@@ -52,7 +52,7 @@ export function getResearchTools(
 
     webSearch: tool({
       description:
-        "Search the web for current information. Use ALWAYS for live sports scores, current events, recent facts, versions, prices, news, or anything you are unsure about. ALWAYS include the current date/time (from your Workspace Context) in the search query for live events to ensure the freshest results. NEVER guess these facts.",
+        "Search the web for accurate, trusted information. Use ALWAYS for current events, news, live scores, facts, versions, prices, or technical queries. Always ground your answer in the returned sources and append a '### Sources' section at the end of your response with clickable markdown links.",
       inputSchema: z.object({
         query: z.string().describe("The search query"),
       }),
@@ -60,14 +60,24 @@ export function getResearchTools(
         wrapTool(
           "webSearch",
           async () => {
-            const res = await tavilySearch(query, { maxResults: 5, depth: "advanced" });
+            const res = await tavilySearch(query, { maxResults: 6, depth: "advanced" });
+            const formattedSources = res.results.map(
+              (r, i) => `${i + 1}. [**${r.title}**](${r.url}) — *${r.domain}*`,
+            );
+
             return {
               answer: res.answer,
               results: res.results.map((r) => ({
                 title: r.title,
                 url: r.url,
-                content: r.content.slice(0, 500),
+                domain: r.domain,
+                content: r.content,
+                score: r.score,
+                publishedDate: r.publishedDate,
               })),
+              sources_markdown: formattedSources.join("\n"),
+              citation_instruction:
+                "Include inline citations [1], [2] or [Domain](URL) after claims, and ALWAYS append a '### Sources' section listing every referenced source at the end of your message.",
               error: res.error ?? null,
             };
           },
@@ -90,7 +100,17 @@ export function getResearchTools(
           "searchArxiv",
           async () => {
             const papers = await searchArxivServer(query);
-            return { query, papers };
+            const formattedSources = papers.map(
+              (p, i) =>
+                `${i + 1}. [**${p.title}**](${p.arxivUrl || p.pdfUrl}) (${p.published?.slice(0, 4) || "arXiv"}) — *arXiv:${p.id}*`,
+            );
+            return {
+              query,
+              papers,
+              sources_markdown: formattedSources.join("\n"),
+              citation_instruction:
+                "Include inline citations and append a '### Sources' section at the end of your response with paper links.",
+            };
           },
           supabase,
           userId,
@@ -111,7 +131,17 @@ export function getResearchTools(
           "searchPapers",
           async () => {
             const papers = await searchPapersServer(query);
-            return { query, papers };
+            const formattedSources = papers.map(
+              (p, i) =>
+                `${i + 1}. [**${p.title}**](${p.url}) (${p.year || "Academic Paper"}) — *${p.authors?.slice(0, 2).join(", ") || "Research"}*`,
+            );
+            return {
+              query,
+              papers,
+              sources_markdown: formattedSources.join("\n"),
+              citation_instruction:
+                "Include inline citations and append a '### Sources' section at the end of your response with paper links.",
+            };
           },
           supabase,
           userId,
@@ -133,7 +163,17 @@ export function getResearchTools(
           "searchDocs",
           async () => {
             const docs = await searchDocsServer(library, topic);
-            return { library, topic, docs };
+            const formattedSources = docs.map(
+              (d, i) => `${i + 1}. [**${d.title}**](${d.url}) — *${library} Documentation*`,
+            );
+            return {
+              library,
+              topic,
+              docs,
+              sources_markdown: formattedSources.join("\n"),
+              citation_instruction:
+                "Include inline citations and append a '### Sources' section at the end of your response with documentation links.",
+            };
           },
           supabase,
           userId,

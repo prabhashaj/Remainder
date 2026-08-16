@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
 import { log } from "@/lib/logger.server";
+import { tavilySearch } from "@/lib/tavily.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const RESEARCH_PROMPT = `You are the research specialist inside Remispace, a calm learning workspace.
@@ -49,48 +50,15 @@ export async function runResearch(params: {
       description: "Search the web for learning resources, tutorials, and videos.",
       inputSchema: z.object({ query: z.string().describe("The search query") }),
       execute: async ({ query }: { query: string }) => {
-        if (!tavilyKey) {
-          return {
-            results: [] as SearchResult[],
-            error: "Web search is not configured.",
-          };
-        }
-        try {
-          const res = await fetch("https://api.tavily.com/search", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              api_key: tavilyKey,
-              query,
-              search_depth: "basic",
-              max_results: 5,
-              include_answer: true,
-            }),
-          });
-          if (!res.ok) {
-            return {
-              results: [] as SearchResult[],
-              error: `Search failed (${res.status})`,
-            };
-          }
-          const data = (await res.json()) as {
-            results?: Array<{ title: string; url: string; content?: string }>;
-            answer?: string;
-          };
-          return {
-            results: (data.results ?? []).map((r) => ({
-              title: r.title,
-              url: r.url,
-              content: (r.content ?? "").slice(0, 500),
-            })),
-            answer: data.answer ?? null,
-          };
-        } catch {
-          return {
-            results: [] as SearchResult[],
-            error: "Search request failed.",
-          };
-        }
+        const res = await tavilySearch(query, { maxResults: 5, depth: "advanced" });
+        return {
+          results: res.results.map((r) => ({
+            title: r.title,
+            url: r.url,
+            content: r.content.slice(0, 500),
+          })),
+          answer: res.answer,
+        };
       },
     }),
 

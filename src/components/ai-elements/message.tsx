@@ -17,7 +17,7 @@ import {
 } from "./code-block";
 
 import type { UIMessage } from "ai";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, ExternalLink } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Streamdown } from "streamdown";
@@ -409,6 +409,52 @@ export const MessageResponse = memo(
           );
         },
         pre: ({ children }) => <>{children}</>,
+        a: ({ href, children, ...props }) => {
+          const isExternal =
+            typeof href === "string" && (href.startsWith("http://") || href.startsWith("https://"));
+          const text = typeof children === "string" ? children.trim() : "";
+          const isNumericBadge = /^\[?\d+\]?$/.test(text);
+
+          if (isNumericBadge) {
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-[11px] px-1.5 py-0.5 mx-0.5 align-super no-underline border border-primary/20 transition-colors shadow-xs"
+                title={href}
+                {...props}
+              >
+                {children}
+              </a>
+            );
+          }
+
+          if (isExternal) {
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-primary hover:underline underline-offset-4 decoration-primary/50 transition-colors"
+                {...props}
+              >
+                <span>{children}</span>
+                <ExternalLink className="inline-block size-3.5 shrink-0 opacity-70" />
+              </a>
+            );
+          }
+
+          return (
+            <a
+              href={href}
+              className="font-medium text-primary hover:underline underline-offset-4 decoration-primary/50 transition-colors"
+              {...props}
+            >
+              {children}
+            </a>
+          );
+        },
         ...components,
       }}
       {...props}
