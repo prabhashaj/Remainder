@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, FileSearch, Menu, Sparkles, X } from "lucide-react";
+import { ArrowRight, Check, Menu, Sparkles, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import remiLogo from "@/assets/remi.png";
@@ -9,6 +9,7 @@ import roadmapsImg from "@/assets/roadmaps.png";
 import tasksImg from "@/assets/tasks.png";
 import remichatImg from "@/assets/remichat.png";
 import notebookImg from "@/assets/Notebbok.png";
+import incontextImg from "@/assets/Incontextlearning.png";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -372,43 +373,13 @@ export default function Landing() {
 
             {/* ── In-Context Learning ── */}
             {activeTab === "incontext" && (
-              <div className="grid gap-0 lg:grid-cols-[1fr_1.4fr]">
-                <div className="p-8 md:p-10 flex flex-col justify-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Feature 06 · Document Intelligence</span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
-                    Chat with your PDFs, videos, and lecture slides.
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    Upload any document and Remi learns from it instantly — summarize chapters, extract theorems, generate flashcards, and ask questions grounded in your exact material.
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-zinc-200">
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Deep PDF reading with exact page citations</li>
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> YouTube &amp; video transcript summarization</li>
-                    <li className="flex items-center gap-2.5"><Check className="size-4.5 text-emerald-400" /> Active-recall flashcard generation from your content</li>
-                  </ul>
-                  <div className="mt-8"><PrimaryLink>Upload a document</PrimaryLink></div>
-                </div>
-                <div className="bg-[#021810] border-l border-[#0d402e] p-6 space-y-3">
-                  <div className="flex items-center gap-2 border-b border-[#0d402e] pb-2.5">
-                    <FileSearch className="size-3.5 text-emerald-400" />
-                    <span className="text-xs font-bold text-white">attention_is_all_you_need.pdf</span>
-                    <span className="ml-auto text-[10px] text-emerald-400 font-semibold">68 pages indexed</span>
-                  </div>
-                  <div className="rounded-xl bg-[#05261b] border border-[#0d402e] p-3.5">
-                    <p className="text-[11px] text-zinc-400 font-semibold">You asked:</p>
-                    <p className="mt-1 text-xs text-white">What is the core idea behind multi-head self-attention?</p>
-                  </div>
-                  <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3.5">
-                    <p className="text-[11px] text-emerald-400 font-semibold">Remi · Page 4 citation</p>
-                    <p className="mt-1 text-xs text-zinc-200 leading-relaxed">
-                      Multi-head attention runs <em>h</em> parallel attention functions on different linear projections of Q, K, V — allowing the model to jointly attend to information from different representation subspaces.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <button className="rounded-lg bg-[#05261b] border border-[#0d402e] px-3 py-1.5 text-[11px] text-zinc-300 font-medium">Generate flashcards</button>
-                    <button className="rounded-lg bg-[#05261b] border border-[#0d402e] px-3 py-1.5 text-[11px] text-zinc-300 font-medium">Add to notebook</button>
-                  </div>
-                </div>
+              <div className="overflow-hidden rounded-3xl">
+                <img
+                  src={incontextImg}
+                  alt="Remispace In-Context Learning — Document intelligence"
+                  className="w-full object-cover object-top"
+                  loading="lazy"
+                />
               </div>
             )}
           </div>
