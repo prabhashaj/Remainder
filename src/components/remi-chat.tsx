@@ -55,6 +55,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { renameThread } from "@/lib/db";
 import { getPlanUsage } from "@/lib/billing.functions";
+import { isSubscriptionPremium } from "@/lib/limits";
 import { cn } from "@/lib/utils";
 
 function getToolLabel(
@@ -448,11 +449,7 @@ export function RemiChat({
     },
   });
 
-  const isPremium =
-    subscription?.status === "active" ||
-    (subscription?.status === "trialing" &&
-      subscription.trial_ends_at != null &&
-      new Date(subscription.trial_ends_at) > new Date());
+  const isPremium = isSubscriptionPremium(subscription);
 
   const { messages, sendMessage, status, stop } = useChat({
     id: threadId,
@@ -651,6 +648,27 @@ export function RemiChat({
       } else {
         // PDF or large file: direct-to-storage upload via presigned URL
         if (rawFile) {
+          const maxBytes = (isPremium ? 50 : 15) * 1024 * 1024;
+          if (rawFile.size > maxBytes) {
+            if (!isPremium) {
+              toast.error(
+                `"${f.filename ?? "file"}" (${(rawFile.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 15MB Free tier limit. Please upgrade to Pro to upload documents up to 50MB.`,
+                {
+                  action: {
+                    label: "Upgrade",
+                    onClick: () => {
+                      navigate({ to: "/pricing" });
+                    },
+                  },
+                  duration: 10000,
+                },
+              );
+            } else {
+              toast.error(`"${f.filename ?? "file"}" exceeds the 50MB maximum upload limit.`);
+            }
+            continue;
+          }
+
           toast.loading(`Uploading ${f.filename ?? "file"}…`, { id: "doc-upload" });
           try {
             const result = await preUploadDocument(rawFile);

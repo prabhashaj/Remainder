@@ -16,6 +16,19 @@ export const LIMITS = {
   },
 };
 
+export function isSubscriptionPremium(sub: Subscription | null | undefined): boolean {
+  if (!sub) return false;
+  const isPaidTier =
+    sub.tier === "weekly" || sub.tier === "monthly" || sub.tier === "pro" || sub.tier === "premium";
+  const isActive = sub.status === "active";
+  const isValidTrial =
+    sub.status === "trialing" &&
+    sub.trial_ends_at != null &&
+    new Date(sub.trial_ends_at) > new Date();
+
+  return (isPaidTier && isActive) || isValidTrial;
+}
+
 export function getCurrentWeekStart() {
   return format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
 }
@@ -26,11 +39,7 @@ export async function getRemainingLimits() {
     fetchUsage(getCurrentWeekStart()).catch(() => null),
   ]);
 
-  const isPremium =
-    sub?.status === "active" ||
-    (sub?.status === "trialing" &&
-      sub.trial_ends_at != null &&
-      new Date(sub.trial_ends_at) > new Date());
+  const isPremium = isSubscriptionPremium(sub);
   const limits = isPremium ? LIMITS.PREMIUM : LIMITS.FREE;
 
   const roadmapsUsed = usage?.roadmaps_generated || 0;
@@ -70,11 +79,7 @@ export async function getRemainingLimitsServer(supabase: SupabaseClient<Database
   const sub = subRes.data;
   const usage = usageRes.data;
 
-  const isPremium =
-    sub?.status === "active" ||
-    (sub?.status === "trialing" &&
-      sub.trial_ends_at != null &&
-      new Date(sub.trial_ends_at) > new Date());
+  const isPremium = isSubscriptionPremium(sub);
   const limits = isPremium ? LIMITS.PREMIUM : LIMITS.FREE;
 
   const roadmapsUsed = usage?.roadmaps_generated || 0;

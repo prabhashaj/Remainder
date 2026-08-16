@@ -46,6 +46,7 @@ import {
   uploadMaterial,
   type StudyResource,
 } from "@/lib/study";
+import { isSubscriptionPremium } from "@/lib/limits";
 import { saveExtractedTextFn, triggerDocumentExtractionFn } from "@/lib/study.functions";
 
 export const Route = createFileRoute("/_authenticated/documents")({
@@ -205,11 +206,7 @@ function DocumentsPage() {
     },
   });
 
-  const isPremium =
-    subscription?.status === "active" ||
-    (subscription?.status === "trialing" &&
-      subscription.trial_ends_at != null &&
-      new Date(subscription.trial_ends_at) > new Date());
+  const isPremium = isSubscriptionPremium(subscription);
 
   const handleUpload = async (file: File) => {
     const maxBytes = (isPremium ? 50 : 15) * 1024 * 1024;
