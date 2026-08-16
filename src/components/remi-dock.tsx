@@ -185,9 +185,9 @@ function DockChat({
         compact
         topic={topic}
         suggestions={[
-          "Build a study roadmap for this topic",
-          "Generate a notebook with formulas",
-          "Add tasks and habits for today",
+          "Create a roadmap to learn Agentic AI",
+          "Explain what is photosynthesis",
+          "Generate a notebook on Backpropagation",
         ]}
       />
     </div>
