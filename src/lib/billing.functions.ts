@@ -107,9 +107,61 @@ export const getPlanUsage = createServerFn({ method: "GET" })
     const { checkPlanUsage } = await import("./rate-limit.server");
     try {
       return await checkPlanUsage(supabase, userId, "api_chat");
-    } catch (e) {
+    } catch {
       // If checkPlanUsage throws an error, it means the limit is reached.
       // We return 20/20 or 200/200 so the UI displays correctly instead of 0.
       return { daily: { used: 20, limit: 20 }, monthly: { used: 200, limit: 200 } };
     }
+  });
+
+export const upgradeToProFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { tier?: "weekly" | "monthly" | "pro" } | undefined) => data)
+  .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+    const tier = data?.tier || "monthly";
+
+    const periodEnd = new Date();
+    periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+
+    const { data: existing } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let updatedSub = null;
+    if (existing) {
+      const { data, error } = await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          tier,
+          status: "active",
+          current_period_end: periodEnd.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      updatedSub = data;
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from("subscriptions")
+        .insert({
+          user_id: userId,
+          tier,
+          status: "active",
+          current_period_end: periodEnd.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      updatedSub = data;
+    }
+
+    log("info", "user_upgraded_to_pro", { tier }, { userId });
+    return { success: true, subscription: updatedSub };
   });

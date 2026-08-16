@@ -1,12 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { upgradeToProFn } from "@/lib/billing.functions";
+import { isSubscriptionPremium } from "@/lib/limits";
 
 export const Route = createFileRoute("/_authenticated/pricing")({
   component: PricingPage,
 });
 
 function PricingPage() {
+  const qc = useQueryClient();
+  const runUpgrade = useServerFn(upgradeToProFn);
+  const [upgrading, setUpgrading] = useState(false);
+
   const { data: subscription } = useQuery({
     queryKey: ["subscription"],
     queryFn: async () => {
@@ -22,9 +31,25 @@ function PricingPage() {
     },
   });
 
-  const handleSubscribe = async (tier: string) => {
-    // In a real implementation, you would make an API call to a route that uses razorpay SDK to create a Razorpay subscription/order.
-    alert(`Checkout flow for ${tier} tier using Razorpay would open here.`);
+  const isPremium = isSubscriptionPremium(subscription);
+
+  const handleSubscribe = async (tier: "weekly" | "monthly") => {
+    setUpgrading(true);
+    toast.loading("Activating Pro subscription…", { id: "upgrade" });
+    try {
+      await runUpgrade({ data: { tier } });
+      await qc.invalidateQueries({ queryKey: ["subscription"] });
+      await qc.invalidateQueries({ queryKey: ["planUsage"] });
+      toast.dismiss("upgrade");
+      toast.success("🎉 You are now a Remispace Pro user! 50MB uploads and unlimited features are unlocked.", {
+        duration: 8000,
+      });
+    } catch (err) {
+      toast.dismiss("upgrade");
+      toast.error(err instanceof Error ? err.message : "Failed to activate Pro subscription");
+    } finally {
+      setUpgrading(false);
+    }
   };
 
   return (
@@ -62,7 +87,7 @@ function PricingPage() {
               disabled
               className="mt-8 w-full rounded-md bg-secondary py-2 text-sm font-semibold text-secondary-foreground"
             >
-              Current Plan
+              {!isPremium ? "Current Plan" : "Free Plan"}
             </button>
           </div>
 
@@ -90,10 +115,15 @@ function PricingPage() {
               </li>
             </ul>
             <button
+              disabled={upgrading || (isPremium && subscription?.tier === "weekly")}
               onClick={() => handleSubscribe("weekly")}
-              className="mt-8 w-full rounded-md bg-primary py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+              className="mt-8 w-full rounded-md bg-primary py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {subscription?.tier === "weekly" ? "Manage Subscription" : "Subscribe Now"}
+              {upgrading
+                ? "Activating…"
+                : isPremium && subscription?.tier === "weekly"
+                  ? "✓ Active Plan"
+                  : "Upgrade to Weekly Pro"}
             </button>
           </div>
 
@@ -115,10 +145,15 @@ function PricingPage() {
               </li>
             </ul>
             <button
+              disabled={upgrading || (isPremium && subscription?.tier === "monthly")}
               onClick={() => handleSubscribe("monthly")}
-              className="mt-8 w-full rounded-md border border-border bg-background py-2 text-sm font-semibold hover:bg-muted transition-colors"
+              className="mt-8 w-full rounded-md border border-border bg-background py-2 text-sm font-semibold hover:bg-muted transition-colors disabled:opacity-50"
             >
-              {subscription?.tier === "monthly" ? "Manage Subscription" : "Subscribe Now"}
+              {upgrading
+                ? "Activating…"
+                : isPremium && subscription?.tier === "monthly"
+                  ? "✓ Active Plan"
+                  : "Upgrade to Monthly Pro"}
             </button>
           </div>
         </div>
