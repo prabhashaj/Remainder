@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Download,
   FileText,
@@ -160,6 +161,7 @@ function ImageThumbnail({ storagePath }: { storagePath: string }) {
 
 function DocumentsPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
   const [deleteTarget, setDeleteTarget] = useState<StudyResource | null>(null);
@@ -188,7 +190,49 @@ function DocumentsPage() {
 
   const refreshResources = () => void qc.invalidateQueries({ queryKey: ["study-resources"] });
 
+  const { data: subscription } = useQuery({
+    queryKey: ["subscription"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
+      if (!userId) return null;
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      return sub;
+    },
+  });
+
+  const isPremium =
+    subscription?.status === "active" ||
+    (subscription?.status === "trialing" &&
+      subscription.trial_ends_at != null &&
+      new Date(subscription.trial_ends_at) > new Date());
+
   const handleUpload = async (file: File) => {
+    const maxBytes = (isPremium ? 50 : 15) * 1024 * 1024;
+    if (file.size > maxBytes) {
+      if (!isPremium) {
+        toast.error(
+          `"${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 15MB Free limit. Upgrade to Pro to upload documents up to 50MB.`,
+          {
+            action: {
+              label: "Upgrade",
+              onClick: () => {
+                navigate({ to: "/pricing" });
+              },
+            },
+            duration: 10000,
+          },
+        );
+      } else {
+        toast.error(`"${file.name}" exceeds the 50MB maximum upload limit.`);
+      }
+      return;
+    }
+
     setUploading(true);
     try {
       const path = await uploadMaterial(file);

@@ -433,6 +433,27 @@ export function RemiChat({
     refetchInterval: 30000, // refresh every 30s
   });
 
+  const { data: subscription } = useQuery({
+    queryKey: ["subscription"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
+      if (!userId) return null;
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      return sub;
+    },
+  });
+
+  const isPremium =
+    subscription?.status === "active" ||
+    (subscription?.status === "trialing" &&
+      subscription.trial_ends_at != null &&
+      new Date(subscription.trial_ends_at) > new Date());
+
   const { messages, sendMessage, status, stop } = useChat({
     id: threadId,
     messages: initialMessages,
@@ -848,7 +869,31 @@ export function RemiChat({
         )}
         <PromptInput
           onSubmit={(message) => submit(message.text ?? "", message.files)}
-          maxFileSize={10 * 1024 * 1024}
+          maxFileSize={isPremium ? 50 * 1024 * 1024 : 15 * 1024 * 1024}
+          onError={(err) => {
+            if (err.code === "max_file_size") {
+              if (!isPremium) {
+                toast.error(
+                  "Files larger than 15MB require Pro. Upgrade to upload documents up to 50MB.",
+                  {
+                    action: {
+                      label: "Upgrade",
+                      onClick: () => {
+                        navigate({ to: "/pricing" });
+                      },
+                    },
+                    duration: 10000,
+                  },
+                );
+              } else {
+                toast.error("File exceeds the 50MB maximum upload limit.", { duration: 8000 });
+              }
+            } else if (err.code === "accept") {
+              toast.error("Unsupported file type.");
+            } else {
+              toast.error(err.message);
+            }
+          }}
         >
           <AttachmentPreviews />
           <PromptInputTextarea
