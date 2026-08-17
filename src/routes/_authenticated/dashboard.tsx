@@ -42,6 +42,21 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     ],
   }),
   component: Dashboard,
+  errorComponent: () => (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
+      <p className="font-display text-xl font-semibold">Something went wrong</p>
+      <p className="text-sm text-muted-foreground max-w-xs">
+        Remi ran into an issue loading your dashboard. Try refreshing the page.
+      </p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="press rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+      >
+        Refresh
+      </button>
+    </div>
+  ),
 });
 
 function Dashboard() {
@@ -58,12 +73,25 @@ function Dashboard() {
   });
   const { data: dueCardData } = useQuery({
     queryKey: ["due-flashcard-count"],
-    queryFn: () => runFetchCardCount(),
+    queryFn: async () => {
+      try {
+        return await runFetchCardCount();
+      } catch {
+        return { count: 0 };
+      }
+    },
   });
   const { data: reflection, isLoading: reflectionLoading } = useQuery({
     queryKey: ["weekly-reflection"],
-    queryFn: () => generateWeeklyReflection(),
+    queryFn: async () => {
+      try {
+        return await generateWeeklyReflection();
+      } catch {
+        return { text: "" };
+      }
+    },
     staleTime: 6 * 60 * 60 * 1000,
+    retry: false,
   });
 
   const [newTask, setNewTask] = useState("");
