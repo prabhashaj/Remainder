@@ -1,16 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  BookOpen,
   Clock,
   ExternalLink,
-  FileText,
   Loader2,
   Pen,
   Play,
   Plus,
   RotateCcw,
-  Search,
   Sparkle,
   Trash2,
   Wand2,
@@ -21,7 +18,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createVideoNote, deleteVideoNote, fetchVideoNotes } from "@/lib/study";
-import { autoNoteFromTranscript, getTranscriptFromUrl } from "@/lib/study.functions";
+import { autoNoteFromTranscript } from "@/lib/study.functions";
 import {
   extractYouTubeId,
   formatVideoTimestamp,
@@ -89,12 +86,11 @@ function loadYouTubeApi(): Promise<void> {
   return ytApiLoadingPromise;
 }
 
-type TabMode = "notes" | "transcript";
-type NoteMode = "manual" | "auto";
+type NoteMode = "auto" | "manual";
 
 /**
- * A resilient YouTube study player with synchronized timestamped notes,
- * auto-note generation from transcripts, and an interactive transcript browser.
+ * A streamlined YouTube study player with live time-synced notes
+ * and automatic timestamp extraction.
  */
 export function VideoNotes({
   resourceId,
@@ -109,39 +105,26 @@ export function VideoNotes({
   const elementId = useId().replace(/:/g, "_");
   const qc = useQueryClient();
   const playerRef = useRef<YTPlayer | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const liveSecondsRef = useRef<number>(0);
 
   const [playerReady, setPlayerReady] = useState(false);
   const [liveSeconds, setLiveSeconds] = useState<number>(0);
-  const [targetTimestamp, setTargetTimestamp] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<TabMode>("notes");
+  const [manualTimeStr, setManualTimeStr] = useState<string>("");
   const [note, setNote] = useState("");
   const [mode, setMode] = useState<NoteMode>("auto");
   const [autoLoading, setAutoLoading] = useState(false);
-  const [transcriptSearch, setTranscriptSearch] = useState("");
 
   const runAutoNote = useServerFn(autoNoteFromTranscript);
-  const runGetTranscript = useServerFn(getTranscriptFromUrl);
 
   const { data: notes = [] } = useQuery({
     queryKey: ["video-notes", resourceId],
     queryFn: () => fetchVideoNotes(resourceId),
   });
 
-  // Query video transcript
-  const { data: transcriptData, isLoading: transcriptLoading } = useQuery({
-    queryKey: ["video-transcript", videoId],
-    queryFn: async () => {
-      const res = await runGetTranscript({ data: { urlOrId: videoId } });
-      return res.success ? res : null;
-    },
-    staleTime: 1000 * 60 * 60, // 1 hour
-  });
-
   const refreshNotes = () => void qc.invalidateQueries({ queryKey: ["video-notes", resourceId] });
 
-  // Initialize YouTube Player & live postMessage listener
+  // Initialize YouTube Player API directly on the container div
   useEffect(() => {
     let alive = true;
     let pollInterval: NodeJS.Timeout | null = null;
@@ -152,26 +135,24 @@ export function VideoNotes({
         const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
         if (data?.event === "infoDelivery" && typeof data?.info?.currentTime === "number") {
           const sec = Math.round(data.info.currentTime);
-          liveSecondsRef.current = sec;
-          setLiveSeconds(sec);
+          if (sec >= 0) {
+            liveSecondsRef.current = sec;
+            setLiveSeconds(sec);
+          }
         }
       } catch {
-        // Ignore non-JSON postmessages
+        // Ignore
       }
     };
 
     window.addEventListener("message", handleMessage);
 
     void loadYouTubeApi().then(() => {
-      if (!alive) return;
+      if (!alive || !containerRef.current) return;
       if (!window.YT?.Player) return;
 
-      const containerId = `yt-player-${elementId}`;
-      const containerElem = document.getElementById(containerId);
-      if (!containerElem) return;
-
       try {
-        const playerInstance = new window.YT.Player(containerId, {
+        const playerInstance = new window.YT.Player(containerRef.current, {
           videoId,
           width: "100%",
           height: "100%",
@@ -187,11 +168,12 @@ export function VideoNotes({
               playerRef.current = event.target;
               setPlayerReady(true);
 
+              // Poll currentTime continuously while active
               pollInterval = setInterval(() => {
                 try {
                   if (playerRef.current?.getCurrentTime) {
                     const sec = Math.round(playerRef.current.getCurrentTime());
-                    if (sec !== liveSecondsRef.current) {
+                    if (!isNaN(sec) && sec >= 0 && sec !== liveSecondsRef.current) {
                       liveSecondsRef.current = sec;
                       setLiveSeconds(sec);
                     }
@@ -199,7 +181,16 @@ export function VideoNotes({
                 } catch {
                   // Ignore
                 }
-              }, 500);
+              }, 300);
+            },
+            onStateChange: (event) => {
+              if (playerRef.current?.getCurrentTime) {
+                const sec = Math.round(playerRef.current.getCurrentTime());
+                if (!isNaN(sec) && sec >= 0) {
+                  liveSecondsRef.current = sec;
+                  setLiveSeconds(sec);
+                }
+              }
             },
           },
         });
@@ -222,13 +213,30 @@ export function VideoNotes({
       playerRef.current = null;
       setPlayerReady(false);
     };
-  }, [videoId, elementId]);
+  }, [videoId]);
 
-  const getCurrentSeconds = useCallback((): number => {
+  const parseSecondsFromString = (str: string): number => {
+    const clean = str.trim();
+    if (!clean) return liveSeconds;
+    const parts = clean.split(":").map((p) => parseInt(p, 10));
+    if (parts.length === 2 && !isNaN(parts[0]!) && !isNaN(parts[1]!)) {
+      return parts[0]! * 60 + parts[1]!;
+    }
+    if (parts.length === 3 && !isNaN(parts[0]!) && !isNaN(parts[1]!) && !isNaN(parts[2]!)) {
+      return parts[0]! * 3600 + parts[1]! * 60 + parts[2]!;
+    }
+    const num = parseInt(clean, 10);
+    return isNaN(num) ? liveSeconds : num;
+  };
+
+  const getEffectiveSeconds = useCallback((): number => {
+    if (manualTimeStr) {
+      return parseSecondsFromString(manualTimeStr);
+    }
     if (playerRef.current?.getCurrentTime) {
       try {
         const sec = Math.round(playerRef.current.getCurrentTime());
-        if (sec > 0) {
+        if (!isNaN(sec) && sec >= 0) {
           liveSecondsRef.current = sec;
           setLiveSeconds(sec);
           return sec;
@@ -238,33 +246,28 @@ export function VideoNotes({
       }
     }
     return liveSecondsRef.current;
-  }, []);
+  }, [manualTimeStr, liveSeconds]);
 
   const seekTo = useCallback(
     (seconds: number) => {
       liveSecondsRef.current = seconds;
       setLiveSeconds(seconds);
-      setTargetTimestamp(seconds);
+      setManualTimeStr(formatVideoTimestamp(seconds));
 
       if (playerRef.current?.seekTo) {
         try {
           playerRef.current.seekTo(seconds, true);
-          return;
         } catch {
-          // Fallback
+          // Ignore
         }
       }
-
-      if (iframeRef.current) {
-        iframeRef.current.src = getYouTubeEmbedUrl(videoId, { autoplay: true, start: seconds });
-      }
     },
-    [videoId],
+    [],
   );
 
   const addNote = useMutation({
     mutationFn: () => {
-      const sec = targetTimestamp > 0 ? targetTimestamp : getCurrentSeconds();
+      const sec = getEffectiveSeconds();
       return createVideoNote({
         resource_id: resourceId,
         seconds: sec,
@@ -273,7 +276,7 @@ export function VideoNotes({
     },
     onSuccess: () => {
       setNote("");
-      setTargetTimestamp(0);
+      setManualTimeStr("");
       refreshNotes();
       toast.success("Note saved!");
     },
@@ -286,13 +289,13 @@ export function VideoNotes({
   });
 
   const handleAutoNote = async () => {
-    const seconds = getCurrentSeconds();
-    setTargetTimestamp(seconds);
+    const seconds = getEffectiveSeconds();
     setAutoLoading(true);
     try {
       const result = await runAutoNote({ data: { videoId, resourceId, seconds } });
       if (result.success && result.note) {
         setNote(result.note);
+        setManualTimeStr(formatVideoTimestamp(seconds));
         toast.success(`Note generated for ${formatVideoTimestamp(seconds)}!`);
       } else {
         toast.error(result.error ?? "Could not generate note for this timestamp");
@@ -309,27 +312,14 @@ export function VideoNotes({
     if (note.trim()) addNote.mutate();
   };
 
-  const filteredSegments = (transcriptData?.segments ?? []).filter((s) =>
-    transcriptSearch.trim()
-      ? s.text.toLowerCase().includes(transcriptSearch.toLowerCase())
-      : true,
-  );
+  const currentDisplayTime = manualTimeStr || formatVideoTimestamp(liveSeconds);
 
   return (
     <div className="space-y-5">
       {/* YouTube Player Container */}
       <div className="overflow-hidden rounded-3xl border border-border bg-black shadow-soft">
         <div className="aspect-video w-full relative">
-          <div id={`yt-player-${elementId}`} className="size-full">
-            <iframe
-              ref={iframeRef}
-              src={getYouTubeEmbedUrl(videoId, { autoplay: false })}
-              title={title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="size-full border-0"
-            />
-          </div>
+          <div ref={containerRef} className="size-full" />
         </div>
       </div>
 
@@ -338,10 +328,10 @@ export function VideoNotes({
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <span className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-1 text-xs font-bold tabular-nums text-primary">
             <Clock className="size-3.5" />
-            Current: {formatVideoTimestamp(liveSeconds)}
+            Current: {currentDisplayTime}
           </span>
           <span className="text-xs text-muted-foreground">
-            {playerReady ? "• Live player connected" : "• Video ready"}
+            {playerReady ? "• Live player connected" : "• Loading player…"}
           </span>
         </div>
         <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5 rounded-xl text-xs">
@@ -351,219 +341,121 @@ export function VideoNotes({
         </Button>
       </div>
 
-      {/* Tabs Header */}
-      <div className="flex items-center justify-between border-b border-border pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab("notes")}
-            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${
-              activeTab === "notes"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            <Pen className="size-3.5" /> Timestamped Notes ({notes.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("transcript")}
-            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${
-              activeTab === "transcript"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            <FileText className="size-3.5" /> Full Transcript
-          </button>
-        </div>
+      {/* Direct Mode Selection (Auto vs Manual) */}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          type="button"
+          onClick={() => setMode("auto")}
+          className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition-all ${
+            mode === "auto"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          <Wand2 className="size-4" /> Auto (from transcript)
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("manual")}
+          className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition-all ${
+            mode === "manual"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          <Pen className="size-4" /> Manual Note
+        </button>
       </div>
 
-      {/* Tab 1: Notes & Annotation */}
-      {activeTab === "notes" && (
-        <div className="space-y-4">
-          {/* Note Mode Switcher */}
-          <div className="flex items-center gap-2">
-            <button
+      {/* Note Form */}
+      <form className="card-soft flex flex-col gap-3 p-5" onSubmit={handleSubmit}>
+        {mode === "auto" && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
               type="button"
-              onClick={() => setMode("auto")}
-              className={`flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-semibold transition-colors ${
-                mode === "auto"
-                  ? "bg-primary/20 text-primary border border-primary/30"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              }`}
+              variant="outline"
+              className="press gap-2 rounded-2xl text-sm font-medium"
+              onClick={() => void handleAutoNote()}
+              disabled={autoLoading}
             >
-              <Wand2 className="size-3" /> Auto (from transcript)
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("manual")}
-              className={`flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-semibold transition-colors ${
-                mode === "manual"
-                  ? "bg-primary/20 text-primary border border-primary/30"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              <Pen className="size-3" /> Manual Note
-            </button>
-          </div>
-
-          {/* Note Form */}
-          <form className="card-soft flex flex-col gap-3 p-5" onSubmit={handleSubmit}>
-            {mode === "auto" && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="press gap-2 rounded-2xl text-sm font-medium"
-                  onClick={() => void handleAutoNote()}
-                  disabled={autoLoading}
-                >
-                  {autoLoading ? (
-                    <Loader2 className="size-4 animate-spin text-primary" />
-                  ) : (
-                    <Sparkle className="size-4 text-primary" />
-                  )}
-                  {autoLoading
-                    ? `Generating note for ${formatVideoTimestamp(targetTimestamp || liveSeconds)}…`
-                    : `Generate note for ${formatVideoTimestamp(liveSeconds)}`}
-                </Button>
-                {targetTimestamp > 0 && (
-                  <span className="text-xs text-primary font-semibold">
-                    Targeted at {formatVideoTimestamp(targetTimestamp)}
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="flex flex-wrap items-center gap-3">
-              <Input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder={
-                  mode === "auto"
-                    ? "Auto-generated note will appear here (edit before saving)…"
-                    : `Type your note for ${formatVideoTimestamp(liveSeconds)}…`
-                }
-                className="min-w-40 flex-1 rounded-2xl h-11 text-base"
-              />
+              {autoLoading ? (
+                <Loader2 className="size-4 animate-spin text-primary" />
+              ) : (
+                <Sparkle className="size-4 text-primary" />
+              )}
+              {autoLoading
+                ? `Generating note for ${currentDisplayTime}…`
+                : `Generate note for ${currentDisplayTime}`}
+            </Button>
+            {manualTimeStr && (
               <Button
-                type="submit"
-                className="press gap-2 rounded-2xl h-11 px-5 text-base font-semibold"
-                disabled={!note.trim() || addNote.isPending}
-              >
-                <Plus className="size-5" /> Pin note at {formatVideoTimestamp(targetTimestamp || liveSeconds)}
-              </Button>
-            </div>
-          </form>
-
-          {/* Notes List */}
-          <ul className="space-y-3">
-            {notes.map((n) => (
-              <li
-                key={n.id}
-                className="flex items-start gap-3 rounded-2xl border border-border px-4 py-3.5 bg-card shadow-soft hover:shadow-lift transition-all"
-              >
-                <button
-                  type="button"
-                  onClick={() => seekTo(n.seconds)}
-                  className="press flex items-center gap-1.5 rounded-xl bg-primary/10 px-2.5 py-1.5 text-sm font-bold tabular-nums text-primary transition-colors hover:bg-primary/20"
-                  title="Click to jump video to this moment"
-                >
-                  <Play className="size-3 fill-current" />
-                  {formatVideoTimestamp(n.seconds)}
-                </button>
-                <p className="min-w-0 flex-1 text-base leading-relaxed text-foreground">{n.note}</p>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Delete note"
-                  onClick={() => removeNote.mutate(n.id)}
-                  className="rounded-xl text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </li>
-            ))}
-            {notes.length === 0 && (
-              <li className="rounded-2xl border border-dashed border-border py-12 text-center text-base text-muted-foreground">
-                No notes yet. Click &quot;Generate note&quot; while listening to save key takeaways!
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
-
-      {/* Tab 2: Full Transcript Browser */}
-      {activeTab === "transcript" && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={transcriptSearch}
-                onChange={(e) => setTranscriptSearch(e.target.value)}
-                placeholder="Search across video transcript…"
-                className="pl-9 rounded-2xl h-10 text-sm"
-              />
-            </div>
-            {transcriptSearch && (
-              <Button
+                type="button"
                 variant="ghost"
                 size="sm"
-                className="rounded-xl text-xs text-muted-foreground"
-                onClick={() => setTranscriptSearch("")}
+                className="h-8 gap-1 rounded-xl text-xs text-muted-foreground"
+                onClick={() => setManualTimeStr("")}
               >
-                Clear
+                <RotateCcw className="size-3" /> Sync with live video
               </Button>
             )}
           </div>
+        )}
 
-          {transcriptLoading ? (
-            <div className="flex items-center justify-center py-12 text-sm text-muted-foreground gap-2">
-              <Loader2 className="size-4 animate-spin text-primary" /> Loading video transcript…
-            </div>
-          ) : filteredSegments.length > 0 ? (
-            <div className="max-h-[450px] overflow-y-auto space-y-2 rounded-2xl border border-border bg-card p-4">
-              {filteredSegments.map((s, idx) => (
-                <div
-                  key={`${s.offset}-${idx}`}
-                  className="group flex items-start gap-3 rounded-xl p-2.5 hover:bg-muted/60 transition-colors"
-                >
-                  <button
-                    type="button"
-                    onClick={() => seekTo(s.offset)}
-                    className="flex shrink-0 items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-bold tabular-nums text-primary group-hover:bg-primary/20 transition-colors"
-                    title="Jump video to this moment"
-                  >
-                    <Play className="size-2.5 fill-current" />
-                    {formatVideoTimestamp(s.offset)}
-                  </button>
-                  <p className="flex-1 text-sm leading-relaxed text-foreground">{s.text}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNote(s.text);
-                      setTargetTimestamp(s.offset);
-                      setActiveTab("notes");
-                      toast.info(`Quote at ${formatVideoTimestamp(s.offset)} loaded into note creator`);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 rounded-lg p-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-opacity"
-                    title="Add quote to notes"
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-muted/40 p-8 text-center text-sm text-muted-foreground">
-              {transcriptSearch
-                ? `No transcript lines found matching "${transcriptSearch}".`
-                : "No subtitles or transcript available for this video."}
-            </div>
-          )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={
+              mode === "auto"
+                ? `Auto-generated note for ${currentDisplayTime} will appear here…`
+                : `Type your note for ${currentDisplayTime}…`
+            }
+            className="min-w-40 flex-1 rounded-2xl h-11 text-base"
+          />
+          <Button
+            type="submit"
+            className="press gap-2 rounded-2xl h-11 px-5 text-base font-semibold"
+            disabled={!note.trim() || addNote.isPending}
+          >
+            <Plus className="size-5" /> Pin note at {currentDisplayTime}
+          </Button>
         </div>
-      )}
+      </form>
+
+      {/* Timestamped Notes List */}
+      <ul className="space-y-3 pt-2">
+        {notes.map((n) => (
+          <li
+            key={n.id}
+            className="flex items-start gap-3 rounded-2xl border border-border px-4 py-3.5 bg-card shadow-soft hover:shadow-lift transition-all"
+          >
+            <button
+              type="button"
+              onClick={() => seekTo(n.seconds)}
+              className="press flex items-center gap-1.5 rounded-xl bg-primary/10 px-2.5 py-1.5 text-sm font-bold tabular-nums text-primary transition-colors hover:bg-primary/20"
+              title="Click to jump video to this moment"
+            >
+              <Play className="size-3 fill-current" />
+              {formatVideoTimestamp(n.seconds)}
+            </button>
+            <p className="min-w-0 flex-1 text-base leading-relaxed text-foreground">{n.note}</p>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Delete note"
+              onClick={() => removeNote.mutate(n.id)}
+              className="rounded-xl text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </li>
+        ))}
+        {notes.length === 0 && (
+          <li className="rounded-2xl border border-dashed border-border py-12 text-center text-base text-muted-foreground">
+            No notes yet. Click &quot;Generate note&quot; while listening to save key takeaways!
+          </li>
+        )}
+      </ul>
     </div>
   );
 }
