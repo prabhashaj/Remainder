@@ -166,20 +166,42 @@ export async function summarizeResource(params: {
     let transcript = resource.extracted_text;
     if (!transcript || params.force) {
       const result = await fetchYoutubeTranscript(effectiveVideoId);
-      if (result.error || !result.fullText) {
-        await supabase.from("study_resources").update({ status: "error" }).eq("id", resourceId);
-        return {
-          success: false,
-          error: result.error ?? "No transcript available for this video.",
-        };
+      if (result.fullText) {
+        transcript = result.fullText;
+        await saveDocumentTextAndEmbed(supabase, resourceId, transcript);
       }
-      transcript = result.fullText;
-      // Cache the transcript in extracted_text and generate embeddings
-      await saveDocumentTextAndEmbed(supabase, resourceId, transcript);
     }
 
     try {
-      const summary = await summarizeTranscript(transcript, resource.title, params.apiKey);
+      let summary: string;
+      if (transcript && transcript.trim().length > 0) {
+        summary = await summarizeTranscript(transcript, resource.title, params.apiKey);
+      } else {
+        // Fallback: summarize directly using video metadata and AI understanding
+        const { fetchYouTubeMetadata } = await import("@/lib/youtube.server");
+        const meta = await fetchYouTubeMetadata(effectiveVideoId);
+        const effectiveTitle = meta?.title || resource.title;
+        const channel = meta?.author ? ` by ${meta.author}` : "";
+        const gateway = createAiGatewayProvider(params.apiKey);
+        const aiRes = await generateText({
+          model: gateway(getAiModelName()),
+          system: SUMMARY_PROMPT,
+          prompt: `Resource title: ${effectiveTitle}${channel}\nKind: YouTube Video\nSource: https://www.youtube.com/watch?v=${effectiveVideoId}\n\nGenerate a thorough pre-watching brief and key points for a learner studying this video topic. Ground all explanations in established technical facts about this topic.`,
+        });
+        summary = aiRes.text.trim();
+        // If resource had a placeholder title like "YouTube Video" or "Video", update with real title
+        if (
+          meta?.title &&
+          (resource.title === "YouTube Video" ||
+            resource.title === "Video" ||
+            resource.title === "connect tools")
+        ) {
+          await supabase
+            .from("study_resources")
+            .update({ title: meta.title })
+            .eq("id", resourceId);
+        }
+      }
 
       const keyPoints = summary
         .split("\n")
@@ -197,7 +219,7 @@ export async function summarizeResource(params: {
       await supabase.from("study_resources").update({ status: "error" }).eq("id", resourceId);
       return {
         success: false,
-        error: err instanceof Error ? err.message : "Transcript summarization failed",
+        error: err instanceof Error ? err.message : "Summarization failed",
       };
     }
   }

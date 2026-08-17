@@ -288,12 +288,13 @@ export const generateNotebookFromTranscript = createServerFn({ method: "POST" })
     let transcript = resource?.extracted_text;
     if (!transcript || transcript.trim().length === 0) {
       const result = await fetchYoutubeTranscript(cleanVid);
-      if (result.error || !result.fullText) {
-        return { success: false, error: result.error ?? "No transcript available for this video" };
+      if (result.fullText) {
+        transcript = result.fullText;
+        await saveDocumentTextAndEmbed(context.supabase, data.resourceId, transcript);
+      } else {
+        const meta = await fetchYouTubeMetadata(cleanVid);
+        transcript = `Video Topic: ${meta?.title ?? data.title}\nChannel: ${meta?.author ?? "YouTube"}\nSource: https://www.youtube.com/watch?v=${cleanVid}`;
       }
-      transcript = result.fullText;
-      // Cache it and embed it
-      await saveDocumentTextAndEmbed(context.supabase, data.resourceId, transcript);
     }
 
     // Create a page in the workspace
