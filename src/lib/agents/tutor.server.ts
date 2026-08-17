@@ -150,29 +150,27 @@ export async function summarizeResource(params: {
   if (resource.summary && !params.force) return { success: true, summary: resource.summary };
 
   // For videos: try to use transcript
-  if (resource.kind === "video" && !resource.extracted_text) {
-    const videoUrl = resource.url;
-    if (!videoUrl) {
-      return { success: false, error: "No video URL available." };
+  const videoId = resource.url ? extractYouTubeId(resource.url) : null;
+  if (videoId || resource.kind === "video") {
+    const effectiveVideoId = videoId || (resource.url ? extractYouTubeId(resource.url) : null);
+    if (!effectiveVideoId) {
+      return { success: false, error: "Not a valid YouTube video URL." };
     }
 
-    // Extract YouTube video ID
-    const videoId = extractYouTubeId(videoUrl);
-    if (!videoId) {
-      return { success: false, error: "Not a recognized YouTube URL." };
-    }
+    await supabase
+      .from("study_resources")
+      .update({ kind: "video", status: "summarizing" })
+      .eq("id", resourceId);
 
-    await supabase.from("study_resources").update({ status: "summarizing" }).eq("id", resourceId);
-
-    // Fetch transcript
+    // Fetch transcript if not already cached or if forced
     let transcript = resource.extracted_text;
-    if (!transcript) {
-      const result = await fetchYoutubeTranscript(videoId);
+    if (!transcript || params.force) {
+      const result = await fetchYoutubeTranscript(effectiveVideoId);
       if (result.error || !result.fullText) {
         await supabase.from("study_resources").update({ status: "error" }).eq("id", resourceId);
         return {
           success: false,
-          error: result.error ?? "No transcript available. The video may not have captions.",
+          error: result.error ?? "No transcript available for this video.",
         };
       }
       transcript = result.fullText;

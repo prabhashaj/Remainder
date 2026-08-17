@@ -9,6 +9,7 @@ import {
   FileText,
   Highlighter,
   Loader2,
+  Play,
   RefreshCw,
   Sparkle,
   Timer,
@@ -29,8 +30,8 @@ import {
   fetchStudyResource,
   signedMaterialUrl,
   updateStudyResource,
-  youtubeId,
 } from "@/lib/study";
+import { extractYouTubeId } from "@/lib/youtube";
 import {
   summarizeMaterial,
   generateNotebookFromTranscript,
@@ -113,10 +114,9 @@ function MaterialPage() {
     mutationFn: (force: boolean) => runSummary({ data: { resourceId, force } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["study-resource", resourceId] }),
   });
-
   const notebook = useMutation({
     mutationFn: () => {
-      const vid = resource?.url ? youtubeId(resource.url) : null;
+      const vid = resource?.url ? extractYouTubeId(resource.url) : null;
       if (!vid) throw new Error("Not a YouTube video");
       return runNotebook({
         data: { videoId: vid, resourceId, title: resource?.title ?? "Video" },
@@ -162,7 +162,7 @@ function MaterialPage() {
     );
   }
 
-  const videoId = resource.url ? youtubeId(resource.url) : null;
+  const videoId = resource.url ? extractYouTubeId(resource.url) : null;
   const isPdf = Boolean(resource.storage_path);
   const summaryError = summarize.data && !summarize.data.success ? summarize.data.error : null;
 
@@ -175,29 +175,51 @@ function MaterialPage() {
         <ArrowLeft className="size-4" /> Back to Study Place
       </Link>
 
-      <div className="mt-4 flex flex-wrap items-start gap-3">
+      <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-bold">{resource.title}</h1>
-          <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium capitalize text-muted-foreground">
-            <FileText className="size-3" />
-            {resource.kind}
-          </span>
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+            {resource.title}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize">
+              {videoId ? (
+                <span className="flex items-center gap-1">
+                  <Play className="size-3 text-primary" /> Video
+                </span>
+              ) : isPdf ? (
+                <span className="flex items-center gap-1">
+                  <FileText className="size-3 text-primary" /> PDF
+                </span>
+              ) : (
+                resource.kind
+              )}
+            </span>
+            {resource.page_count && <span>· {resource.page_count} pages</span>}
+          </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="press gap-1.5 rounded-2xl"
-          onClick={() => startTimer(25, resource.title)}
-        >
-          <Timer className="size-4" /> Focus
-        </Button>
-        {resource.url && (
-          <Button asChild variant="ghost" size="sm" className="rounded-2xl">
-            <a href={resource.url} target="_blank" rel="noreferrer">
-              <ExternalLink className="size-4" /> Open source
-            </a>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="press gap-1.5 rounded-2xl text-xs"
+            onClick={() => startTimer(25)}
+          >
+            <Timer className="size-3.5" /> Focus
           </Button>
-        )}
+          {resource.url && (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="press gap-1.5 rounded-2xl text-xs"
+            >
+              <a href={resource.url} target="_blank" rel="noreferrer">
+                <ExternalLink className="size-3.5" /> Open source
+              </a>
+            </Button>
+          )}
+        </div>
       </div>
 
       <section className="card-soft mt-6 p-6">
@@ -226,7 +248,7 @@ function MaterialPage() {
               variant="outline"
               size="sm"
               className="press gap-1.5 rounded-2xl text-sm font-medium"
-              onClick={() => summarize.mutate(Boolean(resource.summary))}
+              onClick={() => summarize.mutate(true)}
               disabled={summarize.isPending}
             >
               <RefreshCw className={`size-4 ${summarize.isPending ? "animate-spin" : ""}`} />
@@ -242,10 +264,21 @@ function MaterialPage() {
           <div className="mt-4 text-base leading-relaxed">
             <MessageResponse>{resource.summary}</MessageResponse>
           </div>
+        ) : summaryError ? (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm text-destructive">{summaryError}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="press rounded-xl text-xs"
+              onClick={() => summarize.mutate(true)}
+            >
+              Try again
+            </Button>
+          </div>
         ) : (
           <p className="mt-3 text-base text-muted-foreground">
-            {summaryError ??
-              "Get key points in seconds before reading or watching the whole thing."}
+            Get key points in seconds before reading or watching the whole thing.
           </p>
         )}
       </section>
