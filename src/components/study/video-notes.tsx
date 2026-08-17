@@ -9,6 +9,7 @@ import {
   Pen,
   Play,
   Plus,
+  RotateCcw,
   Search,
   Sparkle,
   Trash2,
@@ -31,6 +32,7 @@ import {
 interface YTPlayer {
   getCurrentTime(): number;
   seekTo(seconds: number, allowSeekAhead?: boolean): void;
+  getPlayerState(): number;
   destroy(): void;
 }
 
@@ -43,7 +45,8 @@ interface YTNamespace {
       height?: string | number;
       playerVars?: Record<string, unknown>;
       events?: {
-        onReady?: (event: unknown) => void;
+        onReady?: (event: { target: YTPlayer }) => void;
+        onStateChange?: (event: { data: number; target: YTPlayer }) => void;
         onError?: (event: unknown) => void;
       };
     },
@@ -65,7 +68,6 @@ function loadYouTubeApi(): Promise<void> {
 
   if (!ytApiLoadingPromise) {
     ytApiLoadingPromise = new Promise<void>((resolve) => {
-      // Check if script is already in DOM
       const existingScript = document.querySelector('script[src*="youtube.com/iframe_api"]');
       if (!existingScript) {
         const tag = document.createElement("script");
@@ -80,7 +82,6 @@ function loadYouTubeApi(): Promise<void> {
         resolve();
       };
 
-      // Safety timeout: resolve anyway after 3.5s so fallback iframe can activate
       setTimeout(() => resolve(), 3500);
     });
   }
@@ -107,15 +108,16 @@ export function VideoNotes({
   const videoId = extractYouTubeId(rawVideoId) ?? rawVideoId;
   const elementId = useId().replace(/:/g, "_");
   const qc = useQueryClient();
-  const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const liveSecondsRef = useRef<number>(0);
 
   const [playerReady, setPlayerReady] = useState(false);
-  const [useFallbackIframe, setUseFallbackIframe] = useState(false);
+  const [liveSeconds, setLiveSeconds] = useState<number>(0);
+  const [targetTimestamp, setTargetTimestamp] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<TabMode>("notes");
   const [note, setNote] = useState("");
-  const [mode, setMode] = useState<NoteMode>("manual");
+  const [mode, setMode] = useState<NoteMode>("auto");
   const [autoLoading, setAutoLoading] = useState(false);
   const [transcriptSearch, setTranscriptSearch] = useState("");
 
@@ -139,31 +141,37 @@ export function VideoNotes({
 
   const refreshNotes = () => void qc.invalidateQueries({ queryKey: ["video-notes", resourceId] });
 
-  // Initialize YouTube Player with fallback mechanism
+  // Initialize YouTube Player & live postMessage listener
   useEffect(() => {
     let alive = true;
-    let playerInstance: YTPlayer | null = null;
+    let pollInterval: NodeJS.Timeout | null = null;
 
-    setPlayerReady(false);
-    setUseFallbackIframe(false);
-
-    // Timeout fallback if YT JS API fails to mount
-    const timeoutId = setTimeout(() => {
-      if (alive && !playerRef.current) {
-        setUseFallbackIframe(true);
+    // Listen to iframe postMessages for live currentTime
+    const handleMessage = (e: MessageEvent) => {
+      try {
+        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (data?.event === "infoDelivery" && typeof data?.info?.currentTime === "number") {
+          const sec = Math.round(data.info.currentTime);
+          liveSecondsRef.current = sec;
+          setLiveSeconds(sec);
+        }
+      } catch {
+        // Ignore non-JSON postmessages
       }
-    }, 3000);
+    };
+
+    window.addEventListener("message", handleMessage);
 
     void loadYouTubeApi().then(() => {
-      if (!alive || !containerRef.current) return;
+      if (!alive) return;
+      if (!window.YT?.Player) return;
 
-      if (!window.YT?.Player) {
-        setUseFallbackIframe(true);
-        return;
-      }
+      const containerId = `yt-player-${elementId}`;
+      const containerElem = document.getElementById(containerId);
+      if (!containerElem) return;
 
       try {
-        playerInstance = new window.YT.Player(containerRef.current, {
+        const playerInstance = new window.YT.Player(containerId, {
           videoId,
           width: "100%",
           height: "100%",
@@ -174,31 +182,39 @@ export function VideoNotes({
             origin: typeof window !== "undefined" ? window.location.origin : undefined,
           },
           events: {
-            onReady: () => {
-              if (alive) {
-                clearTimeout(timeoutId);
-                playerRef.current = playerInstance;
-                setPlayerReady(true);
-              }
-            },
-            onError: () => {
-              if (alive) {
-                setUseFallbackIframe(true);
-              }
+            onReady: (event) => {
+              if (!alive) return;
+              playerRef.current = event.target;
+              setPlayerReady(true);
+
+              pollInterval = setInterval(() => {
+                try {
+                  if (playerRef.current?.getCurrentTime) {
+                    const sec = Math.round(playerRef.current.getCurrentTime());
+                    if (sec !== liveSecondsRef.current) {
+                      liveSecondsRef.current = sec;
+                      setLiveSeconds(sec);
+                    }
+                  }
+                } catch {
+                  // Ignore
+                }
+              }, 500);
             },
           },
         });
       } catch {
-        if (alive) setUseFallbackIframe(true);
+        // Fallback
       }
     });
 
     return () => {
       alive = false;
-      clearTimeout(timeoutId);
-      if (playerInstance?.destroy) {
+      window.removeEventListener("message", handleMessage);
+      if (pollInterval) clearInterval(pollInterval);
+      if (playerRef.current?.destroy) {
         try {
-          playerInstance.destroy();
+          playerRef.current.destroy();
         } catch {
           // Ignore
         }
@@ -206,30 +222,39 @@ export function VideoNotes({
       playerRef.current = null;
       setPlayerReady(false);
     };
-  }, [videoId]);
+  }, [videoId, elementId]);
 
   const getCurrentSeconds = useCallback((): number => {
     if (playerRef.current?.getCurrentTime) {
       try {
-        return Math.round(playerRef.current.getCurrentTime());
+        const sec = Math.round(playerRef.current.getCurrentTime());
+        if (sec > 0) {
+          liveSecondsRef.current = sec;
+          setLiveSeconds(sec);
+          return sec;
+        }
       } catch {
-        return 0;
+        // Fallback
       }
     }
-    return 0;
+    return liveSecondsRef.current;
   }, []);
 
   const seekTo = useCallback(
     (seconds: number) => {
+      liveSecondsRef.current = seconds;
+      setLiveSeconds(seconds);
+      setTargetTimestamp(seconds);
+
       if (playerRef.current?.seekTo) {
         try {
           playerRef.current.seekTo(seconds, true);
           return;
         } catch {
-          // Continue to iframe fallback
+          // Fallback
         }
       }
-      // If fallback iframe is in use, update its src with start param
+
       if (iframeRef.current) {
         iframeRef.current.src = getYouTubeEmbedUrl(videoId, { autoplay: true, start: seconds });
       }
@@ -238,14 +263,17 @@ export function VideoNotes({
   );
 
   const addNote = useMutation({
-    mutationFn: () =>
-      createVideoNote({
+    mutationFn: () => {
+      const sec = targetTimestamp > 0 ? targetTimestamp : getCurrentSeconds();
+      return createVideoNote({
         resource_id: resourceId,
-        seconds: getCurrentSeconds(),
+        seconds: sec,
         note: note.trim(),
-      }),
+      });
+    },
     onSuccess: () => {
       setNote("");
+      setTargetTimestamp(0);
       refreshNotes();
       toast.success("Note saved!");
     },
@@ -259,17 +287,18 @@ export function VideoNotes({
 
   const handleAutoNote = async () => {
     const seconds = getCurrentSeconds();
+    setTargetTimestamp(seconds);
     setAutoLoading(true);
     try {
       const result = await runAutoNote({ data: { videoId, resourceId, seconds } });
       if (result.success && result.note) {
         setNote(result.note);
-        toast.success("Note generated from transcript at timestamp!");
+        toast.success(`Note generated for ${formatVideoTimestamp(seconds)}!`);
       } else {
-        toast.error(result.error ?? "No transcript available at this timestamp");
+        toast.error(result.error ?? "Could not generate note for this timestamp");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to get transcript");
+      toast.error(err instanceof Error ? err.message : "Failed to generate note");
     } finally {
       setAutoLoading(false);
     }
@@ -291,29 +320,28 @@ export function VideoNotes({
       {/* YouTube Player Container */}
       <div className="overflow-hidden rounded-3xl border border-border bg-black shadow-soft">
         <div className="aspect-video w-full relative">
-          {useFallbackIframe ? (
+          <div id={`yt-player-${elementId}`} className="size-full">
             <iframe
               ref={iframeRef}
-              src={getYouTubeEmbedUrl(videoId)}
+              src={getYouTubeEmbedUrl(videoId, { autoplay: false })}
               title={title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               className="size-full border-0"
             />
-          ) : (
-            <div id={`yt-player-${elementId}`} ref={containerRef} className="size-full" />
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Action header with Open on YouTube and status */}
+      {/* Action header with Live Time and Open on YouTube */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="size-4 text-primary" />
-          <span>
-            {playerReady
-              ? "Live sync enabled — notes capture playback timestamp"
-              : "Video ready"}
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <span className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-1 text-xs font-bold tabular-nums text-primary">
+            <Clock className="size-3.5" />
+            Current: {formatVideoTimestamp(liveSeconds)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {playerReady ? "• Live player connected" : "• Video ready"}
           </span>
         </div>
         <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5 rounded-xl text-xs">
@@ -358,17 +386,6 @@ export function VideoNotes({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setMode("manual")}
-              className={`flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-semibold transition-colors ${
-                mode === "manual"
-                  ? "bg-primary/20 text-primary border border-primary/30"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              <Pen className="size-3" /> Manual Note
-            </button>
-            <button
-              type="button"
               onClick={() => setMode("auto")}
               className={`flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-semibold transition-colors ${
                 mode === "auto"
@@ -378,25 +395,45 @@ export function VideoNotes({
             >
               <Wand2 className="size-3" /> Auto (from transcript)
             </button>
+            <button
+              type="button"
+              onClick={() => setMode("manual")}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-semibold transition-colors ${
+                mode === "manual"
+                  ? "bg-primary/20 text-primary border border-primary/30"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Pen className="size-3" /> Manual Note
+            </button>
           </div>
 
           {/* Note Form */}
           <form className="card-soft flex flex-col gap-3 p-5" onSubmit={handleSubmit}>
             {mode === "auto" && (
-              <Button
-                type="button"
-                variant="outline"
-                className="press gap-2 self-start rounded-2xl text-sm font-medium"
-                onClick={() => void handleAutoNote()}
-                disabled={autoLoading}
-              >
-                {autoLoading ? (
-                  <Loader2 className="size-4 animate-spin text-primary" />
-                ) : (
-                  <Sparkle className="size-4 text-primary" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="press gap-2 rounded-2xl text-sm font-medium"
+                  onClick={() => void handleAutoNote()}
+                  disabled={autoLoading}
+                >
+                  {autoLoading ? (
+                    <Loader2 className="size-4 animate-spin text-primary" />
+                  ) : (
+                    <Sparkle className="size-4 text-primary" />
+                  )}
+                  {autoLoading
+                    ? `Generating note for ${formatVideoTimestamp(targetTimestamp || liveSeconds)}…`
+                    : `Generate note for ${formatVideoTimestamp(liveSeconds)}`}
+                </Button>
+                {targetTimestamp > 0 && (
+                  <span className="text-xs text-primary font-semibold">
+                    Targeted at {formatVideoTimestamp(targetTimestamp)}
+                  </span>
                 )}
-                {autoLoading ? "Extracting from transcript…" : "Generate note at current timestamp"}
-              </Button>
+              </div>
             )}
             <div className="flex flex-wrap items-center gap-3">
               <Input
@@ -405,7 +442,7 @@ export function VideoNotes({
                 placeholder={
                   mode === "auto"
                     ? "Auto-generated note will appear here (edit before saving)…"
-                    : "Type your note at the current video timestamp…"
+                    : `Type your note for ${formatVideoTimestamp(liveSeconds)}…`
                 }
                 className="min-w-40 flex-1 rounded-2xl h-11 text-base"
               />
@@ -414,7 +451,7 @@ export function VideoNotes({
                 className="press gap-2 rounded-2xl h-11 px-5 text-base font-semibold"
                 disabled={!note.trim() || addNote.isPending}
               >
-                <Plus className="size-5" /> Pin note
+                <Plus className="size-5" /> Pin note at {formatVideoTimestamp(targetTimestamp || liveSeconds)}
               </Button>
             </div>
           </form>
@@ -448,9 +485,8 @@ export function VideoNotes({
               </li>
             ))}
             {notes.length === 0 && (
-              <li className="rounded-2xl bg-muted/50 px-5 py-8 text-center text-base text-muted-foreground">
-                <BookOpen className="mx-auto mb-2 size-6 text-primary" />
-                No timestamped notes pinned yet. Capture your first takeaway while watching!
+              <li className="rounded-2xl border border-dashed border-border py-12 text-center text-base text-muted-foreground">
+                No notes yet. Click &quot;Generate note&quot; while listening to save key takeaways!
               </li>
             )}
           </ul>
@@ -462,11 +498,11 @@ export function VideoNotes({
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={transcriptSearch}
                 onChange={(e) => setTranscriptSearch(e.target.value)}
-                placeholder="Search keywords inside transcript…"
+                placeholder="Search across video transcript…"
                 className="pl-9 rounded-2xl h-10 text-sm"
               />
             </div>
@@ -507,8 +543,9 @@ export function VideoNotes({
                     type="button"
                     onClick={() => {
                       setNote(s.text);
+                      setTargetTimestamp(s.offset);
                       setActiveTab("notes");
-                      toast.info("Transcript quote loaded into note creator");
+                      toast.info(`Quote at ${formatVideoTimestamp(s.offset)} loaded into note creator`);
                     }}
                     className="opacity-0 group-hover:opacity-100 rounded-lg p-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-opacity"
                     title="Add quote to notes"
