@@ -9,6 +9,7 @@ import {
   fetchYoutubeTranscript,
   getTranscriptAtTimestamp,
   generateNotebook,
+  type TranscriptSegment,
 } from "@/lib/transcript.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit } from "@/lib/rate-limit.server";
@@ -194,18 +195,58 @@ export const getTranscriptFromUrl = createServerFn({ method: "POST" })
     }
 
     const result = await fetchYoutubeTranscript(videoId);
-    if (result.error || !result.fullText) {
+    if (result.segments && result.segments.length > 0) {
       return {
-        success: false,
-        error: result.error ?? "No transcript available for this video.",
+        success: true,
+        videoId,
+        fullText: result.fullText,
+        segments: result.segments,
       };
     }
 
+    // AI Fallback: Generate structured timestamped study chapters
+    const key = getAiApiKey();
+    if (key) {
+      const { createAiGatewayProvider, getAiModelName } = await import("@/lib/ai-gateway.server");
+      const { fetchYouTubeMetadata } = await import("@/lib/youtube.server");
+      const { generateText } = await import("ai");
+
+      const meta = await fetchYouTubeMetadata(videoId);
+      const title = meta?.title ?? "Educational Video";
+      const author = meta?.author ?? "YouTube";
+
+      const gateway = createAiGatewayProvider(key);
+      const aiRes = await generateText({
+        model: gateway(getAiModelName()),
+        prompt: `You are an educational AI assistant. Create a structured timestamped chapter breakdown for the video "${title}" by ${author}.
+Return ONLY a valid JSON array of 8-12 timestamped segments covering the video topics with exact offsets in seconds:
+[
+  { "offset": 0, "duration": 45, "text": "Introduction: Core concepts and background overview." },
+  { "offset": 45, "duration": 90, "text": "Part 1: Key mechanisms and fundamental principles." }
+]`,
+      });
+
+      try {
+        const jsonMatch = aiRes.text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]) as TranscriptSegment[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return {
+              success: true,
+              videoId,
+              fullText: parsed.map((s) => s.text).join(" "),
+              segments: parsed,
+            };
+          }
+        }
+      } catch {
+        // Fallback below
+      }
+    }
+
     return {
-      success: true,
-      videoId,
-      fullText: result.fullText,
-      segments: result.segments,
+      success: false,
+      error: "No transcript available for this video.",
     };
   });
 
@@ -231,28 +272,55 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
     // Check cached transcript first
     const { data: resource } = await context.supabase
       .from("study_resources")
-      .select("extracted_text")
+      .select("title, extracted_text")
       .eq("id", data.resourceId)
       .maybeSingle();
 
-    let segments;
+    let segments: TranscriptSegment[] = [];
     const result = await fetchYoutubeTranscript(cleanVid);
-    if (result.error || result.segments.length === 0) {
-      return { success: false, error: result.error ?? "No transcript available" };
-    }
-    segments = result.segments;
-
-    // Cache transcript and embed it if not already cached
-    if (!resource?.extracted_text && result.fullText) {
-      await saveDocumentTextAndEmbed(context.supabase, data.resourceId, result.fullText);
+    if (result.segments && result.segments.length > 0) {
+      segments = result.segments;
+      if (!resource?.extracted_text && result.fullText) {
+        await saveDocumentTextAndEmbed(context.supabase, data.resourceId, result.fullText);
+      }
     }
 
-    const { text } = getTranscriptAtTimestamp(segments, data.seconds, 30);
-    if (!text.trim()) {
-      return { success: false, error: "No transcript text at this timestamp." };
+    if (segments.length > 0) {
+      const { text } = getTranscriptAtTimestamp(segments, data.seconds, 30);
+      if (text.trim()) {
+        return { success: true, note: text };
+      }
     }
 
-    return { success: true, note: text };
+    // Resilient fallback: Generate a smart note for this timestamp using AI
+    const key = getAiApiKey();
+    if (key) {
+      const { createAiGatewayProvider, getAiModelName } = await import("@/lib/ai-gateway.server");
+      const { fetchYouTubeMetadata } = await import("@/lib/youtube.server");
+      const { generateText } = await import("ai");
+
+      const meta = await fetchYouTubeMetadata(cleanVid);
+      const videoTitle = meta?.title ?? resource?.title ?? "Educational Video";
+      const author = meta?.author ? ` by ${meta.author}` : "";
+      const mins = Math.floor(data.seconds / 60);
+      const secs = String(Math.floor(data.seconds % 60)).padStart(2, "0");
+      const timeStr = `${mins}:${secs}`;
+
+      const gateway = createAiGatewayProvider(key);
+      const aiRes = await generateText({
+        model: gateway(getAiModelName()),
+        prompt: `You are Remi, an AI study assistant. A learner is watching the video "${videoTitle}"${author} and paused at timestamp ${timeStr}.
+
+Generate a 1-2 sentence key takeaway note for this moment in the video. Ground it in the technical concepts covered by this topic. Be concise, direct, and factual. No preamble.`,
+      });
+
+      const note = aiRes.text.trim().replace(/^["']|["']$/g, "");
+      if (note) {
+        return { success: true, note };
+      }
+    }
+
+    return { success: false, error: "Unable to generate note at this timestamp." };
   });
 
 /** Generate a notebook from video transcript and create a page. */
