@@ -149,16 +149,20 @@ function httpRequest(
  */
 export async function fetchYoutubeTranscript(
   videoIdOrUrl: string,
-): Promise<{ segments: TranscriptSegment[]; fullText: string; error?: string }> {
-  const empty = { segments: [] as TranscriptSegment[], fullText: "" };
+): Promise<{ segments: TranscriptSegment[]; fullText: string; error?: string; debugLog?: string[] }> {
+  const debugLog: string[] = [];
+  const empty = { segments: [] as TranscriptSegment[], fullText: "", debugLog };
   const videoId = extractYouTubeId(videoIdOrUrl) ?? videoIdOrUrl.trim();
 
   if (!videoId || videoId.length < 5) {
+    debugLog.push(`Invalid ID: "${videoIdOrUrl}"`);
     return {
       ...empty,
       error: "Invalid YouTube URL or video ID provided.",
     };
   }
+
+  debugLog.push(`Starting fetch for videoId=${videoId}`);
 
   // --- Strategy 1: Native Node.js HTTPS InnerTube Multi-Client Engine ---
   for (const client of INNERTUBE_CLIENTS) {
@@ -196,6 +200,8 @@ export async function fetchYoutubeTranscript(
         },
       );
 
+      debugLog.push(`Client ${client.name}: /player HTTP ${res.status}`);
+
       if (res.status === 200 && res.text) {
         const data = JSON.parse(res.text) as Record<string, unknown>;
         const captions = data["captions"] as Record<string, unknown> | undefined;
@@ -205,6 +211,7 @@ export async function fetchYoutubeTranscript(
         const tracks = renderer?.["captionTracks"] as CaptionTrack[] | undefined;
 
         if (Array.isArray(tracks) && tracks.length > 0) {
+          debugLog.push(`Client ${client.name}: found ${tracks.length} tracks`);
           const track =
             tracks.find((t) => t.vssId === ".en" || t.languageCode === "en") ??
             tracks.find((t) => t.vssId === "a.en" || t.languageCode?.startsWith("en")) ??
@@ -220,20 +227,27 @@ export async function fetchYoutubeTranscript(
               timeoutMs: 6000,
             });
 
+            debugLog.push(`Client ${client.name}: caption track HTTP ${capRes.status} (${capRes.text.length}b)`);
+
             if (capRes.status === 200 && capRes.text) {
               const segs = normalizeSegments(parseTranscriptXml(capRes.text));
               if (segs.length > 0) {
+                debugLog.push(`Success with client ${client.name}! ${segs.length} segments`);
                 return {
                   segments: segs,
                   fullText: segs.map((s) => s.text).join(" "),
+                  debugLog,
                 };
               }
             }
           }
+        } else {
+          const playStatus = (data["playabilityStatus"] as Record<string, unknown>)?.["status"];
+          debugLog.push(`Client ${client.name}: playability=${playStatus}, no captionTracks`);
         }
       }
-    } catch {
-      // Continue to next client
+    } catch (err) {
+      debugLog.push(`Client ${client.name} error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -250,14 +264,17 @@ export async function fetchYoutubeTranscript(
       );
 
       if (segments.length > 0) {
+        debugLog.push(`Strategy 2 (caption-extractor) OK: ${segments.length} segments`);
         return {
           segments,
           fullText: segments.map((s) => s.text).join(" "),
+          debugLog,
         };
       }
     }
-  } catch {
-    // Continue to next strategy
+    debugLog.push("Strategy 2: 0 segments returned");
+  } catch (err) {
+    debugLog.push(`Strategy 2 error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // --- Strategy 3: HTML Page Parsing (captionTracks / ytInitialPlayerResponse) ---
@@ -271,6 +288,8 @@ export async function fetchYoutubeTranscript(
       },
       timeoutMs: 6000,
     });
+
+    debugLog.push(`Strategy 3 (watch HTML): HTTP ${res.status}`);
 
     if (res.status === 200) {
       const captionTracks = extractCaptionTracksFromHtml(res.text);
@@ -291,14 +310,15 @@ export async function fetchYoutubeTranscript(
           if (capRes.status === 200 && capRes.text) {
             const segs = normalizeSegments(parseTranscriptXml(capRes.text));
             if (segs.length > 0) {
-              return { segments: segs, fullText: segs.map((s) => s.text).join(" ") };
+              debugLog.push(`Strategy 3 OK: ${segs.length} segments`);
+              return { segments: segs, fullText: segs.map((s) => s.text).join(" "), debugLog };
             }
           }
         }
       }
     }
-  } catch {
-    // Continue to next strategy
+  } catch (err) {
+    debugLog.push(`Strategy 3 error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // --- Strategy 4: Direct TimedText API ---
@@ -326,16 +346,18 @@ export async function fetchYoutubeTranscript(
         }
         const normalized = normalizeSegments(segs);
         if (normalized.length > 0) {
-          return { segments: normalized, fullText: normalized.map((s) => s.text).join(" ") };
+          debugLog.push(`Strategy 4 OK: ${normalized.length} segments`);
+          return { segments: normalized, fullText: normalized.map((s) => s.text).join(" "), debugLog };
         }
       }
     }
-  } catch {
-    // Continue
+  } catch (err) {
+    debugLog.push(`Strategy 4 error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   return {
     ...empty,
+    debugLog,
     error:
       "No transcript available for this video. The video might not have English captions or auto-generated subtitles enabled on YouTube.",
   };

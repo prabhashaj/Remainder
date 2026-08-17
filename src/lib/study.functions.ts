@@ -133,6 +133,7 @@ export const debugTranscriptFn = createServerFn({ method: "POST" })
       segments: result.segments.length,
       chars: result.fullText.length,
       error: result.error ?? null,
+      debugLog: result.debugLog ?? [],
       ms: Date.now() - startMs,
       nodeVersion: process.version,
     };

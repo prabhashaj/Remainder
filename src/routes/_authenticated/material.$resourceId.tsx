@@ -111,6 +111,17 @@ function MaterialPage() {
       runSaveText({ data: { resourceId, text, pages } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["study-resource", resourceId] }),
   });
+  const [debugResult, setDebugResult] = useState<{
+    success: boolean;
+    videoId: string;
+    segments: number;
+    chars: number;
+    error: string | null;
+    debugLog: string[];
+    ms: number;
+    nodeVersion: string;
+  } | null>(null);
+
   const summarize = useMutation({
     mutationFn: (force: boolean) => runSummary({ data: { resourceId, force } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["study-resource", resourceId] }),
@@ -119,7 +130,8 @@ function MaterialPage() {
   const debugTranscript = useMutation({
     mutationFn: (vid: string) => runDebugTranscript({ data: { videoId: vid } }),
     onSuccess: (result) => {
-      const msg = `videoId=${result.videoId} | Node ${result.nodeVersion} | ${result.ms}ms | segments=${result.segments} | chars=${result.chars} | error=${result.error ?? "none"}`;
+      setDebugResult(result);
+      const msg = `videoId=${result.videoId} | Node ${result.nodeVersion} | ${result.ms}ms | segments=${result.segments} | chars=${result.chars} | error=${result.error ?? "none"}`;
       if (result.success) {
         toast.success(`Transcript OK! ${result.segments} segments`, { description: msg, duration: 15000 });
       } else {
@@ -303,6 +315,22 @@ function MaterialPage() {
                 </Button>
               )}
             </div>
+            {debugResult && (
+              <div className="mt-3 p-3 rounded-xl bg-muted/60 border border-border text-xs font-mono space-y-1">
+                <p className="font-bold text-foreground">
+                  Diagnostic Result ({debugResult.success ? "SUCCESS" : "FAILED"} in {debugResult.ms}ms):
+                </p>
+                <p>Node: {debugResult.nodeVersion} | Segments: {debugResult.segments} | Chars: {debugResult.chars}</p>
+                {debugResult.error && <p className="text-destructive">Error: {debugResult.error}</p>}
+                {debugResult.debugLog.length > 0 && (
+                  <div className="mt-2 space-y-0.5 max-h-40 overflow-y-auto text-muted-foreground">
+                    {debugResult.debugLog.map((line, idx) => (
+                      <div key={idx}>› {line}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <p className="mt-3 text-base text-muted-foreground">
