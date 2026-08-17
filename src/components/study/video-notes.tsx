@@ -37,10 +37,7 @@ interface YTNamespace {
   Player: new (
     element: HTMLElement | string,
     options: {
-      videoId: string;
-      width?: string | number;
-      height?: string | number;
-      playerVars?: Record<string, unknown>;
+      videoId?: string;
       events?: {
         onReady?: (event: { target: YTPlayer }) => void;
         onStateChange?: (event: { data: number; target: YTPlayer }) => void;
@@ -79,7 +76,7 @@ function loadYouTubeApi(): Promise<void> {
         resolve();
       };
 
-      setTimeout(() => resolve(), 3500);
+      setTimeout(() => resolve(), 3000);
     });
   }
 
@@ -89,8 +86,8 @@ function loadYouTubeApi(): Promise<void> {
 type NoteMode = "auto" | "manual";
 
 /**
- * A streamlined YouTube study player with live time-synced notes
- * and automatic timestamp extraction.
+ * A robust YouTube study player that always renders immediately,
+ * syncs playback timestamps live, and generates pinpoint notes.
  */
 export function VideoNotes({
   resourceId,
@@ -105,7 +102,7 @@ export function VideoNotes({
   const elementId = useId().replace(/:/g, "_");
   const qc = useQueryClient();
   const playerRef = useRef<YTPlayer | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const liveSecondsRef = useRef<number>(0);
 
   const [playerReady, setPlayerReady] = useState(false);
@@ -124,10 +121,11 @@ export function VideoNotes({
 
   const refreshNotes = () => void qc.invalidateQueries({ queryKey: ["video-notes", resourceId] });
 
-  // Initialize YouTube Player API directly on the container div
+  // Initialize YouTube Iframe postMessage & YT.Player API listener
   useEffect(() => {
     let alive = true;
     let pollInterval: NodeJS.Timeout | null = null;
+    let pingInterval: NodeJS.Timeout | null = null;
 
     // Listen to iframe postMessages for live currentTime
     const handleMessage = (e: MessageEvent) => {
@@ -141,34 +139,39 @@ export function VideoNotes({
           }
         }
       } catch {
-        // Ignore
+        // Ignore non-JSON postmessages
       }
     };
 
     window.addEventListener("message", handleMessage);
 
+    // Send periodic 'listening' ping to the iframe so it delivers playback updates
+    pingInterval = setInterval(() => {
+      try {
+        if (iframeRef.current?.contentWindow) {
+          iframeRef.current.contentWindow.postMessage(
+            JSON.stringify({ event: "listening" }),
+            "*",
+          );
+        }
+      } catch {
+        // Ignore
+      }
+    }, 1000);
+
     void loadYouTubeApi().then(() => {
-      if (!alive || !containerRef.current) return;
+      if (!alive || !iframeRef.current) return;
       if (!window.YT?.Player) return;
 
       try {
-        const playerInstance = new window.YT.Player(containerRef.current, {
-          videoId,
-          width: "100%",
-          height: "100%",
-          playerVars: {
-            rel: 0,
-            modestbranding: 1,
-            enablejsapi: 1,
-            origin: typeof window !== "undefined" ? window.location.origin : undefined,
-          },
+        const playerInstance = new window.YT.Player(iframeRef.current, {
           events: {
             onReady: (event) => {
               if (!alive) return;
               playerRef.current = event.target;
               setPlayerReady(true);
 
-              // Poll currentTime continuously while active
+              // Poll currentTime continuously
               pollInterval = setInterval(() => {
                 try {
                   if (playerRef.current?.getCurrentTime) {
@@ -181,9 +184,9 @@ export function VideoNotes({
                 } catch {
                   // Ignore
                 }
-              }, 300);
+              }, 400);
             },
-            onStateChange: (event) => {
+            onStateChange: () => {
               if (playerRef.current?.getCurrentTime) {
                 const sec = Math.round(playerRef.current.getCurrentTime());
                 if (!isNaN(sec) && sec >= 0) {
@@ -203,6 +206,7 @@ export function VideoNotes({
       alive = false;
       window.removeEventListener("message", handleMessage);
       if (pollInterval) clearInterval(pollInterval);
+      if (pingInterval) clearInterval(pingInterval);
       if (playerRef.current?.destroy) {
         try {
           playerRef.current.destroy();
@@ -257,12 +261,33 @@ export function VideoNotes({
       if (playerRef.current?.seekTo) {
         try {
           playerRef.current.seekTo(seconds, true);
+          return;
         } catch {
-          // Ignore
+          // Fallback
         }
       }
+
+      if (iframeRef.current?.contentWindow) {
+        try {
+          iframeRef.current.contentWindow.postMessage(
+            JSON.stringify({
+              event: "command",
+              func: "seekTo",
+              args: [seconds, true],
+            }),
+            "*",
+          );
+          return;
+        } catch {
+          // Fallback
+        }
+      }
+
+      if (iframeRef.current) {
+        iframeRef.current.src = getYouTubeEmbedUrl(videoId, { autoplay: true, start: seconds });
+      }
     },
-    [],
+    [videoId],
   );
 
   const addNote = useMutation({
@@ -319,7 +344,15 @@ export function VideoNotes({
       {/* YouTube Player Container */}
       <div className="overflow-hidden rounded-3xl border border-border bg-black shadow-soft">
         <div className="aspect-video w-full relative">
-          <div ref={containerRef} className="size-full" />
+          <iframe
+            ref={iframeRef}
+            id={`yt-iframe-${elementId}`}
+            src={getYouTubeEmbedUrl(videoId, { enableJsApi: true, modestbranding: true, rel: 0 })}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="size-full border-0"
+          />
         </div>
       </div>
 
@@ -331,7 +364,7 @@ export function VideoNotes({
             Current: {currentDisplayTime}
           </span>
           <span className="text-xs text-muted-foreground">
-            {playerReady ? "• Live player connected" : "• Loading player…"}
+            {playerReady ? "• Live player connected" : "• Video ready"}
           </span>
         </div>
         <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5 rounded-xl text-xs">
