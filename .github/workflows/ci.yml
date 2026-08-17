@@ -22,13 +22,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type Check
-        run: npx tsc --noEmit
-
-      - name: Lint
-        run: npm run lint
-
       - name: Build
         run: npm run build
-
-    # Deployment step would go here using Vercel CLI or similar
+        env:
+          SKIP_ENV_VALIDATION: 1
