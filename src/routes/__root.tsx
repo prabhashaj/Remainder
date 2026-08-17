@@ -94,12 +94,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Remispace is a warm notebook for your notes, habits and goals, with Remi, an AI coach who builds study roadmaps and keeps you focused.",
+          "Remispace is a calm workspace for your notes, roadmaps, study streaks and goals, with Remi, an AI coach who builds curricula and keeps you focused.",
       },
       { property: "og:title", content: "Remispace — calm workspace + AI learning coach" },
       {
         property: "og:description",
-        content: "Notes, habits, goals and an AI learning coach in one soft, focused workspace.",
+        content: "Notes, roadmaps, study streaks, goals and an AI learning coach in one soft, focused workspace.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://remispace.in" },

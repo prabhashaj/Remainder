@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BookOpen,
-  CalendarHeart,
   ChevronRight,
   Compass,
   FileText,
@@ -78,7 +77,6 @@ import {
   createThread,
   deleteThread,
   fetchGoals,
-  fetchHabits,
   fetchPages,
   fetchProfile,
   fetchRoadmaps,
@@ -90,7 +88,6 @@ import {
 const navItems = [
   { title: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { title: "Tasks", to: "/tasks", icon: ListChecks },
-  { title: "Habits", to: "/habits", icon: CalendarHeart },
   { title: "Goals", to: "/goals", icon: Target },
   { title: "Roadmaps", to: "/roadmaps", icon: Compass },
   { title: "Documents", to: "/documents", icon: FolderOpen },
@@ -439,11 +436,6 @@ function CommandPalette({
     queryFn: fetchGoals,
     enabled: open,
   });
-  const { data: habits = [] } = useQuery({
-    queryKey: ["habits"],
-    queryFn: fetchHabits,
-    enabled: open,
-  });
   const { data: roadmaps = [] } = useQuery({
     queryKey: ["roadmaps"],
     queryFn: fetchRoadmaps,
@@ -462,7 +454,7 @@ function CommandPalette({
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search roadmaps, tasks, habits, goals, notes, conversations…" />
+      <CommandInput placeholder="Search roadmaps, tasks, goals, notes, conversations…" />
       <CommandList className="max-h-[60vh]">
         <CommandEmpty>Nothing matched that.</CommandEmpty>
 
@@ -554,21 +546,6 @@ function CommandPalette({
                 >
                   {task.title}
                 </span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-
-        {habits.length > 0 && (
-          <CommandGroup heading="Habits">
-            {habits.map((habit) => (
-              <CommandItem
-                key={habit.id}
-                value={`habit ${habit.title}`}
-                onSelect={() => go(() => navigate({ to: "/habits" }))}
-              >
-                <CalendarHeart className="size-4" />
-                <span className="truncate">{habit.title}</span>
               </CommandItem>
             ))}
           </CommandGroup>

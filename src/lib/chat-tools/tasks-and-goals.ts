@@ -118,75 +118,6 @@ export function getTasksAndGoalsTools(
         ),
     }),
 
-    createHabit: tool({
-      description: "Create a new daily habit in the user's workspace instantly.",
-      inputSchema: z.object({
-        title: z.string().describe("The habit name"),
-        icon: z
-          .enum([
-            "sprout",
-            "book",
-            "code",
-            "brain",
-            "dumbbell",
-            "droplet",
-            "run",
-            "music",
-            "note",
-            "language",
-            "leaf",
-            "sun",
-            "moon",
-            "timer",
-            "spark",
-            "file",
-          ])
-          .nullable()
-          .optional()
-          .describe("Icon key that best fits the habit, or null"),
-        target_per_week: z
-          .number()
-          .nullable()
-          .optional()
-          .describe("Target completions per week, or null for daily (7)"),
-      }),
-      execute: async ({
-        title,
-        icon,
-        target_per_week,
-      }: {
-        title: string;
-        icon?: string | null | undefined;
-        target_per_week?: number | null | undefined;
-      }) =>
-        wrapTool(
-          "createHabit",
-          async () => {
-            const { data, error } = await supabase
-              .from("habits")
-              .insert({
-                user_id: userId,
-                title,
-                icon: icon ?? "sprout",
-                target_per_week: target_per_week ?? 7,
-              })
-              .select("id, title")
-              .single();
-            if (error) return { success: false, error: error.message };
-            return {
-              success: true,
-              id: data.id,
-              message: `Habit '${title}' created successfully.`,
-            };
-          },
-          supabase,
-          userId,
-          traceId,
-          threadId,
-          { title, icon, target_per_week },
-        ),
-    }),
-
     updateTask: tool({
       description:
         "Update an existing task (e.g., mark as done, change title, or change due date).",
@@ -581,58 +512,6 @@ export function getTasksAndGoalsTools(
           traceId,
           threadId,
           { goal_id, title, milestones },
-        ),
-    }),
-
-    updateHabit: tool({
-      description:
-        "Update an existing habit (e.g., change title, target completions, or archive it).",
-      inputSchema: z.object({
-        habit_id: z.string().describe("ID of the habit to update"),
-        title: z.string().nullable().describe("New title, or null to leave unchanged"),
-        target_per_week: z
-          .number()
-          .nullable()
-          .describe("New target per week (1-7), or null to leave unchanged"),
-        archived: z
-          .boolean()
-          .nullable()
-          .describe("Set to true to archive, false to unarchive, or null to leave unchanged"),
-      }),
-      execute: async ({
-        habit_id,
-        title,
-        target_per_week,
-        archived,
-      }: {
-        habit_id: string;
-        title: string | null;
-        target_per_week: number | null;
-        archived: boolean | null;
-      }) =>
-        wrapTool(
-          "updateHabit",
-          async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const updates: any = {};
-            if (title !== null) updates.title = title;
-            if (target_per_week !== null) updates.target_per_week = target_per_week;
-            if (archived !== null) updates.archived = archived;
-            if (Object.keys(updates).length === 0)
-              return { success: false, error: "No fields to update" };
-            const { error } = await supabase
-              .from("habits")
-              .update(updates)
-              .eq("id", habit_id)
-              .eq("user_id", userId);
-            if (error) return { success: false, error: error.message };
-            return { success: true, message: `Habit ${habit_id} updated successfully.` };
-          },
-          supabase,
-          userId,
-          traceId,
-          threadId,
-          { habit_id, title, target_per_week, archived },
         ),
     }),
   };

@@ -101,7 +101,7 @@ Before answering, evaluate:
 8. PERSONAL WORKSPACE & ACCOUNT DATA
    Does the query ask about the user's own data? Examples: "How many documents are there?", 
    "What is my next task?", "Summarize my notes." 
-   If the query is asking about the user's personal workspace, notes, documents, habits, 
+   If the query is asking about the user's personal workspace, notes, documents, roadmaps, 
    goals, or tasks, a web search is NEVER required because you already have this context.
 
 9. EXPLICIT TOOL OR INTEGRATION REQUESTS

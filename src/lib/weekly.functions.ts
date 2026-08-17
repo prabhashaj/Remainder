@@ -14,8 +14,8 @@ Speak as "Remi", their coach — warm, personal, observant, never preachy.
 
 Structure (markdown, 90-140 words total):
 - One opening sentence naming the most real thing they did this week.
-- "**Here's what you did**" — 2-3 tight bullets with actual numbers (tasks finished, habit days, focus minutes, flashcard/quiz reviews, lessons read).
-- "**The pattern I'm noticing**" — one honest, specific observation about how they work (best days, focus quality, learning retention, what slips, what's building).
+- "**Here's what you did**" — 2-3 tight bullets with actual numbers (roadmap lessons completed, roadmap study streak, focus minutes, flashcard/quiz reviews, tasks finished).
+- "**The pattern I'm noticing**" — one honest, specific observation about how they work (learning streak momentum, focus quality, learning retention, what slips, what's building).
 - One gentle suggestion for next week, small enough to start on Monday.
 
 Rules: use their real data only, never invent activity, never guilt-trip a quiet week — a quiet week gets kindness and one small restart.`;
@@ -39,8 +39,7 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
 
     const [
       { data: tasksDone },
-      { data: habits },
-      { data: habitLogs },
+      { data: roadmaps },
       { data: goals },
       { data: moods },
       { data: focusSessions },
@@ -54,8 +53,7 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
         .eq("done", true)
         .gte("updated_at", weekAgo.toISOString())
         .limit(30),
-      supabase.from("habits").select("id,title").eq("archived", false).limit(10),
-      supabase.from("habit_logs").select("habit_id,day").gte("day", weekAgoStr),
+      supabase.from("roadmaps").select("id,topic,summary").order("created_at", { ascending: false }).limit(5),
       supabase.from("goals").select("title,progress").eq("status", "active").limit(5),
       supabase
         .from("journal_entries")
@@ -68,10 +66,9 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
         .gte("created_at", weekAgo.toISOString()),
       supabase
         .from("roadmap_items")
-        .select("title,updated_at")
-        .eq("content_status", "ready")
+        .select("title,done,updated_at")
         .gte("updated_at", weekAgo.toISOString())
-        .limit(15),
+        .limit(25),
       supabase
         .from("quiz_attempts")
         .select("score,total,created_at")
@@ -80,10 +77,7 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
     ]);
 
     const doneTitles = (tasksDone ?? []).map((t) => t.title);
-    const habitSummary = (habits ?? []).map((h) => {
-      const days = (habitLogs ?? []).filter((l) => l.habit_id === h.id).length;
-      return `${h.title}: ${days}/7 days`;
-    });
+    const completedLessons = (lessons ?? []).filter((l) => l.done);
     const focusMin = (focusSessions ?? []).reduce(
       (sum, s) => sum + (s.counted_minutes ?? s.minutes ?? 0),
       0,
@@ -104,9 +98,9 @@ export const generateWeeklyReflection = createServerFn({ method: "GET" })
 
     const summary = [
       `Tasks completed (${doneTitles.length}): ${doneTitles.slice(0, 12).join(", ") || "none"}`,
-      `Habits: ${habitSummary.join("; ") || "none set up"}`,
+      `Roadmaps in progress: ${(roadmaps ?? []).map((r) => r.topic).join(", ") || "none"}`,
+      `Roadmap lessons completed this week (${completedLessons.length}): ${completedLessons.map((l) => l.title).slice(0, 8).join(", ") || "none"}`,
       `Focus: ${focusMin} minutes across ${focusDays} day(s) (${totalTabAways} total tab-aways)`,
-      `Lessons read/generated: ${(lessons ?? []).map((l) => l.title).join(", ") || "none"}`,
       `Quizzes taken: ${quizzes?.length ?? 0}${avgQuizScore !== null ? ` (avg score: ${avgQuizScore}%)` : ""}`,
       `Flashcard reviews: ${flashcardsReviewed?.length ?? 0} cards updated/reviewed`,
       `Active goals: ${(goals ?? []).map((g) => `${g.title} (${g.progress}%)`).join(", ") || "none"}`,

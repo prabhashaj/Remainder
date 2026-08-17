@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 /**
- * A curated set of line icons used everywhere a habit, page or subject needs a
+ * A curated set of line icons used everywhere a page or subject needs a
  * visual marker. Stored by key so the database never holds emoji.
  */
 export const LINE_ICONS: Record<string, LucideIcon> = {

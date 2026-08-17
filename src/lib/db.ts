@@ -5,8 +5,6 @@ type Tables = Database["public"]["Tables"];
 export type Page = Tables["pages"]["Row"];
 export type Block = Tables["blocks"]["Row"];
 export type Task = Tables["tasks"]["Row"];
-export type Habit = Tables["habits"]["Row"];
-export type HabitLog = Tables["habit_logs"]["Row"];
 export type Goal = Tables["goals"]["Row"];
 export type Milestone = Tables["milestones"]["Row"];
 export type Roadmap = Tables["roadmaps"]["Row"];
@@ -171,54 +169,6 @@ export async function updateTask(id: string, patch: Tables["tasks"]["Update"]) {
 
 export async function deleteTask(id: string) {
   const { error } = await supabase.from("tasks").delete().eq("id", id);
-  if (error) throw new Error(error.message);
-}
-
-/* ---------- habits ---------- */
-
-export async function fetchHabits(): Promise<Habit[]> {
-  return unwrap(
-    await supabase.from("habits").select("*").eq("archived", false).order("created_at"),
-  );
-}
-
-export async function fetchHabitLogs(sinceDay: string): Promise<HabitLog[]> {
-  return unwrap(await supabase.from("habit_logs").select("*").gte("day", sinceDay));
-}
-
-export async function createHabit(input: {
-  title: string;
-  icon?: string;
-  emoji?: string;
-  target_per_week?: number;
-}) {
-  const user_id = await requireUserId();
-  return unwrap(
-    await supabase
-      .from("habits")
-      .insert({ ...input, user_id })
-      .select("*")
-      .single(),
-  );
-}
-
-export async function toggleHabit(habitId: string, day: string, on: boolean) {
-  if (on) {
-    const user_id = await requireUserId();
-    const { error } = await supabase.from("habit_logs").insert({ habit_id: habitId, day, user_id });
-    if (error && !error.message.includes("duplicate")) throw new Error(error.message);
-    return;
-  }
-  const { error } = await supabase
-    .from("habit_logs")
-    .delete()
-    .eq("habit_id", habitId)
-    .eq("day", day);
-  if (error) throw new Error(error.message);
-}
-
-export async function archiveHabit(id: string) {
-  const { error } = await supabase.from("habits").update({ archived: true }).eq("id", id);
   if (error) throw new Error(error.message);
 }
 
@@ -544,17 +494,133 @@ export async function fetchRoadmapResource(id: string): Promise<RoadmapResource 
   return data;
 }
 
-/* ---------- derived helpers ---------- */
+/* ---------- roadmap streak & activity helpers ---------- */
 
-export function streakFor(habitId: string, logs: HabitLog[]): number {
-  const days = new Set(logs.filter((l) => l.habit_id === habitId).map((l) => l.day));
-  let streak = 0;
-  for (let i = 0; i < 365; i++) {
-    const day = dayOffset(-i);
-    if (days.has(day)) streak++;
-    else if (i > 0) break;
+export interface RoadmapStreakInfo {
+  currentStreak: number;
+  bestStreak: number;
+  todayActive: boolean;
+  activeDates: string[];
+  weekActiveDays: string[];
+  totalLessonsCompleted: number;
+  totalFocusMinutes: number;
+}
+
+export function calculateStreakFromDates(dates: Set<string>): {
+  currentStreak: number;
+  bestStreak: number;
+  todayActive: boolean;
+} {
+  const todayStr = today();
+  const yesterdayStr = dayOffset(-1);
+  const todayActive = dates.has(todayStr);
+
+  let currentStreak = 0;
+  const startOffset = todayActive ? 0 : dates.has(yesterdayStr) ? 1 : null;
+
+  if (startOffset !== null) {
+    for (let i = startOffset; i < 3650; i++) {
+      const d = dayOffset(-i);
+      if (dates.has(d)) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
   }
-  return streak;
+
+  let bestStreak = 0;
+  let running = 0;
+  for (let i = 0; i < 3650; i++) {
+    const d = dayOffset(-i);
+    if (dates.has(d)) {
+      running++;
+      if (running > bestStreak) bestStreak = running;
+    } else {
+      running = 0;
+    }
+  }
+
+  return { currentStreak, bestStreak: Math.max(bestStreak, currentStreak), todayActive };
+}
+
+export async function fetchRoadmapStreakInfo(roadmapId?: string): Promise<RoadmapStreakInfo> {
+  const userId = await requireUserId();
+
+  let focusQuery = supabase
+    .from("focus_sessions")
+    .select("created_at, minutes, counted_minutes, roadmap_item_id")
+    .eq("user_id", userId);
+
+  let itemsQuery = supabase
+    .from("roadmap_items")
+    .select("id, roadmap_id, done, updated_at, created_at")
+    .eq("user_id", userId);
+  if (roadmapId) {
+    itemsQuery = itemsQuery.eq("roadmap_id", roadmapId);
+  }
+
+  let quizQuery = supabase
+    .from("quiz_attempts")
+    .select("created_at, roadmap_item_id")
+    .eq("user_id", userId);
+
+  const [{ data: focusSessions }, { data: roadmapItems }, { data: quizAttempts }] =
+    await Promise.all([focusQuery, itemsQuery, quizQuery]);
+
+  const activeDates = new Set<string>();
+  let totalLessonsCompleted = 0;
+  let totalFocusMinutes = 0;
+
+  const validItemIds = roadmapId
+    ? new Set((roadmapItems ?? []).map((i) => i.id))
+    : null;
+
+  (roadmapItems ?? []).forEach((item) => {
+    if (item.done) {
+      totalLessonsCompleted++;
+      if (item.updated_at) {
+        activeDates.add(item.updated_at.slice(0, 10));
+      } else if (item.created_at) {
+        activeDates.add(item.created_at.slice(0, 10));
+      }
+    }
+  });
+
+  (focusSessions ?? []).forEach((fs) => {
+    if (validItemIds && fs.roadmap_item_id && !validItemIds.has(fs.roadmap_item_id)) {
+      return;
+    }
+    const mins = fs.counted_minutes ?? fs.minutes ?? 0;
+    totalFocusMinutes += mins;
+    if (mins > 0 && fs.created_at) {
+      activeDates.add(fs.created_at.slice(0, 10));
+    }
+  });
+
+  (quizAttempts ?? []).forEach((qa) => {
+    if (validItemIds && qa.roadmap_item_id && !validItemIds.has(qa.roadmap_item_id)) {
+      return;
+    }
+    if (qa.created_at) {
+      activeDates.add(qa.created_at.slice(0, 10));
+    }
+  });
+
+  const { currentStreak, bestStreak, todayActive } = calculateStreakFromDates(activeDates);
+
+  const last7Days = Array.from({ length: 7 }, (_, i) => dayOffset(-6 + i));
+  const weekActiveDays = last7Days.filter((d) => activeDates.has(d));
+
+  return {
+    currentStreak,
+    bestStreak,
+    todayActive,
+    activeDates: Array.from(activeDates).sort().reverse(),
+    weekActiveDays,
+    totalLessonsCompleted,
+    totalFocusMinutes,
+  };
 }
 
 /* ---------- subscriptions & usage ---------- */

@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clock,
   ExternalLink,
+  Flame,
   Search,
   Sparkle,
 } from "lucide-react";
@@ -16,9 +17,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import {
   checkAndRecordRoadmapCompletion,
+  dayOffset,
   fetchRoadmap,
   fetchRoadmapItems,
   fetchRoadmapResources,
+  fetchRoadmapStreakInfo,
+  today,
   updateRoadmapItem,
   type RoadmapItem,
 } from "@/lib/db";
@@ -42,6 +46,8 @@ export const Route = createFileRoute("/_authenticated/roadmap/$roadmapId")({
   component: RoadmapDetail,
 });
 
+const LAST_7_DAYS = Array.from({ length: 7 }, (_, i) => dayOffset(-6 + i));
+
 function RoadmapDetail() {
   const { roadmapId } = Route.useParams();
   const qc = useQueryClient();
@@ -57,6 +63,10 @@ function RoadmapDetail() {
   const { data: resources = [] } = useQuery({
     queryKey: ["roadmap-resources", roadmapId],
     queryFn: () => fetchRoadmapResources(roadmapId),
+  });
+  const { data: streakInfo } = useQuery({
+    queryKey: ["roadmap-streak", roadmapId],
+    queryFn: () => fetchRoadmapStreakInfo(roadmapId),
   });
 
   const toggle = useMutation({
@@ -75,7 +85,11 @@ function RoadmapDetail() {
       }
       return updated;
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["roadmap-items", roadmapId] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["roadmap-items", roadmapId] });
+      void qc.invalidateQueries({ queryKey: ["roadmap-streak", roadmapId] });
+      void qc.invalidateQueries({ queryKey: ["roadmap-streak-overall"] });
+    },
   });
 
   const topics = items.filter((i) => !i.parent_id);
@@ -91,8 +105,12 @@ function RoadmapDetail() {
     return acc;
   }, {});
 
+  const currentStreak = streakInfo?.currentStreak ?? 0;
+  const todayActive = streakInfo?.todayActive ?? false;
+  const activeDatesSet = new Set(streakInfo?.activeDates ?? []);
+
   return (
-    <div className="mx-auto max-w-4xl px-5 pb-32 pt-8 sm:px-8">
+    <div className="mx-auto max-w-4xl px-5 pb-32 pt-8 sm:px-8 space-y-6">
       <Link
         to="/roadmaps"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -100,16 +118,63 @@ function RoadmapDetail() {
         <ArrowLeft className="size-4" /> All roadmaps
       </Link>
 
-      <h1 className="mt-4 font-display text-3xl font-bold">{roadmap?.topic ?? "Roadmap"}</h1>
-      {roadmap?.summary && (
-        <p className="mt-2 leading-relaxed text-muted-foreground">{roadmap.summary}</p>
-      )}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-3xl font-bold">{roadmap?.topic ?? "Roadmap"}</h1>
+          {roadmap?.summary && (
+            <p className="mt-2 leading-relaxed text-muted-foreground">{roadmap.summary}</p>
+          )}
+        </div>
 
-      <div className="mt-5 flex items-center gap-3">
+        {/* Roadmap Streak Card */}
+        <div className="card-soft flex items-center gap-3 px-4 py-3 border-primary/20 bg-primary/5 shrink-0">
+          <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+            <Flame className="size-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-display font-bold text-base">
+                {currentStreak} Day{currentStreak === 1 ? "" : "s"}
+              </span>
+              <span className="text-xs text-muted-foreground">streak</span>
+            </div>
+            {/* 7-day mini activity dots */}
+            <div className="mt-1 flex items-center gap-1">
+              {LAST_7_DAYS.map((d) => {
+                const isActive = activeDatesSet.has(d);
+                const isToday = d === today();
+                return (
+                  <span
+                    key={d}
+                    title={`${d}: ${isActive ? "Active" : "Inactive"}`}
+                    className={`size-2 rounded-full transition-colors ${
+                      isActive
+                        ? "bg-primary"
+                        : isToday
+                          ? "border border-primary/60 bg-transparent"
+                          : "bg-muted-foreground/30"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card-soft p-4 space-y-2">
+        <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <span>Roadmap Progress</span>
+          <span>
+            {done}/{items.length} completed ({pct}%)
+          </span>
+        </div>
         <Progress value={pct} className="h-2.5 rounded-full" />
-        <span className="shrink-0 text-xs font-medium text-muted-foreground">
-          {done}/{items.length} done
-        </span>
+        {!todayActive && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
+            ⚡ Keep your {roadmap?.topic ?? "roadmap"} streak alive: Complete a lesson or checkpoint today!
+          </p>
+        )}
       </div>
 
       <div className="mt-8 space-y-8">

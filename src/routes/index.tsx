@@ -133,7 +133,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "roadmaps" | "notebook" | "remi" | "study" | "habits" | "incontext"
+    "roadmaps" | "notebook" | "remi" | "study" | "goals" | "incontext"
   >("roadmaps");
 
   useEffect(() => {
@@ -283,11 +283,11 @@ export default function Landing() {
           {/* Tab Strip */}
           <div className="mt-10 flex flex-wrap justify-center gap-2">
             {[
-              { id: "roadmaps", label: "Roadmaps" },
+              { id: "roadmaps", label: "Roadmaps & Streaks" },
               { id: "notebook",  label: "Notebooks" },
               { id: "remi",      label: "Remi Agent" },
               { id: "study",     label: "Study Space" },
-              { id: "habits",    label: "Habits · Goals · Tasks" },
+              { id: "goals",     label: "Goals · Tasks · Focus" },
               { id: "incontext", label: "In-Context Learning" },
             ].map((t) => (
               <button
@@ -475,23 +475,23 @@ export default function Landing() {
               </div>
             )}
 
-            {/* ── Habits · Goals · Tasks ── */}
-            {activeTab === "habits" && (
+            {/* ── Goals · Tasks · Focus ── */}
+            {activeTab === "goals" && (
               <div className="grid gap-8 p-6 md:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Habit Rituals & Momentum
+                    Goal & Task Momentum
                   </span>
                   <h3 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl font-display">
                     Sustain steady daily progress without burnout.
                   </h3>
                   <p className="mt-3 text-base leading-relaxed text-zinc-300">
-                    Connect daily tasks to high-level goals. Track recurring habit streaks with visual heatmaps, intelligent rescheduling, and gentle momentum protection.
+                    Connect daily tasks directly to high-level goals. Track roadmap study streaks, intelligent rescheduling, and gentle momentum protection.
                   </p>
                   <ul className="mt-6 space-y-3 text-sm text-zinc-200">
                     <li className="flex items-center gap-2.5">
                       <Check className="size-4.5 text-emerald-400 shrink-0" />
-                      <span>Visual completion streaks and guilt-free streak preservation</span>
+                      <span>Roadmap study streaks and milestone momentum</span>
                     </li>
                     <li className="flex items-center gap-2.5">
                       <Check className="size-4.5 text-emerald-400 shrink-0" />
@@ -503,13 +503,13 @@ export default function Landing() {
                     </li>
                   </ul>
                   <div className="mt-8">
-                    <PrimaryLink>Track your rituals</PrimaryLink>
+                    <PrimaryLink>Start your journey</PrimaryLink>
                   </div>
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-[#0d402e] bg-[#021810] shadow-xl">
                   <img
                     src={tasksImg}
-                    alt="Remispace Habits, Goals, and Daily Tasks"
+                    alt="Remispace Goals and Daily Tasks"
                     className="w-full object-cover object-top"
                     loading="lazy"
                   />
@@ -586,7 +586,7 @@ export default function Landing() {
             {
               step: "03",
               title: "Sustain steady momentum",
-              desc: "Enter the ambient focus studio, preserve your daily habit streaks, and watch your knowledge compound week over week.",
+              desc: "Enter the ambient focus studio, preserve your study streaks, and watch your knowledge compound week over week.",
             },
           ].map((item) => (
             <Reveal

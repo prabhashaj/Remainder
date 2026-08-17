@@ -39,8 +39,6 @@ const getToolName = (toolName: string, isRunning: boolean) => {
     updateGoal: { active: "Updating goal...", done: "Updated goal" },
     addMilestone: { active: "Adding milestone...", done: "Added milestone" },
     createMilestone: { active: "Adding milestone...", done: "Added milestone" },
-    createHabit: { active: "Creating habit", done: "Created habit" },
-    updateHabit: { active: "Updating habit", done: "Updated habit" },
     createRoadmap: { active: "Creating roadmap", done: "Created roadmap" },
     updateRoadmap: { active: "Updating and modifying...", done: "Updated roadmap" },
     readRoadmap: { active: "Reading roadmap", done: "Read roadmap" },

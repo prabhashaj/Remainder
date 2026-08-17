@@ -17,7 +17,6 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedFocusRouteImport } from './routes/_authenticated/focus'
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
-import { Route as AuthenticatedHabitsRouteImport } from './routes/_authenticated/habits'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedPricingRouteImport } from './routes/_authenticated/pricing'
 import { Route as AuthenticatedRoadmapsRouteImport } from './routes/_authenticated/roadmaps'
@@ -75,11 +74,6 @@ const AuthenticatedFocusRoute = AuthenticatedFocusRouteImport.update({
 const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedHabitsRoute = AuthenticatedHabitsRouteImport.update({
-  id: '/habits',
-  path: '/habits',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
@@ -192,7 +186,6 @@ export interface FileRoutesByFullPath {
   '/documents': typeof AuthenticatedDocumentsRoute
   '/focus': typeof AuthenticatedFocusRoute
   '/goals': typeof AuthenticatedGoalsRoute
-  '/habits': typeof AuthenticatedHabitsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pricing': typeof AuthenticatedPricingRoute
   '/roadmaps': typeof AuthenticatedRoadmapsRoute
@@ -221,7 +214,6 @@ export interface FileRoutesByTo {
   '/documents': typeof AuthenticatedDocumentsRoute
   '/focus': typeof AuthenticatedFocusRoute
   '/goals': typeof AuthenticatedGoalsRoute
-  '/habits': typeof AuthenticatedHabitsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pricing': typeof AuthenticatedPricingRoute
   '/roadmaps': typeof AuthenticatedRoadmapsRoute
@@ -252,7 +244,6 @@ export interface FileRoutesById {
   '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/focus': typeof AuthenticatedFocusRoute
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
-  '/_authenticated/habits': typeof AuthenticatedHabitsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pricing': typeof AuthenticatedPricingRoute
   '/_authenticated/roadmaps': typeof AuthenticatedRoadmapsRoute
@@ -283,7 +274,6 @@ export interface FileRouteTypes {
     | '/documents'
     | '/focus'
     | '/goals'
-    | '/habits'
     | '/onboarding'
     | '/pricing'
     | '/roadmaps'
@@ -312,7 +302,6 @@ export interface FileRouteTypes {
     | '/documents'
     | '/focus'
     | '/goals'
-    | '/habits'
     | '/onboarding'
     | '/pricing'
     | '/roadmaps'
@@ -342,7 +331,6 @@ export interface FileRouteTypes {
     | '/_authenticated/documents'
     | '/_authenticated/focus'
     | '/_authenticated/goals'
-    | '/_authenticated/habits'
     | '/_authenticated/onboarding'
     | '/_authenticated/pricing'
     | '/_authenticated/roadmaps'
@@ -432,13 +420,6 @@ declare module '@tanstack/react-router' {
       path: '/goals'
       fullPath: '/goals'
       preLoaderRoute: typeof AuthenticatedGoalsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/habits': {
-      id: '/_authenticated/habits'
-      path: '/habits'
-      fullPath: '/habits'
-      preLoaderRoute: typeof AuthenticatedHabitsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/onboarding': {
@@ -583,7 +564,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedFocusRoute: typeof AuthenticatedFocusRoute
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
-  AuthenticatedHabitsRoute: typeof AuthenticatedHabitsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPricingRoute: typeof AuthenticatedPricingRoute
   AuthenticatedRoadmapsRoute: typeof AuthenticatedRoadmapsRoute
@@ -605,7 +585,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedFocusRoute: AuthenticatedFocusRoute,
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
-  AuthenticatedHabitsRoute: AuthenticatedHabitsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPricingRoute: AuthenticatedPricingRoute,
   AuthenticatedRoadmapsRoute: AuthenticatedRoadmapsRoute,

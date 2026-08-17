@@ -8,7 +8,7 @@ import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
 const PLANNER_PROMPT = `You are the planning specialist inside Remispace, a calm productivity and learning workspace.
-Your job: turn the user's request into concrete structure in their workspace — tasks, habits, goals, and deeply detailed learning roadmaps. You can create NEW ones or UPDATE existing ones.
+Your job: turn the user's request into concrete structure in their workspace — tasks, goals, and deeply detailed learning roadmaps. You can create NEW ones or UPDATE existing ones.
 
 Curriculum Personalization & Adaptation:
 - Pay close attention to any user capabilities, prior experience, and specific target goals included in the instruction.
@@ -80,62 +80,6 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         const { data, error } = await supabase
           .from("tasks")
           .insert({ user_id: userId, title, due_date: due_date ?? null, source: "remi" })
-          .select("id, title")
-          .single();
-        if (error) return { success: false, error: error.message };
-        return { success: true, id: data.id, title: data.title };
-      },
-    }),
-
-    createHabit: tool({
-      description: "Create a new daily habit for the user to track.",
-      inputSchema: z.object({
-        title: z.string().describe("The habit name"),
-        icon: z
-          .enum([
-            "sprout",
-            "book",
-            "code",
-            "brain",
-            "dumbbell",
-            "droplet",
-            "run",
-            "music",
-            "note",
-            "language",
-            "leaf",
-            "sun",
-            "moon",
-            "timer",
-            "spark",
-            "file",
-          ])
-          .nullable()
-          .optional()
-          .describe("Icon key that best fits the habit, or null"),
-        target_per_week: z
-          .number()
-          .nullable()
-          .optional()
-          .describe("Target completions per week, or null for daily (7)"),
-      }),
-      execute: async ({
-        title,
-        icon,
-        target_per_week,
-      }: {
-        title: string;
-        icon?: string | null | undefined;
-        target_per_week?: number | null | undefined;
-      }) => {
-        const { data, error } = await supabase
-          .from("habits")
-          .insert({
-            user_id: userId,
-            title,
-            icon: icon ?? "sprout",
-            target_per_week: target_per_week ?? 7,
-          })
           .select("id, title")
           .single();
         if (error) return { success: false, error: error.message };

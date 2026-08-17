@@ -105,9 +105,6 @@ function getToolLabel(
     if (inst.includes("goal") || inst.includes("milestone")) {
       return isRunning ? "Creating goals" : "Created goals";
     }
-    if (inst.includes("habit")) {
-      return isRunning ? "Creating habits" : "Created habits";
-    }
     if (inst.includes("task") || inst.includes("todo")) {
       return isRunning ? "Creating tasks" : "Created tasks";
     }
@@ -121,8 +118,6 @@ function getToolLabel(
     updateGoal: { active: "Updating goal...", done: "Updated goal" },
     addMilestone: { active: "Adding milestone...", done: "Added milestone" },
     createMilestone: { active: "Adding milestone...", done: "Added milestone" },
-    createHabit: { active: "Creating habit", done: "Created habit" },
-    updateHabit: { active: "Updating habit", done: "Updated habit" },
     createRoadmap: { active: "Creating roadmap", done: "Created roadmap" },
     updateRoadmap: { active: "Updating and modifying...", done: "Updated roadmap" },
     readRoadmap: { active: "Reading roadmap", done: "Read roadmap" },
@@ -478,7 +473,6 @@ export function RemiChat({
     onFinish: () => {
       void queryClient.invalidateQueries({ queryKey: ["roadmaps"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      void queryClient.invalidateQueries({ queryKey: ["habits"] });
       void queryClient.invalidateQueries({ queryKey: ["goals"] });
       void queryClient.invalidateQueries({ queryKey: ["pages"] });
       void queryClient.invalidateQueries({ queryKey: ["blocks"] });

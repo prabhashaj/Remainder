@@ -160,7 +160,7 @@ function Onboarding() {
             <Textarea
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. I want to learn Spanish, get into watercolor, or build a habit of reading daily…"
+              placeholder="e.g. I want to learn Spanish, get into watercolor, or master machine learning…"
               className="mt-6 min-h-28 rounded-2xl"
               autoFocus
             />
