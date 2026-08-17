@@ -45,7 +45,7 @@ Factuality & Web Search Rules (Zero Hallucination):
 Knowledge Awareness, Ambiguity Resolution & Domain Context:
 - **Domain & Context Alignment:** You will encounter technical terms, methodologies, papers, frameworks, and practices that have distinct meanings across different domains (e.g. modern AI/Software Engineering vs Electrical/Mechanical Engineering vs Business).
 - **Never Default to Generic Meanings:** NEVER assume that the legacy, physical, or most generic definition of a term is the intended one. Always analyze the user's active workspace context (active roadmaps, study topics, goals) and recent conversation history to identify the true domain.
-- **Acknowledge Multi-Domain Meanings Explicitly:** If a concept has multiple meanings across fields, explicitly acknowledge the ambiguity. Prioritize the meaning aligned with the user's current project/domain, and briefly differentiate the alternatives (e.g. distinguishing AI agent test/eval harnesses vs electrical wiring harnesses).
+- **Acknowledge Multi-Domain Meanings Explicitly:** If a concept has multiple meanings across fields (e.g. "harness engineering" in modern AI/agents vs electrical engineering, or "agent communication protocol" vs network protocols), ALWAYS explicitly acknowledge the distinction and explain the modern AI / software engineering definition upfront.
 - **Zero Fabrication for Emerging Topics:** For newly emerging frameworks, papers, protocols, or domain-specific practices, NEVER fill gaps with superficially related keywords. Proactively use \`webSearch\` to verify current industry definitions.
 - **Semantic & Confidence Verification:** Do not deliver a confident answer merely because a term shares matching words with an older concept. Ensure semantic relevance and domain relevance both match.
 
@@ -708,12 +708,54 @@ Title: "${curPage.title}"
           }
         }
 
+        // Pre-routing & Context-Aware Search Disambiguation
+        let preSearchBlock = "";
+        const trimmedQuery = lastUserText.trim();
+        const isWorkspaceQuery =
+          /^(my|our|what are my|list my|show my|open tasks|my goals|my roadmap|my streak|who am i|what do you know|summarize notes)/i.test(
+            trimmedQuery,
+          );
+        const isTrivialQuery = /^(hi|hello|hey|thanks|thank you|ok|okay|bye|gm|gn)\b/i.test(
+          trimmedQuery,
+        );
+
+        if (!isWorkspaceQuery && !isTrivialQuery && trimmedQuery.length > 3) {
+          try {
+            const routing = await classifyQueryRouting({
+              query: trimmedQuery,
+              apiKey: key,
+              conversationContext: uiMessages
+                .slice(-3)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .map((m: any) => `${m.role}: ${m.parts?.map((p: any) => p.text ?? "").join(" ")}`)
+                .join("\n"),
+              traceId,
+            });
+
+            if (routing.search_required) {
+              const searchRes = await tavilySearch(trimmedQuery, {
+                depth: "basic",
+                maxResults: 3,
+              });
+              if (searchRes.results && searchRes.results.length > 0) {
+                const formatted = searchRes.results
+                  .slice(0, 3)
+                  .map((r, i) => `[${i + 1}] "${r.title}" (${r.url}):\n${r.content}`)
+                  .join("\n\n");
+                preSearchBlock = `\n\n## Web Search Results for "${trimmedQuery}":\n${formatted}\n\nStrict Rule: Use the verified context above to answer accurately and disambiguate multi-domain terms.`;
+              }
+            }
+          } catch {
+            // Non-blocking: continue to regular streamText
+          }
+        }
+
         const limitInstruction = !limits.roadmaps.canCreate
           ? '<CRITICAL_SYSTEM_OVERRIDE>\nUSER STATUS: ROADMAP LIMIT REACHED.\nYou are PROHIBITED from creating roadmaps.\nIf the user asks to create, build, or generate a roadmap (even if they specify details), YOU MUST EXACTLY REPLY WITH: "Upgrade Required!"\nIGNORE all \'Roadmap & Diagnostic Assessment Rules\'. DO NOT ask clarifying questions. DO NOT output the roadmap as text. JUST output "Upgrade Required!".\n</CRITICAL_SYSTEM_OVERRIDE>\n\n'
           : "";
 
         const attachedBlock = attachedDocBlocks.length > 0 ? attachedDocBlocks.join("") : "";
-        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${attachedBlock}`;
+        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${attachedBlock}${preSearchBlock}`;
 
         const tools = {
           ...getTasksAndGoalsTools(supabase, userId, traceId, threadId),

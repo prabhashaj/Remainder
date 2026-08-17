@@ -217,56 +217,87 @@ export function chunkText(text: string, maxChunkLength = 180): string[] {
   return rawChunks.filter((c) => c.length > 0);
 }
 
+function isVoiceDisallowed(voice: SpeechSynthesisVoice): boolean {
+  const name = voice.name.toLowerCase();
+  // Filter out disallowed voices requested by user: zira, heera, ravi, david
+  if (
+    name.includes("zira") ||
+    name.includes("heera") ||
+    name.includes("ravi") ||
+    name.includes("david")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /**
- * Score and prioritize voices:
- * 1. High-quality Neural / Natural Indian English voices
- * 2. Natural / Neural English voices
- * 3. Other Indian English voices
- * 4. General English voices
- * 5. Other system voices
+ * Score and prioritize voices with UK English Female as the top default:
+ * 1. Natural / Neural UK English Female voices (Microsoft Sonia, Libby, Google UK English Female, Hazel, Serena)
+ * 2. Standard UK English Female voices
+ * 3. Other UK English voices
+ * 4. High-quality Neural English Female voices
+ * 5. General English voices
  */
 function getVoiceRank(voice: SpeechSynthesisVoice): number {
   const name = voice.name.toLowerCase();
   const lang = voice.lang.replace("_", "-").toLowerCase();
-  const isIndianLang = lang.includes("in") || name.includes("india");
+  const isUK =
+    lang.includes("gb") ||
+    lang.includes("uk") ||
+    name.includes("united kingdom") ||
+    name.includes("uk") ||
+    name.includes("british") ||
+    name.includes("great britain");
+  const isFemale =
+    name.includes("female") ||
+    name.includes("sonia") ||
+    name.includes("libby") ||
+    name.includes("hazel") ||
+    name.includes("serena") ||
+    name.includes("fiona") ||
+    name.includes("mia") ||
+    name.includes("stephanie") ||
+    name.includes("victoria") ||
+    name.includes("clara") ||
+    name.includes("susan");
 
-  // Top Indian Natural / Neural Voices
-  if (name.includes("neerja")) return 1; // Microsoft Neerja Natural (Female)
-  if (name.includes("prabhat")) return 2; // Microsoft Prabhat Natural (Male)
-  if (name.includes("google") && isIndianLang) return 3; // Google English (India)
-  if (name.includes("veena") || name.includes("rishi") || name.includes("heera")) return 4; // Apple Veena / Rishi
-  if (isIndianLang && (name.includes("natural") || name.includes("neural") || name.includes("online")))
+  // 1. UK English Female (Top Priority Default)
+  if (isUK && isFemale && (name.includes("natural") || name.includes("neural") || name.includes("online") || name.includes("wavenet"))) {
+    return 1;
+  }
+  if (isUK && isFemale) return 2;
+  if (isUK && (name.includes("natural") || name.includes("neural") || name.includes("online"))) return 3;
+  if (isUK) return 4;
+
+  // 2. High-quality Natural/Neural English Female voices
+  if (isFemale && (name.includes("natural") || name.includes("neural") || name.includes("wavenet"))) {
     return 5;
-  if (isIndianLang) return 6;
+  }
+  if (isFemale && (name.includes("jenny") || name.includes("aria") || name.includes("samantha") || name.includes("neerja"))) {
+    return 6;
+  }
+  if (name.includes("natural") || name.includes("neural") || name.includes("wavenet")) return 7;
 
-  // Natural English Voices (US, UK, Global)
-  if (
-    (name.includes("natural") || name.includes("neural") || name.includes("wavenet")) &&
-    lang.startsWith("en")
-  )
-    return 7;
-  if (
-    name.includes("jenny") ||
-    name.includes("aria") ||
-    name.includes("guy") ||
-    name.includes("samantha") ||
-    name.includes("daniel")
-  )
-    return 8;
-  if (name.includes("google") && lang.startsWith("en")) return 9;
-  if (lang.startsWith("en")) return 10;
-  if (voice.default) return 11;
+  // 3. Other English Female voices
+  if (lang.startsWith("en") && isFemale) return 8;
 
-  return 12;
+  // 4. General English voices
+  if (lang.startsWith("en")) return 9;
+  if (voice.default) return 10;
+
+  return 11;
 }
 
 export function sortVoices(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice[] {
-  return [...voices].sort((a, b) => {
-    const rankA = getVoiceRank(a);
-    const rankB = getVoiceRank(b);
-    if (rankA !== rankB) return rankA - rankB;
-    return a.name.localeCompare(b.name);
-  });
+  return voices
+    .filter((v) => !isVoiceDisallowed(v))
+    .sort((a, b) => {
+      const rankA = getVoiceRank(a);
+      const rankB = getVoiceRank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.name.localeCompare(b.name);
+    });
 }
 
 const SERVER_SNAPSHOT: SpeechState = {
@@ -313,7 +344,18 @@ class SpeechEngine {
   private initStorage() {
     try {
       const storedVoice = window.localStorage.getItem(VOICE_STORAGE_KEY);
-      if (storedVoice) this.selectedVoiceName = storedVoice;
+      if (
+        storedVoice &&
+        !storedVoice.toLowerCase().includes("zira") &&
+        !storedVoice.toLowerCase().includes("heera") &&
+        !storedVoice.toLowerCase().includes("ravi") &&
+        !storedVoice.toLowerCase().includes("david")
+      ) {
+        this.selectedVoiceName = storedVoice;
+      } else if (storedVoice) {
+        window.localStorage.removeItem(VOICE_STORAGE_KEY);
+        this.selectedVoiceName = "";
+      }
 
       const storedRate = window.localStorage.getItem(RATE_STORAGE_KEY);
       if (storedRate) {
