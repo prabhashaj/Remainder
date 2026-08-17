@@ -3,9 +3,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
-  BookOpen,
-  CheckCircle2,
-  Clock,
   Compass,
   Layers,
   ListChecks,
@@ -24,7 +21,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   createTask,
   fetchGoals,
-  fetchProfile,
   fetchRoadmapItems,
   fetchRoadmaps,
   fetchTasks,
@@ -48,19 +44,11 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-}
-
 function Dashboard() {
   const qc = useQueryClient();
   const day = today();
   const runFetchCardCount = useServerFn(fetchDueFlashcardCount);
 
-  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: fetchProfile });
   const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: fetchTasks });
   const { data: goals = [] } = useQuery({ queryKey: ["goals"], queryFn: fetchGoals });
   const { data: roadmaps = [] } = useQuery({ queryKey: ["roadmaps"], queryFn: fetchRoadmaps });
@@ -160,78 +148,6 @@ function Dashboard() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-5 sm:px-8 sm:py-8 space-y-5 sm:space-y-6 pb-28 sm:pb-12">
-      {/* Header & Quick Status */}
-      <header className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {new Date().toLocaleDateString(undefined, {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-              })}
-            </p>
-            <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              {greeting()}
-              {profile?.display_name ? `, ${profile.display_name}` : ""}.
-            </h1>
-          </div>
-
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            {openTasks.length === 0
-              ? "✨ All tasks complete for today."
-              : `${openTasks.length} task${openTasks.length === 1 ? "" : "s"} waiting · ${doneToday} completed`}
-          </p>
-        </div>
-
-        {/* Mobile Quick Glance Strip */}
-        <div className="grid grid-cols-3 gap-2 pt-1">
-          <Link
-            to="/tasks"
-            className="press flex flex-col items-center justify-center rounded-2xl border border-border/80 bg-card p-2.5 text-center shadow-xs transition-colors hover:border-primary/40"
-          >
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <ListChecks className="size-3.5 text-primary" />
-              <span className="text-[11px] font-medium">Tasks</span>
-            </div>
-            <span className="mt-1 font-display text-lg font-bold">
-              {openTasks.length}
-            </span>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => dueCardCount > 0 && setReviewOpen(true)}
-            className={`press flex flex-col items-center justify-center rounded-2xl border p-2.5 text-center shadow-xs transition-colors ${
-              dueCardCount > 0
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-border/80 bg-card text-foreground"
-            }`}
-          >
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Layers className="size-3.5 text-primary" />
-              <span className="text-[11px] font-medium">Review</span>
-            </div>
-            <span className="mt-1 font-display text-lg font-bold">
-              {dueCardCount}
-            </span>
-          </button>
-
-          <Link
-            to="/roadmaps"
-            className="press flex flex-col items-center justify-center rounded-2xl border border-border/80 bg-card p-2.5 text-center shadow-xs transition-colors hover:border-primary/40"
-          >
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Compass className="size-3.5 text-primary" />
-              <span className="text-[11px] font-medium">Roadmaps</span>
-            </div>
-            <span className="mt-1 font-display text-lg font-bold">
-              {roadmaps.length}
-            </span>
-          </Link>
-        </div>
-      </header>
-
       {/* Pinned Next Best Action Card */}
       <section className="card-soft border-primary/30 bg-primary/8 p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

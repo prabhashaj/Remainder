@@ -18,12 +18,21 @@ export type ThemeId =
   | "aurora"
   | "crimson";
 
-export type FontId = "sans" | "cormorant" | "merienda";
+export type FontId =
+  | "sans"
+  | "noto-serif"
+  | "roboto"
+  | "open-sans"
+  | "cormorant"
+  | "merienda";
 
 export const FONT_STORAGE_KEY = "remispace-font";
 
 export const FONTS: { id: FontId; name: string; blurb: string; fontClass: string }[] = [
   { id: "sans", name: "Default (Inter / Jakarta)", blurb: "Modern, clean, balanced.", fontClass: "font-sans" },
+  { id: "noto-serif", name: "Noto Serif", blurb: "Classic, harmonious, and legible serif.", fontClass: "font-noto-serif" },
+  { id: "roboto", name: "Roboto", blurb: "Crisp, geometric neo-grotesque sans.", fontClass: "font-roboto" },
+  { id: "open-sans", name: "Open Sans", blurb: "Warm, neutral, and readable sans.", fontClass: "font-open-sans" },
   { id: "cormorant", name: "Luxury (Cormorant)", blurb: "High-fashion classical serif.", fontClass: "font-cormorant" },
   { id: "merienda", name: "Flow (Merienda)", blurb: "Playful, organic cursive.", fontClass: "font-merienda" },
 ];
