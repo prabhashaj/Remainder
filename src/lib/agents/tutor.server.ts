@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
 import { saveDocumentTextAndEmbed } from "../document-processor.server";
 import { fetchYoutubeTranscript, summarizeTranscript } from "@/lib/transcript.server";
+import { extractYouTubeId } from "@/lib/youtube";
 import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -156,13 +157,10 @@ export async function summarizeResource(params: {
     }
 
     // Extract YouTube video ID
-    const ytMatch = videoUrl.match(
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{11})/,
-    );
-    if (!ytMatch || !ytMatch[1]) {
+    const videoId = extractYouTubeId(videoUrl);
+    if (!videoId) {
       return { success: false, error: "Not a recognized YouTube URL." };
     }
-    const videoId = ytMatch[1];
 
     await supabase.from("study_resources").update({ status: "summarizing" }).eq("id", resourceId);
 

@@ -18,6 +18,7 @@ import { useFocusTimer } from "@/components/focus-timer";
 import { QuizModal } from "@/components/quiz-modal";
 import { CheckpointGate } from "@/components/checkpoint-gate";
 import { FlashcardReview } from "@/components/flashcard-review";
+import { extractYouTubeId, getYouTubeEmbedUrl, getYouTubeWatchUrl } from "@/lib/youtube";
 import type { LessonImage, LessonVideo } from "@/lib/agents/curriculum.server";
 
 export const Route = createFileRoute("/_authenticated/lesson/$itemId")({
@@ -320,32 +321,36 @@ function LessonPage() {
             Top Video Resources
           </h2>
           <div className="mt-4 space-y-5">
-            {videos.slice(0, 2).map((v) => (
-              <div
-                key={v.url}
-                className="w-full overflow-hidden rounded-3xl border border-border bg-card shadow-soft transition-all hover:shadow-lift"
-              >
-                {v.youtube_id ? (
-                  <iframe
-                    src={`https://www.youtube.com/embed/${v.youtube_id}`}
-                    title={v.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    loading="lazy"
-                    className="aspect-video w-full"
-                  />
-                ) : null}
-                <a
-                  href={v.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2.5 p-4 text-sm font-semibold hover:bg-muted/50 transition-colors"
+            {videos.slice(0, 2).map((v) => {
+              const vid = extractYouTubeId(v.youtube_id || v.url);
+              const watchUrl = vid ? getYouTubeWatchUrl(vid) : v.url;
+              return (
+                <div
+                  key={v.url}
+                  className="w-full overflow-hidden rounded-3xl border border-border bg-card shadow-soft transition-all hover:shadow-lift"
                 >
-                  <Play className="size-4 text-primary shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">{v.title}</span>
-                </a>
-              </div>
-            ))}
+                  {vid ? (
+                    <iframe
+                      src={getYouTubeEmbedUrl(vid)}
+                      title={v.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      loading="lazy"
+                      className="aspect-video w-full border-0"
+                    />
+                  ) : null}
+                  <a
+                    href={watchUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2.5 p-4 text-sm font-semibold hover:bg-muted/50 transition-colors"
+                  >
+                    <Play className="size-4 text-primary shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{v.title}</span>
+                  </a>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

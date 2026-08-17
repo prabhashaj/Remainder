@@ -104,6 +104,21 @@ export const askAboutMaterial = createServerFn({ method: "POST" })
     });
   });
 
+import { extractYouTubeId } from "@/lib/youtube";
+import { fetchYouTubeMetadata } from "@/lib/youtube.server";
+
+/** Fetch metadata (title, thumbnail, author) for a YouTube video. */
+export const getYouTubeMetadataFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ urlOrId: z.string().min(1).max(1000) }).parse(data))
+  .handler(async ({ data }) => {
+    const meta = await fetchYouTubeMetadata(data.urlOrId);
+    if (!meta) {
+      return { success: false, error: "Unable to retrieve YouTube metadata." };
+    }
+    return { success: true, metadata: meta };
+  });
+
 /** Fetch YouTube transcript for a video resource. */
 export const fetchTranscript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -127,7 +142,8 @@ export const fetchTranscript = createServerFn({ method: "POST" })
       return { success: true, transcript: resource.extracted_text };
     }
 
-    const result = await fetchYoutubeTranscript(data.videoId);
+    const cleanVideoId = extractYouTubeId(data.videoId) ?? data.videoId;
+    const result = await fetchYoutubeTranscript(cleanVideoId);
     if (result.error || !result.fullText) {
       return { success: false, error: result.error ?? "No transcript available" };
     }
@@ -148,11 +164,7 @@ export const getTranscriptFromUrl = createServerFn({ method: "POST" })
     } catch {
       return { success: false, error: "Too many requests. Please try again later." };
     }
-    const raw = data.urlOrId.trim();
-    const match = raw.match(
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{11})/,
-    );
-    const videoId = match ? match[1] : raw.length === 11 ? raw : null;
+    const videoId = extractYouTubeId(data.urlOrId);
 
     if (!videoId) {
       return {

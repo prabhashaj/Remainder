@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, Timer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { fetchRoadmapResource } from "@/lib/db";
+import { extractYouTubeId, getYouTubeEmbedUrl } from "@/lib/youtube";
 
 export const Route = createFileRoute("/_authenticated/resource/$resourceId")({
   head: () => ({
@@ -22,13 +23,6 @@ export const Route = createFileRoute("/_authenticated/resource/$resourceId")({
   }),
   component: ResourceViewer,
 });
-
-function extractYouTubeId(url: string): string | null {
-  const m = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{11})/,
-  );
-  return m ? (m[1] ?? null) : null;
-}
 
 function ResourceViewer() {
   const { resourceId } = Route.useParams();
@@ -81,11 +75,11 @@ function ResourceViewer() {
       </div>
 
       {youtubeId ? (
-        <div className="mt-6 aspect-video overflow-hidden rounded-3xl border border-border">
+        <div className="mt-6 aspect-video overflow-hidden rounded-3xl border border-border bg-black shadow-soft">
           <iframe
-            src={`https://www.youtube.com/embed/${youtubeId}`}
+            src={getYouTubeEmbedUrl(youtubeId)}
             title={resource.title}
-            className="size-full"
+            className="size-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />

@@ -2,6 +2,7 @@ import { generateText } from "ai";
 import { getSubtitles } from "youtube-caption-extractor";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import { extractYouTubeId } from "@/lib/youtube";
 
 export type TranscriptSegment = {
   text: string;
@@ -9,35 +10,103 @@ export type TranscriptSegment = {
   duration: number; // seconds
 };
 
-type CaptionTrack = { baseUrl: string; languageCode: string };
+type CaptionTrack = {
+  baseUrl: string;
+  languageCode?: string;
+  name?: { simpleText?: string; runs?: Array<{ text?: string }> } | string;
+  vssId?: string;
+  kind?: string;
+  isTranslatable?: boolean;
+};
 
-function isCaptionTrack(value: unknown): value is CaptionTrack {
-  const rec = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-  return (
-    Boolean(rec) && typeof rec!["baseUrl"] === "string" && typeof rec!["languageCode"] === "string"
-  );
-}
+const INNERTUBE_CLIENTS = [
+  {
+    name: "ios",
+    clientName: "IOS",
+    clientVersion: "20.10.4",
+    clientNameHeader: "5",
+    userAgent: "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)",
+    context: {
+      deviceMake: "Apple",
+      deviceModel: "iPhone16,2",
+      platform: "MOBILE",
+      osName: "iOS",
+      osVersion: "18.3.2.22D82",
+    },
+  },
+  {
+    name: "android",
+    clientName: "ANDROID",
+    clientVersion: "19.34.42",
+    clientNameHeader: "3",
+    userAgent: "com.google.android.youtube/19.34.42 (Linux; U; Android 14; Pixel 8 Pro Build/AP2A.240805.005) gzip",
+    context: {
+      deviceMake: "Google",
+      deviceModel: "Pixel 8 Pro",
+      platform: "MOBILE",
+      osName: "Android",
+      osVersion: "14",
+      androidSdkVersion: 34,
+    },
+  },
+  {
+    name: "android_vr",
+    clientName: "ANDROID_VR",
+    clientVersion: "1.62.20",
+    clientNameHeader: "28",
+    userAgent: "com.google.android.apps.youtube.vr.oculus/1.62.20 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
+    context: {
+      deviceMake: "Oculus",
+      deviceModel: "Quest 3",
+      platform: "MOBILE",
+      osName: "Android",
+      osVersion: "12L",
+      androidSdkVersion: 32,
+    },
+  },
+  {
+    name: "tv_embedded",
+    clientName: "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+    clientVersion: "2.0",
+    clientNameHeader: "85",
+    userAgent: "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/4.0 Chrome/76.0.3809.146 TV Safari/537.36",
+    context: {
+      clientScreen: "TV",
+    },
+  },
+];
 
 /**
- * Robustly fetches YouTube transcripts using youtube-caption-extractor,
- * with fallbacks to InnerTube and timedtext endpoints.
+ * Robustly fetches YouTube transcripts using multiple layered strategies:
+ * 1. Primary: youtube-caption-extractor
+ * 2. Secondary: InnerTube multi-client player API (iOS/Android/TV)
+ * 3. Tertiary: YouTube Watch Page parsing (JSON3 / XML caption tracks)
+ * 4. Quaternary: Direct TimedText API endpoints
  */
 export async function fetchYoutubeTranscript(
-  videoId: string,
+  videoIdOrUrl: string,
 ): Promise<{ segments: TranscriptSegment[]; fullText: string; error?: string }> {
   const empty = { segments: [] as TranscriptSegment[], fullText: "" };
+  const videoId = extractYouTubeId(videoIdOrUrl);
 
-  // --- Primary Strategy: youtube-caption-extractor ---
+  if (!videoId) {
+    return {
+      ...empty,
+      error: "Invalid YouTube URL or video ID provided.",
+    };
+  }
+
+  // --- Strategy 1: youtube-caption-extractor (English) ---
   try {
     const subtitles = await getSubtitles({ videoID: videoId, lang: "en" });
     if (Array.isArray(subtitles) && subtitles.length > 0) {
-      const segments: TranscriptSegment[] = subtitles
-        .map((s) => ({
+      const segments = normalizeSegments(
+        subtitles.map((s) => ({
           text: decodeXmlEntities(s.text ?? ""),
           offset: parseFloat(s.start ?? "0") || 0,
           duration: parseFloat(s.dur ?? "0") || 0,
-        }))
-        .filter((s) => s.text.length > 0);
+        })),
+      );
 
       if (segments.length > 0) {
         return {
@@ -47,10 +116,10 @@ export async function fetchYoutubeTranscript(
       }
     }
   } catch (err) {
-    console.warn("[Transcript] Primary extractor warning:", err);
+    // Continue to next strategy
   }
 
-  // --- Fallback Strategy 1: InnerTube Player API ---
+  // --- Strategy 2: Multi-Client InnerTube Player API ---
   try {
     const captionTracks = await fetchCaptionTracksFromInnerTube(videoId);
     if (captionTracks && captionTracks.length > 0) {
@@ -60,10 +129,10 @@ export async function fetchYoutubeTranscript(
       }
     }
   } catch {
-    /* continue */
+    // Continue to next strategy
   }
 
-  // --- Fallback Strategy 2: HTML Page Parsing ---
+  // --- Strategy 3: HTML Page Parsing (captionTracks / ytInitialPlayerResponse) ---
   try {
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const res = await fetch(watchUrl, {
@@ -76,7 +145,7 @@ export async function fetchYoutubeTranscript(
 
     if (res.ok) {
       const html = await res.text();
-      const captionTracks = extractJsonArrayFromKey(html, '"captionTracks"');
+      const captionTracks = extractCaptionTracksFromHtml(html);
       if (captionTracks && captionTracks.length > 0) {
         const segments = await fetchSegmentsFromCaptionTracks(captionTracks);
         if (segments.length > 0) {
@@ -85,69 +154,221 @@ export async function fetchYoutubeTranscript(
       }
     }
   } catch {
-    /* continue */
+    // Continue to next strategy
+  }
+
+  // --- Strategy 4: Direct TimedText API ---
+  try {
+    const timedTextUrls = [
+      `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`,
+      `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=srv3`,
+      `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en`,
+      `https://www.youtube.com/api/timedtext?v=${videoId}&lang=a.en&fmt=json3`,
+    ];
+
+    for (const u of timedTextUrls) {
+      const res = await fetch(u, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        },
+      });
+      if (res.ok) {
+        const content = await res.text();
+        if (content.trim()) {
+          let segs: TranscriptSegment[] = [];
+          if (content.trim().startsWith("{")) {
+            segs = parseTranscriptJson3(content);
+          } else if (content.includes("<text")) {
+            segs = parseTranscriptXml(content);
+          }
+          const normalized = normalizeSegments(segs);
+          if (normalized.length > 0) {
+            return { segments: normalized, fullText: normalized.map((s) => s.text).join(" ") };
+          }
+        }
+      }
+    }
+  } catch {
+    // Continue
   }
 
   return {
     ...empty,
     error:
-      "No transcript available for this video. The video might not have English captions or auto-generated subtitles.",
+      "No transcript available for this video. The video might not have English captions or auto-generated subtitles enabled on YouTube.",
   };
 }
 
-/* ---------- Helpers ---------- */
+/* ---------- Internal Helpers ---------- */
+
+function isCaptionTrack(value: unknown): value is CaptionTrack {
+  const rec = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  return Boolean(rec) && typeof rec!["baseUrl"] === "string";
+}
 
 async function fetchCaptionTracksFromInnerTube(videoId: string): Promise<CaptionTrack[] | null> {
-  const res = await fetch("https://www.youtube.com/youtubei/v1/player", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-    },
-    body: JSON.stringify({
-      videoId,
-      context: {
-        client: {
-          clientName: "WEB",
-          clientVersion: "2.20240101.00.00",
-          hl: "en",
+  for (const client of INNERTUBE_CLIENTS) {
+    try {
+      const res = await fetch("https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "*/*",
+          "User-Agent": client.userAgent,
+          "X-YouTube-Client-Name": client.clientNameHeader,
+          "X-YouTube-Client-Version": client.clientVersion,
+          Origin: "https://www.youtube.com",
         },
-      },
-    }),
-  });
-  if (!res.ok) return null;
-  const data: unknown = await res.json();
-  if (!data || typeof data !== "object") return null;
-  const captions = (data as Record<string, unknown>)["captions"];
-  if (!captions || typeof captions !== "object") return null;
-  const renderer = (captions as Record<string, unknown>)["playerCaptionsTracklistRenderer"];
-  if (!renderer || typeof renderer !== "object") return null;
-  const tracks = (renderer as Record<string, unknown>)["captionTracks"];
-  return Array.isArray(tracks) ? tracks.filter(isCaptionTrack) : null;
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: client.clientName,
+              clientVersion: client.clientVersion,
+              hl: "en",
+              gl: "US",
+              ...client.context,
+            },
+            user: { lockedSafetyMode: false },
+            request: { useSsl: true },
+          },
+          videoId,
+          contentCheckOk: true,
+          racyCheckOk: true,
+        }),
+      });
+
+      if (!res.ok) continue;
+      const data = (await res.json()) as Record<string, unknown>;
+      const captions = data["captions"] as Record<string, unknown> | undefined;
+      const renderer = captions?.["playerCaptionsTracklistRenderer"] as
+        | Record<string, unknown>
+        | undefined;
+      const tracks = renderer?.["captionTracks"];
+
+      if (Array.isArray(tracks)) {
+        const valid = tracks.filter(isCaptionTrack);
+        if (valid.length > 0) return valid;
+      }
+    } catch {
+      // Try next client
+    }
+  }
+  return null;
+}
+
+function extractCaptionTracksFromHtml(html: string): CaptionTrack[] | null {
+  // 1. Try finding ytInitialPlayerResponse
+  const playerMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/s);
+  if (playerMatch && playerMatch[1]) {
+    try {
+      const parsed = JSON.parse(playerMatch[1]) as Record<string, unknown>;
+      const captions = parsed["captions"] as Record<string, unknown> | undefined;
+      const renderer = captions?.["playerCaptionsTracklistRenderer"] as
+        | Record<string, unknown>
+        | undefined;
+      const tracks = renderer?.["captionTracks"];
+      if (Array.isArray(tracks)) {
+        const valid = tracks.filter(isCaptionTrack);
+        if (valid.length > 0) return valid;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  // 2. Extract captionTracks array directly
+  return extractJsonArrayFromKey(html, '"captionTracks"');
 }
 
 async function fetchSegmentsFromCaptionTracks(
   captionTracks: CaptionTrack[],
 ): Promise<TranscriptSegment[]> {
+  // Best track selection: English manual -> English auto -> any English prefix -> first track
   const track =
-    captionTracks.find((t) => t.languageCode === "en") ??
-    captionTracks.find((t) => t.languageCode?.startsWith("en")) ??
+    captionTracks.find((t) => t.vssId === ".en" || t.languageCode === "en") ??
+    captionTracks.find((t) => t.vssId === "a.en" || t.languageCode?.startsWith("en")) ??
+    captionTracks.find((t) => t.vssId?.includes(".en") || t.languageCode?.includes("en")) ??
     captionTracks[0];
 
   if (!track || !track.baseUrl) return [];
 
-  const captionUrl = track.baseUrl.replace(/&amp;/g, "&");
-  const res = await fetch(captionUrl, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-    },
-  });
-  if (!res.ok) return [];
+  // Try fetching as JSON3 first (cleanest structure), then XML
+  let captionUrl = track.baseUrl.replace(/&amp;/g, "&");
+  if (!captionUrl.includes("fmt=")) {
+    captionUrl += "&fmt=json3";
+  }
 
-  const text = await res.text();
-  return parseTranscriptXml(text);
+  try {
+    const res = await fetch(captionUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+      },
+    });
+
+    if (res.ok) {
+      const text = await res.text();
+      if (text.trim().startsWith("{")) {
+        const jsonSegments = parseTranscriptJson3(text);
+        if (jsonSegments.length > 0) return normalizeSegments(jsonSegments);
+      } else if (text.includes("<text")) {
+        const xmlSegments = parseTranscriptXml(text);
+        if (xmlSegments.length > 0) return normalizeSegments(xmlSegments);
+      }
+    }
+  } catch {
+    // Fall through to XML retry
+  }
+
+  // Fallback to XML endpoint if json3 was not returned
+  const xmlUrl = track.baseUrl.replace(/&amp;/g, "&").replace(/&fmt=[^&]+/, "");
+  try {
+    const xmlRes = await fetch(xmlUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+      },
+    });
+    if (xmlRes.ok) {
+      const xmlText = await xmlRes.text();
+      return normalizeSegments(parseTranscriptXml(xmlText));
+    }
+  } catch {
+    // Return empty
+  }
+
+  return [];
+}
+
+function parseTranscriptJson3(jsonString: string): TranscriptSegment[] {
+  try {
+    const data = JSON.parse(jsonString) as {
+      events?: Array<{
+        tStartMs?: number;
+        dDurationMs?: number;
+        segs?: Array<{ utf8?: string }>;
+        aAppend?: number;
+      }>;
+    };
+    const events = data.events ?? [];
+    const segments: TranscriptSegment[] = [];
+
+    for (const event of events) {
+      if (!event.segs || event.aAppend === 1) continue;
+      const rawText = event.segs.map((s) => s.utf8 ?? "").join("");
+      const text = decodeXmlEntities(rawText.replace(/<[^>]+>/g, "")).trim();
+      if (!text) continue;
+
+      const offset = (event.tStartMs ?? 0) / 1000;
+      const duration = (event.dDurationMs ?? 0) / 1000;
+      segments.push({ text, offset, duration });
+    }
+
+    return segments;
+  } catch {
+    return [];
+  }
 }
 
 function extractJsonArrayFromKey(html: string, key: string): CaptionTrack[] | null {
@@ -216,6 +437,28 @@ function parseTranscriptXml(xml: string): TranscriptSegment[] {
   return segments;
 }
 
+function normalizeSegments(segments: TranscriptSegment[]): TranscriptSegment[] {
+  const cleaned: TranscriptSegment[] = [];
+  for (const s of segments) {
+    const text = s.text.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+    if (!text || text === "[Music]" || text === "[Applause]") continue;
+
+    // Deduplicate consecutive identical lines
+    const last = cleaned[cleaned.length - 1];
+    if (last && last.text === text) {
+      last.duration += s.duration;
+      continue;
+    }
+
+    cleaned.push({
+      text,
+      offset: s.offset,
+      duration: s.duration,
+    });
+  }
+  return cleaned;
+}
+
 function decodeXmlEntities(text: string): string {
   return text
     .replace(/&amp;/g, "&")
@@ -224,6 +467,7 @@ function decodeXmlEntities(text: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
     .replace(/<[^>]+>/g, "")
     .replace(/\s+/g, " ")
     .trim();

@@ -4,7 +4,9 @@ import type { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 import { fetchYoutubeTranscript } from "@/lib/transcript.server";
-import { tavilySearch, searchTopicPhotos, youtubeIdFromUrl } from "@/lib/tavily.server";
+import { tavilySearch, searchTopicPhotos } from "@/lib/tavily.server";
+import { extractYouTubeId } from "@/lib/youtube";
+import { searchYouTubeDirect } from "@/lib/youtube.server";
 import { runNotebookAgent } from "@/lib/agents/notebook-agent.server";
 
 export function getNotebookTools(
@@ -43,8 +45,7 @@ export function getNotebookTools(
         }
 
         const raw = topicOrUrl.trim();
-        const directVideoId =
-          youtubeIdFromUrl(raw) ?? (raw.length === 11 && !raw.includes(" ") ? raw : null);
+        const directVideoId = extractYouTubeId(raw);
         const notebookTitle = title ?? raw;
 
         let sourceMaterial = "";
@@ -58,29 +59,28 @@ export function getNotebookTools(
         }
 
         if (!sourceMaterial) {
-          // 2. Search YouTube & Web via Tavily search API automatically!
-          const [videoSearch, webSearch] = await Promise.all([
-            tavilySearch(`${raw} youtube tutorial video`, { maxResults: 5 }),
+          // 2. Search YouTube & Web via Direct YouTube Search & Tavily
+          const [directVideos, webSearch] = await Promise.all([
+            searchYouTubeDirect(`${raw} tutorial`, 3),
             tavilySearch(`${raw} comprehensive explanation overview guide`, {
               maxResults: 5,
             }),
           ]);
 
           // Try extracting transcript from top video result
-          const videoResult = videoSearch.results.find((r) => youtubeIdFromUrl(r.url));
-          if (videoResult) {
-            const vid = youtubeIdFromUrl(videoResult.url);
+          for (const v of directVideos) {
+            const vid = extractYouTubeId(v.id || v.url);
             if (vid) {
               const res = await fetchYoutubeTranscript(vid);
               if (res.fullText) {
-                sourceMaterial = `Source Video: ${videoResult.title} (${videoResult.url})\n\nVideo Transcript:\n${res.fullText}\n\n`;
+                sourceMaterial = `Source Video: ${v.title} (${v.url})\n\nVideo Transcript:\n${res.fullText}\n\n`;
+                break;
               }
             }
           }
 
           // Compile web research context
           const researchContext = [
-            videoSearch.answer ? `Search Answer: ${videoSearch.answer}` : "",
             webSearch.answer ? `Summary: ${webSearch.answer}` : "",
             ...webSearch.results.map((r) => `### ${r.title}\nURL: ${r.url}\n${r.content}`),
           ]

@@ -215,9 +215,8 @@ export function getResearchTools(
         "Search for high-quality photos, illustrations, visual diagrams, and images for a topic. Use ONLY when the user explicitly asks for an image, photo, or diagram in their prompt. Returns exactly 1 highly relevant image.",
       inputSchema: z.object({
         query: z.string().describe("The visual topic or image search query"),
-        limit: z.number().optional().describe("Maximum number of images to return (always 1)"),
       }),
-      execute: async ({ query }: { query: string; limit?: number }) =>
+      execute: async ({ query }: { query: string }) =>
         wrapTool(
           "searchPhotos",
           async () => {

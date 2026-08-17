@@ -2,7 +2,9 @@ import { generateText } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
-import { searchTopicPhotos, tavilySearch, youtubeIdFromUrl } from "@/lib/tavily.server";
+import { searchTopicPhotos, tavilySearch } from "@/lib/tavily.server";
+import { extractYouTubeId } from "@/lib/youtube";
+import { searchYouTubeDirect } from "@/lib/youtube.server";
 import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -123,13 +125,12 @@ export async function writeLesson(params: {
   // Search queries — precise and human-search-like, not a sentence dump
   const researchQuery = `${focusedQuery} explained guide`;
   const imageQuery = `${focusedQuery} diagram illustration`;
-  // Best format for YouTube video retrieval: "{subtopic} in {roadmap domain}"
-  const videoQuery = `${cleanSubtopic} in ${cleanRoadmap} site:youtube.com`;
+  const ytSearchQuery = `${cleanSubtopic} ${cleanRoadmap} tutorial`;
 
   // Track the focused query for relevance ranking later
   const fullContextQuery = focusedQuery;
 
-  const [research, imageSearch, videoSearch] = await Promise.all([
+  const [research, imageSearch, directYtVideos, tavilyVideoSearch] = await Promise.all([
     tavilySearch(researchQuery, {
       maxResults: 6,
       depth: "advanced",
@@ -138,11 +139,9 @@ export async function writeLesson(params: {
       maxResults: 6,
       includeImages: true,
     }),
-    tavilySearch(videoQuery, {
-      maxResults: 10,
-      // No includeDomains — restricting to youtube.com/youtu.be causes Tavily to return
-      // channel and playlist pages (no watch?v= IDs). The site: operator in the query
-      // is enough to surface watch-URL results.
+    searchYouTubeDirect(ytSearchQuery, 6),
+    tavilySearch(`${cleanSubtopic} in ${cleanRoadmap} site:youtube.com`, {
+      maxResults: 6,
     }),
   ]);
 
@@ -193,66 +192,33 @@ Write the lesson now.`,
     }
   }
 
-  // Rank video results by relevance to key terms across the full contextual query
-  const contextKeywords = fullContextQuery
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(
-      (w) =>
-        w.length > 2 &&
-        ![
-          "with",
-          "from",
-          "into",
-          "that",
-          "this",
-          "your",
-          "for",
-          "and",
-          "the",
-          "phase",
-          "part",
-          "section",
-          "chapter",
-          "topic",
-        ].includes(w),
-    );
-
-  const sortedVideoResults = [...videoSearch.results].sort((a, b) => {
-    const scoreA = contextKeywords.filter((k) => a.title.toLowerCase().includes(k)).length;
-    const scoreB = contextKeywords.filter((k) => b.title.toLowerCase().includes(k)).length;
-    return scoreB - scoreA;
-  });
-
   const seen = new Set<string>();
   const videos: LessonVideo[] = [];
-  for (const r of sortedVideoResults) {
-    const id = youtubeIdFromUrl(r.url);
-    if (!id) continue; // Skip channels, playlists, or invalid video links
 
-    if (seen.has(id)) continue;
+  // 1. First add direct YouTube search results (guaranteed high-quality videos)
+  for (const v of directYtVideos) {
+    const id = extractYouTubeId(v.id || v.url);
+    if (!id || seen.has(id)) continue;
     seen.add(id);
-    videos.push({ title: r.title, url: r.url, youtube_id: id });
+    videos.push({
+      title: v.title,
+      url: v.url,
+      youtube_id: id,
+    });
     if (videos.length >= 2) break;
   }
 
-  // Fallback: if no valid YouTube watch URLs came back from the first search,
-  // retry with a broader query (no site: operator).
-  if (videos.length === 0) {
-    const fallbackVideoSearch = await tavilySearch(`${cleanSubtopic} in ${cleanRoadmap} youtube`, {
-      maxResults: 10,
-    });
-    const fallbackSorted = [...fallbackVideoSearch.results].sort((a, b) => {
-      const scoreA = contextKeywords.filter((k) => a.title.toLowerCase().includes(k)).length;
-      const scoreB = contextKeywords.filter((k) => b.title.toLowerCase().includes(k)).length;
-      return scoreB - scoreA;
-    });
-    for (const r of fallbackSorted) {
-      const id = youtubeIdFromUrl(r.url);
-      if (!id) continue;
-      if (seen.has(id)) continue;
+  // 2. If needed, fallback to Tavily video results
+  if (videos.length < 2) {
+    for (const r of tavilyVideoSearch.results) {
+      const id = extractYouTubeId(r.url);
+      if (!id || seen.has(id)) continue;
       seen.add(id);
-      videos.push({ title: r.title, url: r.url, youtube_id: id });
+      videos.push({
+        title: r.title,
+        url: r.url,
+        youtube_id: id,
+      });
       if (videos.length >= 2) break;
     }
   }

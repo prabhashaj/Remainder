@@ -204,9 +204,10 @@ export async function tavilySearch(
   return fallbackSearch;
 }
 
+import { extractYouTubeId } from "@/lib/youtube";
+
 export function youtubeIdFromUrl(url: string): string | null {
-  const match = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/.exec(url);
-  return match?.[1] ?? null;
+  return extractYouTubeId(url);
 }
 
 /**

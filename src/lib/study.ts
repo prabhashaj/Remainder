@@ -215,16 +215,12 @@ export async function deleteVideoNote(id: string) {
 
 /* ---------- helpers ---------- */
 
+import { extractYouTubeId, formatVideoTimestamp } from "@/lib/youtube";
+
 export function youtubeId(url: string): string | null {
-  const m = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{11})/,
-  );
-  return m ? (m[1] ?? null) : null;
+  return extractYouTubeId(url);
 }
 
 export function formatClock(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+  return formatVideoTimestamp(seconds);
 }

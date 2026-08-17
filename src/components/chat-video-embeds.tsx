@@ -1,15 +1,26 @@
 import { Play } from "lucide-react";
 
-const YT_RE =
-  /https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/g;
+import { extractYouTubeId, getYouTubeEmbedUrl, getYouTubeWatchUrl } from "@/lib/youtube";
+
+// Matches any URL or markdown link containing youtube or youtu.be
+const YT_URL_SCANNER =
+  /https?:\/\/(?:[a-zA-Z0-9-]+\.)?(?:youtube\.com|youtu\.be)\/[^\s)>\]"]+/gi;
 
 /** Pulls unique YouTube video ids out of a markdown/plain text answer. */
 export function youtubeIdsIn(text: string): string[] {
+  if (!text) return [];
   const ids: string[] = [];
-  for (const match of text.matchAll(YT_RE)) {
-    const id = match[1];
-    if (id && !ids.includes(id)) ids.push(id);
+  const matches = text.match(YT_URL_SCANNER);
+
+  if (matches) {
+    for (const url of matches) {
+      const id = extractYouTubeId(url);
+      if (id && !ids.includes(id)) {
+        ids.push(id);
+      }
+    }
   }
+
   return ids.slice(0, 4);
 }
 
@@ -26,7 +37,7 @@ export function ChatVideoEmbeds({ text }: { text: string }) {
       {ids.map((id) => (
         <div key={id} className="overflow-hidden rounded-2xl border border-border bg-muted/30">
           <iframe
-            src={`https://www.youtube.com/embed/${id}`}
+            src={getYouTubeEmbedUrl(id)}
             title="Recommended video"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -34,7 +45,7 @@ export function ChatVideoEmbeds({ text }: { text: string }) {
             className="aspect-video w-full"
           />
           <a
-            href={`https://www.youtube.com/watch?v=${id}`}
+            href={getYouTubeWatchUrl(id)}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"

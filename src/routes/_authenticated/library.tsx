@@ -50,7 +50,13 @@ import {
   type StudyResource,
 } from "@/lib/study";
 import { isSubscriptionPremium } from "@/lib/limits";
-import { saveExtractedTextFn, triggerDocumentExtractionFn } from "@/lib/study.functions";
+import {
+  saveExtractedTextFn,
+  triggerDocumentExtractionFn,
+  getYouTubeMetadataFn,
+  fetchTranscript,
+} from "@/lib/study.functions";
+import { extractYouTubeId, getYouTubeThumbnailUrl } from "@/lib/youtube";
 
 export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
@@ -175,6 +181,8 @@ function LibraryPage() {
 
   const runTriggerExtraction = useServerFn(triggerDocumentExtractionFn);
   const runSaveText = useServerFn(saveExtractedTextFn);
+  const runGetMetadata = useServerFn(getYouTubeMetadataFn);
+  const runFetchTranscript = useServerFn(fetchTranscript);
 
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ["study-resources"],
@@ -201,42 +209,31 @@ function LibraryPage() {
   const isPremium = isSubscriptionPremium(subscription);
 
   const handleUpload = async (file: File) => {
-    const maxBytes = (isPremium ? 50 : 15) * 1024 * 1024;
+    const maxMb = isPremium ? 50 : 15;
+    const maxBytes = maxMb * 1024 * 1024;
     if (file.size > maxBytes) {
-      if (!isPremium) {
-        toast.error(
-          `"${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 15MB Free limit. Upgrade to Pro to upload documents up to 50MB.`,
-          {
-            action: {
-              label: "Upgrade",
-              onClick: () => {
-                navigate({ to: "/pricing" });
-              },
-            },
-            duration: 10000,
-          },
-        );
-      } else {
-        toast.error(`"${file.name}" exceeds the 50MB maximum upload limit.`);
-      }
+      toast.error(
+        isPremium
+          ? `File exceeds the maximum limit of ${maxMb}MB.`
+          : `File exceeds the 15MB Free tier limit. Please upgrade to Pro to upload documents up to 50MB.`,
+      );
       return;
     }
 
     setUploading(true);
     try {
+      const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+      const isImage = file.type.startsWith("image/");
       const path = await uploadMaterial(file);
-      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-      const kind = isPdf ? "pdf" : file.type.startsWith("image/") ? "image" : "note";
-
       const created = await createStudyResource({
-        title: file.name.replace(/\.[^.]+$/, ""),
-        kind,
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        kind: isPdf ? "pdf" : isImage ? "image" : "note",
         storage_path: path,
         mime_type: file.type || "application/octet-stream",
       });
 
       refreshResources();
-      toast.success("Resource added to Library — processing text & chunks...");
+      toast.success("Document added to library");
 
       // 1. Immediately trigger server-side extraction, chunking & embedding
       void runTriggerExtraction({ data: { resourceId: created.id, storagePath: path } }).then(
@@ -268,23 +265,48 @@ function LibraryPage() {
     mutationFn: async () => {
       const trimmed = linkUrl.trim();
       if (!trimmed) return;
-      const isVid = Boolean(youtubeId(trimmed));
+      const ytId = extractYouTubeId(trimmed);
+      const isVid = Boolean(ytId);
       const kind = isVid ? "video" : "article";
-      const fallbackTitle = isVid
-        ? "YouTube Video"
-        : (() => {
-            try {
-              return new URL(trimmed).hostname.replace(/^www\./, "");
-            } catch {
-              return "Article";
-            }
-          })();
 
-      return createStudyResource({
-        title: linkTitle.trim() || fallbackTitle,
+      let finalTitle = linkTitle.trim();
+      if (!finalTitle && ytId) {
+        try {
+          const metaRes = await runGetMetadata({ data: { urlOrId: ytId } });
+          if (metaRes.success && metaRes.metadata?.title) {
+            finalTitle = metaRes.metadata.title;
+          }
+        } catch {
+          // Ignore
+        }
+      }
+
+      if (!finalTitle) {
+        finalTitle = isVid
+          ? "YouTube Video"
+          : (() => {
+              try {
+                return new URL(trimmed).hostname.replace(/^www\./, "");
+              } catch {
+                return "Article";
+              }
+            })();
+      }
+
+      const created = await createStudyResource({
+        title: finalTitle,
         kind,
         url: trimmed,
       });
+
+      if (isVid && ytId && created?.id) {
+        // Trigger transcript extraction & embedding in background
+        void runFetchTranscript({ data: { videoId: ytId, resourceId: created.id } }).then(() => {
+          refreshResources();
+        });
+      }
+
+      return created;
     },
     onSuccess: () => {
       setLinkUrl("");
@@ -478,7 +500,7 @@ function LibraryPage() {
 
 function ResourceCard({ resource, onDelete }: { resource: StudyResource; onDelete: () => void }) {
   const kind = resource.kind ?? "note";
-  const video = resource.url ? youtubeId(resource.url) : null;
+  const video = resource.url ? extractYouTubeId(resource.url) : null;
   const Icon = video ? Play : KIND_ICONS[kind] ?? FileText;
   const colorClass = KIND_COLORS[kind] ?? "bg-muted text-muted-foreground";
   const label = KIND_LABELS[kind] ?? kind;
@@ -488,7 +510,21 @@ function ResourceCard({ resource, onDelete }: { resource: StudyResource; onDelet
     <article className="card-soft group relative flex flex-col overflow-hidden transition-all hover:shadow-lift">
       {/* Preview area */}
       <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl bg-muted/30">
-        {isImage && resource.storage_path ? (
+        {video ? (
+          <div className="relative size-full bg-black">
+            <img
+              src={getYouTubeThumbnailUrl(video, "hq")}
+              alt={resource.title}
+              className="size-full object-cover"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-black/25 flex items-center justify-center transition-all group-hover:bg-black/40">
+              <div className="flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-110">
+                <Play className="size-5 fill-current ml-0.5" />
+              </div>
+            </div>
+          </div>
+        ) : isImage && resource.storage_path ? (
           <ImageThumbnail storagePath={resource.storage_path} />
         ) : (
           <div

@@ -37,10 +37,15 @@ import {
   deleteStudyResource,
   fetchStudyResources,
   uploadMaterial,
-  youtubeId,
   type StudyResource,
 } from "@/lib/study";
-import { saveExtractedTextFn, triggerDocumentExtractionFn } from "@/lib/study.functions";
+import {
+  saveExtractedTextFn,
+  triggerDocumentExtractionFn,
+  getYouTubeMetadataFn,
+  fetchTranscript,
+} from "@/lib/study.functions";
+import { extractYouTubeId } from "@/lib/youtube";
 
 export const Route = createFileRoute("/_authenticated/study")({
   head: () => ({
@@ -127,22 +132,6 @@ function StudyPlacePage() {
 
   const refreshResources = () => void qc.invalidateQueries({ queryKey: ["study-resources"] });
 
-  const addLink = useMutation({
-    mutationFn: () =>
-      createStudyResource({
-        title: linkTitle.trim() || linkUrl.trim(),
-        kind: youtubeId(linkUrl) ? "video" : "article",
-        url: linkUrl.trim(),
-        roadmap_id: roadmapId,
-      }),
-    onSuccess: () => {
-      setLinkTitle("");
-      setLinkUrl("");
-      refreshResources();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const removeResource = useMutation({
     mutationFn: (resource: StudyResource) => deleteStudyResource(resource),
     onSuccess: refreshResources,
@@ -157,6 +146,65 @@ function StudyPlacePage() {
 
   const runTriggerExtraction = useServerFn(triggerDocumentExtractionFn);
   const runSaveText = useServerFn(saveExtractedTextFn);
+  const runGetMetadata = useServerFn(getYouTubeMetadataFn);
+  const runFetchTranscript = useServerFn(fetchTranscript);
+
+  const addLink = useMutation({
+    mutationFn: async () => {
+      const trimmed = linkUrl.trim();
+      if (!trimmed) return;
+      const ytId = extractYouTubeId(trimmed);
+      const isVid = Boolean(ytId);
+      const kind = isVid ? "video" : "article";
+
+      let finalTitle = linkTitle.trim();
+      if (!finalTitle && ytId) {
+        try {
+          const metaRes = await runGetMetadata({ data: { urlOrId: ytId } });
+          if (metaRes.success && metaRes.metadata?.title) {
+            finalTitle = metaRes.metadata.title;
+          }
+        } catch {
+          // Ignore
+        }
+      }
+
+      if (!finalTitle) {
+        finalTitle = isVid
+          ? "YouTube Video"
+          : (() => {
+              try {
+                return new URL(trimmed).hostname.replace(/^www\./, "");
+              } catch {
+                return "Article";
+              }
+            })();
+      }
+
+      const created = await createStudyResource({
+        title: finalTitle,
+        kind,
+        url: trimmed,
+        roadmap_id: roadmapId,
+      });
+
+      if (isVid && ytId && created?.id) {
+        // Trigger transcript extraction & embedding in background
+        void runFetchTranscript({ data: { videoId: ytId, resourceId: created.id } }).then(() => {
+          refreshResources();
+        });
+      }
+
+      return created;
+    },
+    onSuccess: () => {
+      setLinkTitle("");
+      setLinkUrl("");
+      refreshResources();
+      toast.success("Resource added");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const handleUpload = async (file: File) => {
     const maxBytes = (isPremium ? 50 : 15) * 1024 * 1024;
@@ -419,7 +467,7 @@ function StudyPlacePage() {
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {visibleResources.map((resource) => {
-            const video = resource.url ? youtubeId(resource.url) : null;
+            const video = resource.url ? extractYouTubeId(resource.url) : null;
             const Icon = video ? Play : resource.storage_path ? FileText : Link2;
             return (
               <article key={resource.id} className="card-soft flex flex-col gap-3 p-4">
