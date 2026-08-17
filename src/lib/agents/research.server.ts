@@ -50,7 +50,7 @@ export async function runResearch(params: {
       description: "Search the web for learning resources, tutorials, and videos.",
       inputSchema: z.object({ query: z.string().describe("The search query") }),
       execute: async ({ query }: { query: string }) => {
-        const res = await tavilySearch(query, { maxResults: 5, depth: "advanced" });
+        const res = await tavilySearch(query, { maxResults: 5, depth: "basic" });
         return {
           results: res.results.map((r) => ({
             title: r.title,

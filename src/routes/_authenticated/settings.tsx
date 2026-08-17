@@ -28,7 +28,7 @@ import {
   createMemory,
   deleteMemory,
 } from "@/lib/db";
-import { THEMES, type ThemeId } from "@/lib/themes";
+import { THEMES, FONTS, type ThemeId } from "@/lib/themes";
 import { BillingSection } from "@/components/billing-section";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -204,61 +204,30 @@ function SettingsPage() {
       <section className="card-soft p-6">
         <div className="flex items-center gap-2">
           <Type className="size-5 text-primary" />
-          <h2 className="font-display text-lg font-semibold">Typography</h2>
+          <h2 className="font-display text-lg font-semibold">Iconic Typography</h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Click to choose a text style for your workspace.
+          Click to choose an iconic font aesthetic for your notes and workspace.
         </p>
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => setFont("sans")}
-            className={`press relative rounded-3xl border p-4 text-left transition-all ${
-              font === "sans"
-                ? "border-primary shadow-soft ring-2 ring-primary/30"
-                : "border-border hover:border-border/80"
-            }`}
-          >
-            <span className="block font-sans text-lg font-medium">Default (Sans)</span>
-            <span className="text-xs text-muted-foreground block mt-0.5">Clean and modern.</span>
-            {font === "sans" && (
-              <Check className="absolute right-4 top-4 size-4 text-primary" aria-hidden />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setFont("serif")}
-            className={`press relative rounded-3xl border p-4 text-left transition-all ${
-              font === "serif"
-                ? "border-primary shadow-soft ring-2 ring-primary/30"
-                : "border-border hover:border-border/80"
-            }`}
-          >
-            <span className="block font-serif text-lg font-medium">Serif</span>
-            <span className="text-xs text-muted-foreground block mt-0.5">Elegant and classic.</span>
-            {font === "serif" && (
-              <Check className="absolute right-4 top-4 size-4 text-primary" aria-hidden />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setFont("merienda")}
-            className={`press relative rounded-3xl border p-4 text-left transition-all ${
-              font === "merienda"
-                ? "border-primary shadow-soft ring-2 ring-primary/30"
-                : "border-border hover:border-border/80"
-            }`}
-          >
-            <span className="block font-merienda text-2xl font-medium leading-none">Merienda</span>
-            <span className="text-xs text-muted-foreground block mt-2">
-              Friendly and expressive.
-            </span>
-            {font === "merienda" && (
-              <Check className="absolute right-4 top-4 size-4 text-primary" aria-hidden />
-            )}
-          </button>
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {FONTS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFont(f.id)}
+              className={`press relative rounded-3xl border p-4 text-left transition-all ${
+                font === f.id
+                  ? "border-primary shadow-soft ring-2 ring-primary/30"
+                  : "border-border hover:border-border/80"
+              }`}
+            >
+              <span className={`block text-xl font-medium ${f.fontClass}`}>{f.name}</span>
+              <span className="text-xs text-muted-foreground block mt-1">{f.blurb}</span>
+              {font === f.id && (
+                <Check className="absolute right-4 top-4 size-4 text-primary" aria-hidden />
+              )}
+            </button>
+          ))}
         </div>
       </section>
 

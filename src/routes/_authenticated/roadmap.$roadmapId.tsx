@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   BookOpen,
@@ -7,6 +7,7 @@ import {
   Clock,
   ExternalLink,
   Flame,
+  ListPlus,
   Search,
   Sparkle,
 } from "lucide-react";
@@ -17,11 +18,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import {
   checkAndRecordRoadmapCompletion,
+  createTask,
   dayOffset,
   fetchRoadmap,
   fetchRoadmapItems,
   fetchRoadmapResources,
   fetchRoadmapStreakInfo,
+  fetchTasks,
   today,
   updateRoadmapItem,
   type RoadmapItem,
@@ -51,6 +54,7 @@ const LAST_7_DAYS = Array.from({ length: 7 }, (_, i) => dayOffset(-6 + i));
 function RoadmapDetail() {
   const { roadmapId } = Route.useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: roadmap } = useQuery({
     queryKey: ["roadmap", roadmapId],
@@ -67,6 +71,10 @@ function RoadmapDetail() {
   const { data: streakInfo } = useQuery({
     queryKey: ["roadmap-streak", roadmapId],
     queryFn: () => fetchRoadmapStreakInfo(roadmapId),
+  });
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks"],
+    queryFn: fetchTasks,
   });
 
   const toggle = useMutation({
@@ -91,6 +99,33 @@ function RoadmapDetail() {
       void qc.invalidateQueries({ queryKey: ["roadmap-streak-overall"] });
     },
   });
+
+  const addTask = useMutation({
+    mutationFn: async (lessonTitle: string) => {
+      return createTask({
+        title: `Study: ${lessonTitle}`,
+        due_date: today(),
+      });
+    },
+    onSuccess: (newTask) => {
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success(`Added "${newTask.title}" to today's tasks!`, {
+        action: {
+          label: "View Tasks",
+          onClick: () => navigate({ to: "/tasks" }),
+        },
+      });
+    },
+  });
+
+  const isTaskScheduled = (title: string) => {
+    return tasks.some(
+      (t) =>
+        (t.title.toLowerCase() === `study: ${title}`.toLowerCase() ||
+          t.title.toLowerCase() === title.toLowerCase()) &&
+        !t.done,
+    );
+  };
 
   const topics = items.filter((i) => !i.parent_id);
   const subsFor = (id: string) => items.filter((i) => i.parent_id === id);
@@ -162,7 +197,7 @@ function RoadmapDetail() {
         </div>
       </div>
 
-      <div className="card-soft p-4 space-y-2">
+      <div className="card-soft p-4 space-y-3">
         <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
           <span>Roadmap Progress</span>
           <span>
@@ -170,11 +205,38 @@ function RoadmapDetail() {
           </span>
         </div>
         <Progress value={pct} className="h-2.5 rounded-full" />
-        {!todayActive && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
-            ⚡ Keep your {roadmap?.topic ?? "roadmap"} streak alive: Complete a lesson or checkpoint today!
-          </p>
-        )}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
+          {!todayActive ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              ⚡ Keep your {roadmap?.topic ?? "roadmap"} streak alive: Complete a lesson or checkpoint today!
+            </p>
+          ) : (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">
+              ✓ Learning streak active today! Keep building momentum.
+            </p>
+          )}
+
+          {items.find((i) => !i.done) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = items.find((i) => !i.done);
+                if (next) addTask.mutate(next.title);
+              }}
+              disabled={
+                addTask.isPending ||
+                Boolean(items.find((i) => !i.done && isTaskScheduled(i.title)))
+              }
+              className="rounded-2xl text-xs gap-1.5 press self-start sm:self-auto shrink-0"
+            >
+              <ListPlus className="size-3.5" />
+              {items.find((i) => !i.done && isTaskScheduled(i.title))
+                ? "Next Lesson In Tasks"
+                : "Add Next Lesson to Tasks"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="mt-8 space-y-8">
@@ -186,35 +248,56 @@ function RoadmapDetail() {
             <div className="mt-3 space-y-4">
               {phaseTopics.map((topic) => (
                 <article key={topic.id} className="card-soft p-5">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={topic.done}
-                      onCheckedChange={(v) => toggle.mutate({ id: topic.id, done: Boolean(v) })}
-                      className="mt-1 rounded-md"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h3
-                        className={`font-display text-base font-semibold ${topic.done ? "text-muted-foreground line-through" : ""}`}
-                      >
-                        {topic.title}
-                      </h3>
-                      {topic.detail && (
-                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                          {topic.detail}
-                        </p>
-                      )}
-                      {topic.estimated_minutes ? (
-                        <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="size-3" />~{topic.estimated_minutes} min
-                        </p>
-                      ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <Checkbox
+                        checked={topic.done}
+                        onCheckedChange={(v) => toggle.mutate({ id: topic.id, done: Boolean(v) })}
+                        className="mt-1 rounded-md"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3
+                          className={`font-display text-base font-semibold ${topic.done ? "text-muted-foreground line-through" : ""}`}
+                        >
+                          {topic.title}
+                        </h3>
+                        {topic.detail && (
+                          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                            {topic.detail}
+                          </p>
+                        )}
+                        {topic.estimated_minutes ? (
+                          <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="size-3" />~{topic.estimated_minutes} min
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => addTask.mutate(topic.title)}
+                      disabled={topic.done || isTaskScheduled(topic.title)}
+                      className={`press rounded-xl text-xs gap-1 shrink-0 ${
+                        isTaskScheduled(topic.title)
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      title={isTaskScheduled(topic.title) ? "Added to tasks" : "Add to tasks"}
+                    >
+                      <ListPlus className="size-3.5" />
+                      <span className="hidden sm:inline">
+                        {isTaskScheduled(topic.title) ? "In tasks" : "Add to tasks"}
+                      </span>
+                    </Button>
                   </div>
 
                   <ul className="mt-3 space-y-1">
                     {subsFor(topic.id).map((sub) => (
                       <li key={sub.id}>
-                        <div className="flex items-start gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-muted/50">
+                        <div className="flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-muted/50">
                           <Checkbox
                             checked={sub.done}
                             onCheckedChange={(v) => toggle.mutate({ id: sub.id, done: Boolean(v) })}
@@ -240,6 +323,28 @@ function RoadmapDetail() {
                               <ChevronRight className="size-3" />
                             </span>
                           </Link>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addTask.mutate(sub.title);
+                            }}
+                            disabled={sub.done || isTaskScheduled(sub.title)}
+                            className={`press rounded-xl text-xs gap-1 shrink-0 ${
+                              isTaskScheduled(sub.title)
+                                ? "bg-primary/10 text-primary font-semibold"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                            title={isTaskScheduled(sub.title) ? "Added to tasks" : "Add to tasks"}
+                          >
+                            <ListPlus className="size-3.5" />
+                            <span className="hidden sm:inline">
+                              {isTaskScheduled(sub.title) ? "In tasks" : "Add to tasks"}
+                            </span>
+                          </Button>
                         </div>
                       </li>
                     ))}

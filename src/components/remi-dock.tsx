@@ -153,15 +153,15 @@ export function RemiDock() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Chat with Remi"
-        className="press fixed bottom-6 right-6 z-40 flex size-15 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_18px_40px_-16px_hsl(var(--foreground)/0.5)] transition-transform hover:scale-105"
+        className="press fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex size-14 sm:size-15 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_18px_40px_-16px_hsl(var(--foreground)/0.5)] transition-transform hover:scale-105"
       >
-        <MessageCircle className="size-7" />
+        <MessageCircle className="size-6 sm:size-7" />
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex max-h-[min(82vh,760px)] w-[min(calc(100vw-2.5rem),480px)] flex-col overflow-hidden rounded-[28px] border border-border/70 bg-card/98 shadow-[0_24px_60px_-24px_hsl(var(--foreground)/0.4)] backdrop-blur">
+    <div className="fixed bottom-20 right-3 sm:bottom-6 sm:right-6 z-40 flex max-h-[min(78vh,760px)] w-[calc(100vw-1.5rem)] sm:w-[min(calc(100vw-2.5rem),480px)] flex-col overflow-hidden rounded-[28px] border border-border/70 bg-card/98 shadow-[0_24px_60px_-24px_hsl(var(--foreground)/0.4)] backdrop-blur">
       <RemiHeader
         threadId={threadId}
         onNew={() => void startFresh()}

@@ -285,13 +285,34 @@ function VoiceInputButton({
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const ctor =
       (window as unknown as Record<string, unknown>)["SpeechRecognition"] ??
       (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"];
     if (!ctor) setSupported(false);
+
+    return () => {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      recognitionRef.current?.stop();
+    };
   }, []);
+
+  const clearTimer = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
+  const resetSilenceTimer = useCallback(() => {
+    clearTimer();
+    // 10-second silence timeout: allows natural pauses before committing
+    silenceTimerRef.current = setTimeout(() => {
+      recognitionRef.current?.stop();
+    }, 10000);
+  }, [clearTimer]);
 
   const toggle = useCallback(() => {
     const Ctor = ((window as unknown as Record<string, unknown>)["SpeechRecognition"] ??
@@ -305,47 +326,52 @@ function VoiceInputButton({
 
     // If already listening, stop manually
     if (listening) {
+      clearTimer();
       recognitionRef.current?.stop();
       return;
     }
 
     const recognition = new Ctor();
     recognition.lang = "en-US";
-    recognition.interimResults = false; // only fire for final segments
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    recognition.continuous = false; // stops naturally after a pause
+    recognition.continuous = true; // Stay active across pauses
 
-    recognition.onstart = () => setListening(true);
-
-    // Accumulate final segments as they are committed by the browser.
-    // Do NOT call stop() here — let recognition run until natural end.
     let accumulated = "";
+
+    recognition.onstart = () => {
+      setListening(true);
+      resetSilenceTimer();
+    };
+
     recognition.onresult = (e: {
       resultIndex: number;
       results: { isFinal?: boolean; 0: { transcript: string } }[];
     }) => {
+      resetSilenceTimer();
+      let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const result = e.results[i];
-        if (result && result.isFinal !== false) {
-          accumulated += (accumulated ? " " : "") + (result[0]?.transcript ?? "");
+        if (result) {
+          if (result.isFinal !== false) {
+            accumulated += (accumulated ? " " : "") + (result[0]?.transcript ?? "");
+          } else {
+            interim += " " + (result[0]?.transcript ?? "");
+          }
         }
       }
     };
 
-    // onend fires when recognition ends naturally (pause detected) or manually stopped.
-    // Inject the accumulated transcript exactly once here.
+    // onend fires when recognition finishes (after 10s silence timeout or manual stop)
     recognition.onend = () => {
+      clearTimer();
       setListening(false);
       let transcript = accumulated.trim();
       if (!transcript) return;
 
-      // Ensure the transcribed text ends like a question ('?') after speech finishes
-      if (!transcript.endsWith("?")) {
-        if (transcript.endsWith(".")) {
-          transcript = transcript.slice(0, -1) + "?";
-        } else if (!transcript.endsWith("!")) {
-          transcript = transcript + "?";
-        }
+      // Ensure the transcribed query ends with punctuation
+      if (!transcript.endsWith("?") && !transcript.endsWith(".") && !transcript.endsWith("!")) {
+        transcript = transcript + "?";
       }
 
       const el = textareaRef.current;
@@ -361,6 +387,7 @@ function VoiceInputButton({
     };
 
     recognition.onerror = (e: { error: string }) => {
+      clearTimer();
       setListening(false);
       if (e.error !== "aborted" && e.error !== "no-speech") {
         toast.error(`Microphone error: ${e.error}`);
@@ -369,7 +396,7 @@ function VoiceInputButton({
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, [listening, textareaRef]);
+  }, [listening, textareaRef, clearTimer, resetSilenceTimer]);
 
   if (!supported) return null;
 

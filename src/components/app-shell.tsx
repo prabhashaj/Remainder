@@ -154,15 +154,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <FocusTimerButton />
                 <AccountMenu />
               </header>
-              <main className="flex-1">{children}</main>
+              <main className="flex-1 pb-24 md:pb-6">{children}</main>
             </SidebarInset>
           </div>
           <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
           <FocusTimerChip />
           <RemiDock />
+          <MobileBottomNav />
         </SidebarProvider>
       </TopicProvider>
     </FocusTimerProvider>
+  );
+}
+
+function MobileBottomNav() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  const items = [
+    { to: "/dashboard", icon: LayoutDashboard, label: "Today" },
+    { to: "/tasks", icon: ListChecks, label: "Tasks" },
+    { to: "/roadmaps", icon: Compass, label: "Roadmaps" },
+    { to: "/goals", icon: Target, label: "Goals" },
+    { to: "/study", icon: BookOpen, label: "Study" },
+  ] as const;
+
+  return (
+    <nav className="fixed bottom-0 inset-x-0 z-30 flex h-16 items-center justify-around border-t border-border/70 bg-background/95 px-2 backdrop-blur-md md:hidden">
+      {items.map(({ to, icon: Icon, label }) => {
+        const isActive = pathname === to || (to !== "/dashboard" && pathname.startsWith(to));
+        return (
+          <Link
+            key={to}
+            to={to}
+            className={`press flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-1.5 transition-colors ${
+              isActive
+                ? "text-primary font-bold bg-primary/10"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Icon className="size-5" />
+            <span className="text-[11px] leading-none">{label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

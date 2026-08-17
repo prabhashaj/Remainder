@@ -18,18 +18,37 @@ export type ThemeId =
   | "aurora"
   | "crimson";
 
-export type FontId = "sans" | "serif" | "merienda";
+export type FontId =
+  | "sans"
+  | "outfit"
+  | "serif"
+  | "cormorant"
+  | "mono"
+  | "merienda"
+  | "caveat";
 
 export const FONT_STORAGE_KEY = "remispace-font";
 
+export const FONTS: { id: FontId; name: string; blurb: string; fontClass: string }[] = [
+  { id: "sans", name: "Default (Inter / Jakarta)", blurb: "Modern, clean, balanced.", fontClass: "font-sans" },
+  { id: "outfit", name: "Geometric (Outfit)", blurb: "Sleek, futuristic, and modern.", fontClass: "font-sans" },
+  { id: "serif", name: "Editorial (Merriweather)", blurb: "Literary, warm, and classic.", fontClass: "font-serif" },
+  { id: "cormorant", name: "Luxury (Cormorant)", blurb: "High-fashion classical serif.", fontClass: "font-serif" },
+  { id: "mono", name: "Terminal (JetBrains Mono)", blurb: "Cyberpunk developer monospace.", fontClass: "font-mono" },
+  { id: "merienda", name: "Flow (Merienda)", blurb: "Playful, organic cursive.", fontClass: "font-serif" },
+  { id: "caveat", name: "Handwritten (Caveat)", blurb: "Casual notebook notes feel.", fontClass: "font-sans" },
+];
+
+export const FONT_IDS = FONTS.map((f) => f.id);
+
 export function isFontId(val: unknown): val is FontId {
-  return typeof val === "string" && ["sans", "serif", "merienda"].includes(val);
+  return typeof val === "string" && (FONT_IDS as string[]).includes(val);
 }
 
 export function applyFontClass(font: FontId) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.classList.remove("font-sans", "font-serif", "font-merienda");
+  FONT_IDS.forEach((id) => root.classList.remove(`font-${id}`));
   root.classList.add(`font-${font}`);
 }
 

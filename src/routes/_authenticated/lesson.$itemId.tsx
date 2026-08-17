@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, BookOpenCheck, Clock, Layers, Play, RefreshCw, Sparkle } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Clock, Layers, ListPlus, Play, RefreshCw, Sparkle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -10,7 +10,7 @@ import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { Button } from "@/components/ui/button";
 import { ExpandableImage } from "@/components/ui/expandable-image";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { fetchRoadmapItem, updateRoadmapItem } from "@/lib/db";
+import { createTask, fetchRoadmapItem, fetchTasks, today, updateRoadmapItem } from "@/lib/db";
 import { generateLesson } from "@/lib/lesson.functions";
 import { generateFlashcardsForItem, fetchFlashcardCountForItem } from "@/lib/srs.functions";
 import { useRegisterTopic } from "@/lib/topic-context";
@@ -42,6 +42,7 @@ export const Route = createFileRoute("/_authenticated/lesson/$itemId")({
 function LessonPage() {
   const { itemId } = Route.useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const runLesson = useServerFn(generateLesson);
   const runGenerateFlashcards = useServerFn(generateFlashcardsForItem);
   const runFetchCardCount = useServerFn(fetchFlashcardCountForItem);
@@ -55,11 +56,43 @@ function LessonPage() {
     queryFn: () => fetchRoadmapItem(itemId),
   });
 
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks"],
+    queryFn: fetchTasks,
+  });
+
   const { data: flashcardData } = useQuery({
     queryKey: ["flashcard-count-item", itemId],
     queryFn: () => runFetchCardCount({ data: { itemId } }),
     enabled: Boolean(item?.content),
   });
+
+  const addTask = useMutation({
+    mutationFn: async (lessonTitle: string) => {
+      return createTask({
+        title: `Study: ${lessonTitle}`,
+        due_date: today(),
+      });
+    },
+    onSuccess: (newTask) => {
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success(`Added "${newTask.title}" to today's tasks!`, {
+        action: {
+          label: "View Tasks",
+          onClick: () => navigate({ to: "/tasks" }),
+        },
+      });
+    },
+  });
+
+  const isTaskScheduled = item
+    ? tasks.some(
+        (t) =>
+          (t.title.toLowerCase() === `study: ${item.title}`.toLowerCase() ||
+            t.title.toLowerCase() === item.title.toLowerCase()) &&
+          !t.done,
+      )
+    : false;
 
   const generate = useMutation({
     mutationFn: (force: boolean) => runLesson({ data: { itemId, force } }),
@@ -164,6 +197,19 @@ function LessonPage() {
           onClick={() => startTimer(item.estimated_minutes || 25, item.title, item.id)}
         >
           Focus on this
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => addTask.mutate(item.title)}
+          disabled={item.done || isTaskScheduled || addTask.isPending}
+          className={`press rounded-2xl gap-1.5 ${
+            isTaskScheduled ? "bg-primary/10 text-primary border-primary/30" : ""
+          }`}
+        >
+          <ListPlus className="size-3.5 text-primary" />
+          {isTaskScheduled ? "Scheduled in tasks" : "Add to tasks"}
         </Button>
 
         {hasContent && (

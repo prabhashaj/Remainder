@@ -61,7 +61,7 @@ export function getResearchTools(
         wrapTool(
           "webSearch",
           async () => {
-            const res = await tavilySearch(query, { maxResults: 6, depth: "advanced" });
+            const res = await tavilySearch(query, { maxResults: 5, depth: "basic" });
             const formattedSources = res.results.map(
               (r, i) => `${i + 1}. [**${r.title}**](${r.url}) — *${r.domain}*`,
             );

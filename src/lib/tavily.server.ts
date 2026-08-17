@@ -86,9 +86,24 @@ async function searchDuckDuckGoFallback(query: string, limit = 5): Promise<WebRe
   }
 }
 
+// Cost-optimized in-memory search and photo cache (1-hour TTL)
+const SEARCH_CACHE_TTL_MS = 60 * 60 * 1000;
+const searchCache = new Map<string, { data: TavilySearch; expiresAt: number }>();
+const photoCache = new Map<string, { data: ImageResult[]; expiresAt: number }>();
+
+function cleanExpiredCache() {
+  const now = Date.now();
+  for (const [k, v] of searchCache.entries()) {
+    if (v.expiresAt <= now) searchCache.delete(k);
+  }
+  for (const [k, v] of photoCache.entries()) {
+    if (v.expiresAt <= now) photoCache.delete(k);
+  }
+}
+
 /**
- * Robust web search API combining Tavily Advanced Search with DuckDuckGo fallback.
- * Guarantees accurate, domain-grounded results for every search.
+ * Robust web search API combining Tavily Search with DuckDuckGo fallback.
+ * Uses basic depth (1 credit instead of 2 credits) and 1-hour in-memory caching to minimize cost.
  */
 export async function tavilySearch(
   query: string,
@@ -100,7 +115,16 @@ export async function tavilySearch(
   } = {},
 ): Promise<TavilySearch> {
   const key = process.env["TAVILY_API_KEY"];
-  const maxResults = opts.maxResults ?? 6;
+  const maxResults = opts.maxResults ?? 5;
+  const depth = opts.depth ?? "basic"; // Cost optimization: default to 'basic' (1 credit vs 2 credits)
+
+  // Check cache first for $0 cost on repeated queries
+  cleanExpiredCache();
+  const cacheKey = `${query.toLowerCase().trim()}:${depth}:${opts.includeImages ? 1 : 0}:${opts.includeDomains?.slice().sort().join(",") ?? ""}:${maxResults}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
 
   if (key) {
     try {
@@ -113,7 +137,7 @@ export async function tavilySearch(
         body: JSON.stringify({
           api_key: key,
           query,
-          search_depth: opts.depth ?? "advanced",
+          search_depth: depth,
           max_results: maxResults,
           include_answer: true,
           include_images: opts.includeImages ?? false,
@@ -132,13 +156,13 @@ export async function tavilySearch(
             title: r.title,
             url: r.url,
             domain: extractDomain(r.url),
-            content: cleanSnippet((r.content ?? "").slice(0, 1200)),
+            content: cleanSnippet((r.content ?? "").slice(0, 1000)),
             score: r.score,
             publishedDate: r.published_date,
           }));
 
         if (validResults.length > 0) {
-          return {
+          const searchResult: TavilySearch = {
             results: validResults,
             images: (data.images ?? [])
               .map((img) =>
@@ -149,6 +173,13 @@ export async function tavilySearch(
               .filter((img) => img.url.startsWith("http")),
             answer: data.answer ?? null,
           };
+
+          searchCache.set(cacheKey, {
+            data: searchResult,
+            expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+          });
+
+          return searchResult;
         }
       }
     } catch {
@@ -156,14 +187,21 @@ export async function tavilySearch(
     }
   }
 
-  // Fallback to DuckDuckGo search
+  // Fallback to DuckDuckGo search (0 cost)
   const fallbackResults = await searchDuckDuckGoFallback(query, maxResults);
-  return {
+  const fallbackSearch: TavilySearch = {
     results: fallbackResults,
     images: [],
     answer: null,
     ...(fallbackResults.length === 0 ? { error: "No search results found." } : {}),
   };
+
+  searchCache.set(cacheKey, {
+    data: fallbackSearch,
+    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+  });
+
+  return fallbackSearch;
 }
 
 export function youtubeIdFromUrl(url: string): string | null {
@@ -173,76 +211,83 @@ export function youtubeIdFromUrl(url: string): string | null {
 
 /**
  * Robust photo/diagram search for topics.
- * Combines Wikimedia Commons search API and Tavily image search.
- * Guarantees topic-matched visual diagrams and images without returning generic stock photos.
+ * Prioritizes free Wikimedia Commons API before falling back to Tavily Image Search to minimize API consumption.
  */
 export async function searchTopicPhotos(query: string): Promise<ImageResult[]> {
   const photos: ImageResult[] = [];
   const cleanQuery = query.trim();
+  const cacheKey = cleanQuery.toLowerCase();
 
-  // 1. Tavily Image Search (Web Search API with includeImages)
+  // Check photo cache first
+  cleanExpiredCache();
+  const cached = photoCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  // 1. Wikimedia Commons Search API (0 cost, highly accurate for educational diagrams)
   try {
-    const tavRes = await tavilySearch(cleanQuery, {
-      maxResults: 6,
-      includeImages: true,
-      depth: "advanced",
-    });
-    for (const img of tavRes.images) {
-      if (
-        img.url &&
-        !photos.some((p) => p.url === img.url) &&
-        !img.url.includes("avatar") &&
-        !img.url.includes("logo")
-      ) {
-        photos.push({
-          url: img.url,
-          description: img.description || cleanQuery,
-        });
+    const wikiKeyword = cleanQuery
+      .replace(/diagrams?|workflows?|images?|photos?|notebook/gi, "")
+      .trim();
+    const wikiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(wikiKeyword || cleanQuery)}&gsrnamespace=6&format=json&prop=imageinfo&iiprop=url&iiurlwidth=800`;
+    const res = await fetch(wikiUrl);
+    if (res.ok) {
+      const data = (await res.json()) as {
+        query?: {
+          pages?: Record<
+            string,
+            {
+              title?: string;
+              imageinfo?: Array<{ thumburl?: string; url?: string }>;
+            }
+          >;
+        };
+      };
+      const pages = data.query?.pages || {};
+      for (const p of Object.values(pages)) {
+        const imgUrl = p.imageinfo?.[0]?.thumburl || p.imageinfo?.[0]?.url;
+        if (
+          imgUrl &&
+          !photos.some((existing) => existing.url === imgUrl) &&
+          (imgUrl.endsWith(".png") ||
+            imgUrl.endsWith(".jpg") ||
+            imgUrl.endsWith(".jpeg") ||
+            imgUrl.includes("thumb"))
+        ) {
+          const cap = p.title
+            ? p.title
+                .replace("File:", "")
+                .replace(/\.[^/.]+$/, "")
+                .replace(/_/g, " ")
+            : cleanQuery;
+          photos.push({ url: imgUrl, description: cap });
+        }
       }
     }
   } catch {
     // Continue
   }
 
-  // 2. Wikimedia Commons Search API
-  if (photos.length < 3) {
+  // 2. If Wikimedia provided 0 images, fallback to Tavily with basic depth
+  if (photos.length === 0) {
     try {
-      const wikiKeyword = cleanQuery
-        .replace(/diagrams?|workflows?|images?|photos?|notebook/gi, "")
-        .trim();
-      const wikiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(wikiKeyword || cleanQuery)}&gsrnamespace=6&format=json&prop=imageinfo&iiprop=url&iiurlwidth=800`;
-      const res = await fetch(wikiUrl);
-      if (res.ok) {
-        const data = (await res.json()) as {
-          query?: {
-            pages?: Record<
-              string,
-              {
-                title?: string;
-                imageinfo?: Array<{ thumburl?: string; url?: string }>;
-              }
-            >;
-          };
-        };
-        const pages = data.query?.pages || {};
-        for (const p of Object.values(pages)) {
-          const imgUrl = p.imageinfo?.[0]?.thumburl || p.imageinfo?.[0]?.url;
-          if (
-            imgUrl &&
-            !photos.some((existing) => existing.url === imgUrl) &&
-            (imgUrl.endsWith(".png") ||
-              imgUrl.endsWith(".jpg") ||
-              imgUrl.endsWith(".jpeg") ||
-              imgUrl.includes("thumb"))
-          ) {
-            const cap = p.title
-              ? p.title
-                  .replace("File:", "")
-                  .replace(/\.[^/.]+$/, "")
-                  .replace(/_/g, " ")
-              : cleanQuery;
-            photos.push({ url: imgUrl, description: cap });
-          }
+      const tavRes = await tavilySearch(cleanQuery, {
+        maxResults: 4,
+        includeImages: true,
+        depth: "basic",
+      });
+      for (const img of tavRes.images) {
+        if (
+          img.url &&
+          !photos.some((p) => p.url === img.url) &&
+          !img.url.includes("avatar") &&
+          !img.url.includes("logo")
+        ) {
+          photos.push({
+            url: img.url,
+            description: img.description || cleanQuery,
+          });
         }
       }
     } catch {
@@ -250,5 +295,11 @@ export async function searchTopicPhotos(query: string): Promise<ImageResult[]> {
     }
   }
 
-  return photos.slice(0, 4);
+  const result = photos.slice(0, 2);
+  photoCache.set(cacheKey, {
+    data: result,
+    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+  });
+
+  return result;
 }
