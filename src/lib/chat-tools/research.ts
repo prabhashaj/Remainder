@@ -212,9 +212,9 @@ export function getResearchTools(
 
     searchPhotos: tool({
       description:
-        "Search for real photographs of physical places, landmarks, nature, animals, or objects. Use ONLY when the user explicitly requests a real photograph or image. Do NOT use for technical workflows, software architectures, or abstract coding concepts (use Mermaid diagrams instead).",
+        "Search the web for the best relevant image, photo, or diagram for a topic. Use ONLY when the user explicitly asks to see or get an image, photo, or diagram. Returns 1 highly relevant web image.",
       inputSchema: z.object({
-        query: z.string().describe("The visual topic or photograph search query"),
+        query: z.string().describe("The visual topic or image search query"),
       }),
       execute: async ({ query }: { query: string }) =>
         wrapTool(
