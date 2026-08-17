@@ -164,7 +164,7 @@ export const getTranscriptFromUrl = createServerFn({ method: "POST" })
     } catch {
       return { success: false, error: "Too many requests. Please try again later." };
     }
-    const videoId = extractYouTubeId(data.urlOrId);
+    const videoId = extractYouTubeId(data.urlOrId) ?? data.urlOrId.trim();
 
     if (!videoId) {
       return {
@@ -207,6 +207,7 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
     } catch {
       return { success: false, error: "Too many requests. Please try again later." };
     }
+    const cleanVid = extractYouTubeId(data.videoId) ?? data.videoId.trim();
     // Check cached transcript first
     const { data: resource } = await context.supabase
       .from("study_resources")
@@ -215,25 +216,15 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
       .maybeSingle();
 
     let segments;
-    if (resource?.extracted_text) {
-      // Re-parse from full text — we need the segment offsets
-      // For cached text, fetch fresh segments
-      const result = await fetchYoutubeTranscript(data.videoId);
-      if (result.error || result.segments.length === 0) {
-        return { success: false, error: result.error ?? "No transcript" };
-      }
-      segments = result.segments;
-    } else {
-      const result = await fetchYoutubeTranscript(data.videoId);
-      if (result.error || result.segments.length === 0) {
-        return { success: false, error: result.error ?? "No transcript" };
-      }
-      segments = result.segments;
+    const result = await fetchYoutubeTranscript(cleanVid);
+    if (result.error || result.segments.length === 0) {
+      return { success: false, error: result.error ?? "No transcript available" };
+    }
+    segments = result.segments;
 
-      // Cache transcript and embed it
-      if (result.fullText) {
-        await saveDocumentTextAndEmbed(context.supabase, data.resourceId, result.fullText);
-      }
+    // Cache transcript and embed it if not already cached
+    if (!resource?.extracted_text && result.fullText) {
+      await saveDocumentTextAndEmbed(context.supabase, data.resourceId, result.fullText);
     }
 
     const { text } = getTranscriptAtTimestamp(segments, data.seconds, 30);
@@ -265,6 +256,8 @@ export const generateNotebookFromTranscript = createServerFn({ method: "POST" })
     const key = getAiApiKey();
     if (!key) return { success: false, error: "AI is not configured." };
 
+    const cleanVid = extractYouTubeId(data.videoId) ?? data.videoId.trim();
+
     // Get transcript (cached or fresh)
     const { data: resource } = await context.supabase
       .from("study_resources")
@@ -273,10 +266,10 @@ export const generateNotebookFromTranscript = createServerFn({ method: "POST" })
       .maybeSingle();
 
     let transcript = resource?.extracted_text;
-    if (!transcript) {
-      const result = await fetchYoutubeTranscript(data.videoId);
+    if (!transcript || transcript.trim().length === 0) {
+      const result = await fetchYoutubeTranscript(cleanVid);
       if (result.error || !result.fullText) {
-        return { success: false, error: result.error ?? "No transcript" };
+        return { success: false, error: result.error ?? "No transcript available for this video" };
       }
       transcript = result.fullText;
       // Cache it and embed it
