@@ -3,9 +3,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  Clock,
   Compass,
+  Layers,
+  ListChecks,
   Plus,
   Sparkles,
+  Target,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +26,7 @@ import {
   fetchGoals,
   fetchProfile,
   fetchRoadmapItems,
+  fetchRoadmaps,
   fetchTasks,
   today,
   updateTask,
@@ -56,6 +63,7 @@ function Dashboard() {
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: fetchProfile });
   const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: fetchTasks });
   const { data: goals = [] } = useQuery({ queryKey: ["goals"], queryFn: fetchGoals });
+  const { data: roadmaps = [] } = useQuery({ queryKey: ["roadmaps"], queryFn: fetchRoadmaps });
   const { data: roadmapItems = [] } = useQuery({
     queryKey: ["roadmap-items"],
     queryFn: () => fetchRoadmapItems(),
@@ -96,7 +104,7 @@ function Dashboard() {
 
   const dueCardCount = dueCardData?.count ?? 0;
 
-  // Next Best Action Determination (Deterministic ranking algorithm)
+  // Next Best Action Determination
   const nextBestAction = (() => {
     // 1. Overdue task
     const overdueTask = tasks.find((t) => !t.done && t.due_date && t.due_date < day);
@@ -151,67 +159,128 @@ function Dashboard() {
   })();
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-      <header className="mb-8">
-        <p className="text-sm text-muted-foreground">
-          {new Date().toLocaleDateString(undefined, {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-bold">
-          {greeting()}
-          {profile?.display_name ? `, ${profile.display_name}` : ""}.
-        </h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          {openTasks.length === 0
-            ? "Nothing pressing today. A calm day counts too."
-            : `${openTasks.length} thing${openTasks.length === 1 ? "" : "s"} waiting, ${doneToday} already done. One at a time.`}
-        </p>
+    <div className="mx-auto max-w-6xl px-4 py-5 sm:px-8 sm:py-8 space-y-5 sm:space-y-6 pb-28 sm:pb-12">
+      {/* Header & Quick Status */}
+      <header className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {new Date().toLocaleDateString(undefined, {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              {greeting()}
+              {profile?.display_name ? `, ${profile.display_name}` : ""}.
+            </h1>
+          </div>
+
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {openTasks.length === 0
+              ? "✨ All tasks complete for today."
+              : `${openTasks.length} task${openTasks.length === 1 ? "" : "s"} waiting · ${doneToday} completed`}
+          </p>
+        </div>
+
+        {/* Mobile Quick Glance Strip */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <Link
+            to="/tasks"
+            className="press flex flex-col items-center justify-center rounded-2xl border border-border/80 bg-card p-2.5 text-center shadow-xs transition-colors hover:border-primary/40"
+          >
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <ListChecks className="size-3.5 text-primary" />
+              <span className="text-[11px] font-medium">Tasks</span>
+            </div>
+            <span className="mt-1 font-display text-lg font-bold">
+              {openTasks.length}
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => dueCardCount > 0 && setReviewOpen(true)}
+            className={`press flex flex-col items-center justify-center rounded-2xl border p-2.5 text-center shadow-xs transition-colors ${
+              dueCardCount > 0
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border/80 bg-card text-foreground"
+            }`}
+          >
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Layers className="size-3.5 text-primary" />
+              <span className="text-[11px] font-medium">Review</span>
+            </div>
+            <span className="mt-1 font-display text-lg font-bold">
+              {dueCardCount}
+            </span>
+          </button>
+
+          <Link
+            to="/roadmaps"
+            className="press flex flex-col items-center justify-center rounded-2xl border border-border/80 bg-card p-2.5 text-center shadow-xs transition-colors hover:border-primary/40"
+          >
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Compass className="size-3.5 text-primary" />
+              <span className="text-[11px] font-medium">Roadmaps</span>
+            </div>
+            <span className="mt-1 font-display text-lg font-bold">
+              {roadmaps.length}
+            </span>
+          </Link>
+        </div>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        {/* Pinned Next Best Action Card */}
-        <section className="card-soft lg:col-span-3 border-primary/20 bg-primary/5 p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-primary/10 p-2.5 text-primary shrink-0">
-                <Compass className="size-5" />
-              </div>
-              <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
-                  Next Best Action · {nextBestAction.category}
-                </span>
-                <h3 className="font-display text-base font-semibold text-foreground mt-0.5">
-                  {nextBestAction.title}
-                </h3>
-              </div>
+      {/* Pinned Next Best Action Card */}
+      <section className="card-soft border-primary/30 bg-primary/8 p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="rounded-2xl bg-primary/15 p-2.5 text-primary shrink-0">
+              <Compass className="size-5" />
             </div>
-
-            {nextBestAction.onClick ? (
-              <Button
-                onClick={nextBestAction.onClick}
-                className="press rounded-2xl shrink-0 self-start sm:self-auto"
-              >
-                {nextBestAction.actionText} <ArrowRight className="ml-1.5 size-4" />
-              </Button>
-            ) : (
-              <Button asChild className="press rounded-2xl shrink-0 self-start sm:self-auto">
-                <Link to={nextBestAction.link ?? "#"}>
-                  {nextBestAction.actionText} <ArrowRight className="ml-1.5 size-4" />
-                </Link>
-              </Button>
-            )}
+            <div className="min-w-0 flex-1">
+              <span className="inline-block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-primary">
+                Next Best Action · {nextBestAction.category}
+              </span>
+              <h3 className="font-display text-base sm:text-lg font-semibold text-foreground mt-0.5 leading-snug">
+                {nextBestAction.title}
+              </h3>
+            </div>
           </div>
-        </section>
 
-        <RemiPanel className="lg:col-span-3" />
+          {nextBestAction.onClick ? (
+            <Button
+              onClick={nextBestAction.onClick}
+              className="press rounded-2xl shrink-0 w-full sm:w-auto mt-1 sm:mt-0 font-bold"
+            >
+              {nextBestAction.actionText} <ArrowRight className="ml-1.5 size-4" />
+            </Button>
+          ) : (
+            <Button asChild className="press rounded-2xl shrink-0 w-full sm:w-auto mt-1 sm:mt-0 font-bold">
+              <Link to={nextBestAction.link ?? "#"}>
+                {nextBestAction.actionText} <ArrowRight className="ml-1.5 size-4" />
+              </Link>
+            </Button>
+          )}
+        </div>
+      </section>
 
-        <section className="card-soft p-6 lg:col-span-2">
+      {/* Remi Chat Panel */}
+      <RemiPanel />
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* Today's List */}
+        <section className="card-soft p-4 sm:p-6 lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">Today's list</h2>
-            <Button asChild variant="ghost" size="sm" className="rounded-xl text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <ListChecks className="size-4 sm:size-5 text-primary" />
+              <h2 className="font-display text-base sm:text-lg font-semibold">Today's list</h2>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                {openTasks.length}
+              </span>
+            </div>
+            <Button asChild variant="ghost" size="sm" className="rounded-xl text-xs sm:text-sm text-muted-foreground">
               <Link to="/tasks">
                 All tasks <ArrowRight className="size-3.5" />
               </Link>
@@ -219,7 +288,7 @@ function Dashboard() {
           </div>
 
           <form
-            className="mt-4 flex gap-2"
+            className="flex gap-2"
             onSubmit={(e) => {
               e.preventDefault();
               if (newTask.trim()) addTask.mutate(newTask.trim());
@@ -228,75 +297,88 @@ function Dashboard() {
             <Input
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
-              placeholder="Add something for today…"
-              className="rounded-2xl"
+              placeholder="Add a task for today…"
+              className="h-11 sm:h-12 rounded-2xl text-sm"
             />
-            <Button type="submit" size="icon" className="press rounded-2xl">
-              <Plus className="size-4" />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!newTask.trim() || addTask.isPending}
+              className="size-11 sm:size-12 shrink-0 press rounded-2xl"
+              aria-label="Add task"
+            >
+              <Plus className="size-5" />
             </Button>
           </form>
 
-          <ul className="mt-4 space-y-1.5">
+          <ul className="space-y-1.5">
             {todaysTasks.slice(0, 8).map((task) => (
               <li
                 key={task.id}
-                className="flex items-start gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-muted/60"
+                className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-muted/60"
               >
                 <Checkbox
                   checked={task.done}
                   onCheckedChange={(v) => toggleTask.mutate({ id: task.id, done: Boolean(v) })}
-                  className="mt-0.5 rounded-md"
+                  className="rounded-md size-5"
                 />
                 <span
-                  className={`text-sm leading-relaxed ${task.done ? "text-muted-foreground line-through" : ""}`}
+                  className={`text-sm leading-relaxed min-w-0 flex-1 ${
+                    task.done ? "text-muted-foreground line-through" : "text-foreground"
+                  }`}
                 >
                   {task.title}
                 </span>
               </li>
             ))}
             {todaysTasks.length === 0 && (
-              <li className="rounded-2xl bg-muted/50 px-4 py-6 text-center text-sm text-muted-foreground">
-                Your list is empty. Add one small step.
+              <li className="rounded-2xl bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
+                ✨ Your list is clear. Add one small step to begin.
               </li>
             )}
           </ul>
         </section>
 
-        <section className="card-soft p-6">
+        {/* Goals in Motion */}
+        <section className="card-soft p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">Goals in motion</h2>
-            <Button asChild variant="ghost" size="sm" className="rounded-xl text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Target className="size-4 sm:size-5 text-primary" />
+              <h2 className="font-display text-base sm:text-lg font-semibold">Goals in motion</h2>
+            </div>
+            <Button asChild variant="ghost" size="sm" className="rounded-xl text-xs sm:text-sm text-muted-foreground">
               <Link to="/goals">
                 All goals <ArrowRight className="size-3.5" />
               </Link>
             </Button>
           </div>
-          <ul className="mt-4 space-y-4">
+          <ul className="space-y-3.5">
             {goals.slice(0, 4).map((goal) => (
-              <li key={goal.id}>
+              <li key={goal.id} className="rounded-2xl border border-border/60 bg-muted/20 p-3">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="truncate text-sm font-medium">{goal.title}</span>
-                  <span className="text-xs text-muted-foreground">{goal.progress}%</span>
+                  <span className="text-xs font-bold text-primary">{goal.progress}%</span>
                 </div>
                 <Progress value={goal.progress} className="mt-2 h-2 rounded-full" />
               </li>
             ))}
             {goals.length === 0 && (
-              <li className="text-sm text-muted-foreground">
-                No goals yet. Ask Remi to help shape one.
+              <li className="rounded-2xl bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
+                No active goals yet. Ask Remi to shape one.
               </li>
             )}
           </ul>
         </section>
 
-        <section className="card-soft p-6 lg:col-span-3">
+        {/* Weekly Reflection */}
+        <section className="card-soft p-4 sm:p-6 lg:col-span-3">
           <div className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />
-            <h2 className="font-display text-lg font-semibold">Your week, seen</h2>
+            <h2 className="font-display text-base sm:text-lg font-semibold">Your week, seen</h2>
           </div>
           {reflectionLoading ? (
             <p className="mt-3 text-sm text-muted-foreground">
-              Remi is looking back over your week…
+              Remi is reviewing your week…
             </p>
           ) : reflection?.text ? (
             <div className="mt-3 text-sm leading-relaxed">
@@ -304,7 +386,7 @@ function Dashboard() {
             </div>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
-              Once you've logged a few study sessions, I'll show you the pattern I'm noticing here.
+              Once you've logged a few study sessions, I'll show your learning rhythm here.
             </p>
           )}
         </section>

@@ -18,25 +18,14 @@ export type ThemeId =
   | "aurora"
   | "crimson";
 
-export type FontId =
-  | "sans"
-  | "outfit"
-  | "serif"
-  | "cormorant"
-  | "mono"
-  | "merienda"
-  | "caveat";
+export type FontId = "sans" | "cormorant" | "merienda";
 
 export const FONT_STORAGE_KEY = "remispace-font";
 
 export const FONTS: { id: FontId; name: string; blurb: string; fontClass: string }[] = [
   { id: "sans", name: "Default (Inter / Jakarta)", blurb: "Modern, clean, balanced.", fontClass: "font-sans" },
-  { id: "outfit", name: "Geometric (Outfit)", blurb: "Sleek, futuristic, and modern.", fontClass: "font-sans" },
-  { id: "serif", name: "Editorial (Merriweather)", blurb: "Literary, warm, and classic.", fontClass: "font-serif" },
-  { id: "cormorant", name: "Luxury (Cormorant)", blurb: "High-fashion classical serif.", fontClass: "font-serif" },
-  { id: "mono", name: "Terminal (JetBrains Mono)", blurb: "Cyberpunk developer monospace.", fontClass: "font-mono" },
-  { id: "merienda", name: "Flow (Merienda)", blurb: "Playful, organic cursive.", fontClass: "font-serif" },
-  { id: "caveat", name: "Handwritten (Caveat)", blurb: "Casual notebook notes feel.", fontClass: "font-sans" },
+  { id: "cormorant", name: "Luxury (Cormorant)", blurb: "High-fashion classical serif.", fontClass: "font-cormorant" },
+  { id: "merienda", name: "Flow (Merienda)", blurb: "Playful, organic cursive.", fontClass: "font-merienda" },
 ];
 
 export const FONT_IDS = FONTS.map((f) => f.id);

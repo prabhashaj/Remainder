@@ -193,7 +193,7 @@ export function RemiPanel({ className = "" }: { className?: string }) {
 
   return (
     <section
-      className={`card-soft flex h-[min(75vh,700px)] flex-col overflow-hidden p-0 ${className}`}
+      className={`card-soft flex h-[460px] sm:h-[min(75vh,700px)] flex-col overflow-hidden p-0 ${className}`}
     >
       <RemiHeader threadId={threadId} onNew={() => void startFresh()} />
       {threadId ? (
