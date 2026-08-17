@@ -8,6 +8,7 @@ import {
   Folder,
   FolderOpen,
   LayoutDashboard,
+  Library,
   ListChecks,
   LogOut,
   MessageCircle,
@@ -90,7 +91,7 @@ const navItems = [
   { title: "Tasks", to: "/tasks", icon: ListChecks },
   { title: "Goals", to: "/goals", icon: Target },
   { title: "Roadmaps", to: "/roadmaps", icon: Compass },
-  { title: "Documents", to: "/documents", icon: FolderOpen },
+  { title: "Library", to: "/library", icon: Library },
 ] as const;
 
 const SIDEBAR_WIDTH_KEY = "remispace.sidebar.width";
