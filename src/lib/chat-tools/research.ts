@@ -212,31 +212,31 @@ export function getResearchTools(
 
     searchPhotos: tool({
       description:
-        "Search for high-quality photos, illustrations, visual diagrams, and images for a topic. Use ONLY when the user explicitly asks for an image, photo, or diagram in their prompt.",
+        "Search for high-quality photos, illustrations, visual diagrams, and images for a topic. Use ONLY when the user explicitly asks for an image, photo, or diagram in their prompt. Returns exactly 1 highly relevant image.",
       inputSchema: z.object({
         query: z.string().describe("The visual topic or image search query"),
-        limit: z.number().optional().describe("Maximum number of images to return (default: 1)"),
+        limit: z.number().optional().describe("Maximum number of images to return (always 1)"),
       }),
-      execute: async ({ query, limit }) =>
+      execute: async ({ query }: { query: string; limit?: number }) =>
         wrapTool(
           "searchPhotos",
           async () => {
             const res = await searchTopicPhotos(query);
             const photos = res
-              .slice(0, limit || 1)
+              .slice(0, 1)
               .map((img) => ({ url: img.url, caption: img.description ?? query }));
             return {
               query,
               photos,
               instruction:
-                "Render each photo in your response text using markdown image syntax: ![caption](url). Do NOT list text bullets — embed the markdown images directly so they display visually in the chat.",
+                "Render the single relevant photo in your response text using markdown image syntax: ![caption](url). Give ONLY 1 example image per requested category. Do NOT list text bullets or output multiple images for a category.",
             };
           },
           supabase,
           userId,
           traceId,
           threadId,
-          { query, limit },
+          { query },
         ),
     }),
   };

@@ -213,10 +213,10 @@ export function ReadAloudButton({
             <span className="text-xs font-medium text-foreground block mb-2">Speech Speed</span>
             <div className="grid grid-cols-4 gap-1">
               {[
-                { r: 0.8, label: "0.8x" },
-                { r: 0.92, label: "0.9x Clear" },
+                { r: 0.75, label: "0.75x" },
                 { r: 1.0, label: "1.0x" },
-                { r: 1.2, label: "1.2x" },
+                { r: 1.25, label: "1.25x" },
+                { r: 1.5, label: "1.5x" },
               ].map(({ r, label }) => (
                 <button
                   key={r}

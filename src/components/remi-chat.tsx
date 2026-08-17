@@ -852,10 +852,11 @@ export function RemiChat({
                         )}
                         {groupedParts.map((group, gIdx) => {
                           if (group.type === "text") {
+                            const isActivelyStreaming = isStreaming && message.role === "assistant" && idx === messages.length - 1;
                             return (
                               <div key={gIdx}>
                                 <MessageResponse>{group.text}</MessageResponse>
-                                {message.role === "assistant" && (
+                                {message.role === "assistant" && !isActivelyStreaming && (
                                   <>
                                     <ChatVideoEmbeds text={group.text} />
                                     <SpeechAndCopyToolbar

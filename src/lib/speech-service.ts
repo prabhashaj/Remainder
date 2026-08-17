@@ -274,7 +274,7 @@ const SERVER_SNAPSHOT: SpeechState = {
   activeId: null,
   currentChunkIndex: 0,
   totalChunks: 0,
-  rate: 0.92,
+  rate: 1.0,
   selectedVoiceName: "",
   voices: [],
   isSupported: false,
@@ -288,7 +288,7 @@ class SpeechEngine {
   private activeId: string | null = null;
   private currentChunks: string[] = [];
   private currentChunkIndex = 0;
-  private rate = 0.92;
+  private rate = 1.0;
   private selectedVoiceName = "";
   private voices: SpeechSynthesisVoice[] = [];
   private isSupported = false;

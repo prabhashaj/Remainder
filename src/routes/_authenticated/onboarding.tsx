@@ -106,19 +106,16 @@ function Onboarding() {
           <div>
             <h1 className="text-center font-display text-2xl font-bold">Pick your vibe</h1>
             <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-relaxed text-muted-foreground">
-              Ten soft palettes. Hover to preview, click to keep. You can change this anytime in
-              Settings.
+              Soft light and rich dark palettes. Click to select your vibe. You can change this anytime in Settings.
             </p>
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
               {THEMES.map((t) => (
                 <button
                   key={t.id}
                   type="button"
-                  onMouseEnter={() => previewTheme(t.id as ThemeId)}
-                  onMouseLeave={() => previewTheme(theme)}
                   onClick={() => setTheme(t.id as ThemeId)}
-                  className={`press relative overflow-hidden rounded-2xl border p-3 text-left transition-shadow ${
-                    theme === t.id ? "border-primary/50 shadow-soft" : "border-border"
+                  className={`press relative overflow-hidden rounded-2xl border p-3 text-left transition-all ${
+                    theme === t.id ? "border-primary shadow-soft ring-2 ring-primary/30" : "border-border"
                   }`}
                 >
                   <span className="flex gap-1.5">

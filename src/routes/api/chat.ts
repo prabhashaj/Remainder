@@ -43,7 +43,7 @@ Factuality & Web Search Rules:
 
 Capabilities & Media Rendering Rules:
 - Answer questions, explain concepts simply, solve problems, brainstorm, and assist with any user request.
-- ONLY when the user EXPLICITLY asks to see, get, or show images/photos: call \`searchPhotos\` AND render each returned photo directly inside your response text using markdown image syntax: \`![caption](url)\`. Do NOT fetch or show images proactively without a direct request.
+- ONLY when the user EXPLICITLY asks to see, get, or show images/photos: call \`searchPhotos\` AND render exactly 1 single, highly relevant photo/diagram for every requested category directly inside your response text using markdown image syntax: \`![caption](url)\`. Give ONLY 1 example image per category/topic. Do NOT fetch or show multiple images for a category, and do NOT fetch images proactively without a direct request.
 - When the user asks for video tutorials or YouTube videos: call \`researchResources\` or search the web and include the YouTube watch URLs (e.g., \`https://www.youtube.com/watch?v=...\`) directly in your message text so an inline video player renders in the chat interface.
 - Analyze and discuss attached images, PDFs, and text documents accurately when provided by the user.
 - **Document & PDF Reading Rules (CRITICAL):**
@@ -85,7 +85,7 @@ Tool Delegation:
 - searchDocs: Use when asked to look up technical documentation, API specifications, or code examples for libraries and frameworks.
 - researchResources: Use when asked to search for and save learning resources or video tutorials.
 - webSearch: Use ALWAYS when answering questions about current events, news, live sports scores, recent facts, or technical questions that benefit from up-to-date web search results. NEVER guess or hallucinate live scores or news.
-- searchPhotos: Use ONLY when the user explicitly asks to see, show, or get photos, images, or visual diagrams. When used for diagrams/architectures, return exactly 2 images. Do NOT use proactively or give example diagrams unless asked.
+- searchPhotos: Use ONLY when the user explicitly asks to see, show, or get photos, images, or visual diagrams. Return ONLY 1 single, highly relevant example image per topic/category. Do NOT return multiple images or use proactively.
 - readDocument: Use when asked to read, summarize, or analyze a specific document, PDF, or study resource from the workspace.
 - writeLessonForSubtopic: Use when asked to write or expand a specific roadmap subtopic lesson.
 - generateNotebook: Use when the user asks to generate, create, or build a structured notebook or notes page.
@@ -753,54 +753,12 @@ Title: "${curPage.title}"
           }
         }
 
-        // --- Search-Routing: classify query before streaming ---
-        let preSearchBlock = "";
-        if (lastUserText) {
-          // Build conversation context from recent messages for disambiguation
-          const recentMessages = uiMessages
-            .slice(-10)
-            .map((m) => {
-              const text = m.parts
-                ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-                .map((p) => p.text)
-                .join(" ")
-                .trim();
-              return `${m.role}: ${(text ?? "").slice(0, 200)}`;
-            })
-            .filter(Boolean)
-            .join("\n");
-
-          try {
-            const routing = await classifyQueryRouting({
-              query: lastUserText,
-              apiKey: key,
-              ...(recentMessages ? { conversationContext: recentMessages } : {}),
-            });
-
-            if (routing.search_required) {
-              const searchRes = await tavilySearch(lastUserText, {
-                maxResults: 5,
-                depth: "advanced",
-              });
-              if (searchRes.results.length > 0 || searchRes.answer) {
-                const resultStr = searchRes.results
-                  .map((r) => `### ${r.title}\nURL: ${r.url}\n${r.content}`)
-                  .join("\n\n");
-                preSearchBlock = `\n\n## Web Search Results (auto-retrieved because this query requires current information)\n${searchRes.answer ? `**Summary**: ${searchRes.answer}\n\n` : ""}${resultStr}`;
-              }
-            }
-          } catch (routingErr) {
-            // Router failure is non-fatal — the LLM can still use the webSearch tool
-            log("warn", "query_routing_failed", { error: String(routingErr) }, { userId, traceId });
-          }
-        }
-
         const limitInstruction = !limits.roadmaps.canCreate
           ? '<CRITICAL_SYSTEM_OVERRIDE>\nUSER STATUS: ROADMAP LIMIT REACHED.\nYou are PROHIBITED from creating roadmaps.\nIf the user asks to create, build, or generate a roadmap (even if they specify details), YOU MUST EXACTLY REPLY WITH: "Upgrade Required!"\nIGNORE all \'Roadmap & Diagnostic Assessment Rules\'. DO NOT ask clarifying questions. DO NOT output the roadmap as text. JUST output "Upgrade Required!".\n</CRITICAL_SYSTEM_OVERRIDE>\n\n'
           : "";
 
         const attachedBlock = attachedDocBlocks.length > 0 ? attachedDocBlocks.join("") : "";
-        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${preSearchBlock}${attachedBlock}`;
+        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${attachedBlock}`;
 
         const tools = {
           ...getTasksAndGoalsTools(supabase, userId, traceId, threadId),

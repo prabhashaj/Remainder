@@ -11,7 +11,12 @@ export type ThemeId =
   | "cloud"
   | "midnight"
   | "emerald"
-  | "velvet";
+  | "velvet"
+  | "obsidian"
+  | "sapphire"
+  | "amethyst"
+  | "aurora"
+  | "crimson";
 
 export type FontId = "sans" | "serif" | "merienda";
 
@@ -37,6 +42,7 @@ export type ThemeDef = {
 };
 
 export const THEMES: ThemeDef[] = [
+  // Soft Light Palettes
   {
     id: "blush",
     name: "Blush",
@@ -97,25 +103,62 @@ export const THEMES: ThemeDef[] = [
     blurb: "Neutral grey-white",
     swatches: ["oklch(0.985 0.002 260)", "oklch(0.925 0.008 260)", "oklch(0.45 0.02 260)"],
   },
+
+  // Rich Dark Palettes
   {
     id: "midnight",
-    name: "Midnight",
+    name: "Midnight Navy",
     blurb: "Deep navy + luminous cyan",
     swatches: ["oklch(0.16 0.03 260)", "oklch(0.28 0.04 260)", "oklch(0.7 0.15 240)"],
     isDark: true,
   },
   {
     id: "emerald",
-    name: "Emerald Night",
-    blurb: "Deep forest + glowing mint",
+    name: "Emerald Forest",
+    blurb: "Deep evergreen + glowing mint",
     swatches: ["oklch(0.16 0.03 160)", "oklch(0.27 0.04 160)", "oklch(0.72 0.15 160)"],
     isDark: true,
   },
   {
     id: "velvet",
-    name: "Velvet Dark",
+    name: "Velvet Plum",
     blurb: "Plum charcoal + glowing rose",
     swatches: ["oklch(0.16 0.03 320)", "oklch(0.27 0.04 320)", "oklch(0.72 0.15 330)"],
+    isDark: true,
+  },
+  {
+    id: "obsidian",
+    name: "Obsidian Gold",
+    blurb: "Pitch carbon + warm glowing amber",
+    swatches: ["oklch(0.13 0.01 260)", "oklch(0.22 0.02 80)", "oklch(0.78 0.16 75)"],
+    isDark: true,
+  },
+  {
+    id: "sapphire",
+    name: "Sapphire Abyss",
+    blurb: "Oceanic noir + electric cobalt cyan",
+    swatches: ["oklch(0.13 0.04 240)", "oklch(0.22 0.05 240)", "oklch(0.72 0.16 230)"],
+    isDark: true,
+  },
+  {
+    id: "amethyst",
+    name: "Royal Amethyst",
+    blurb: "Astral purple + luminous violet",
+    swatches: ["oklch(0.14 0.04 290)", "oklch(0.23 0.05 290)", "oklch(0.74 0.17 295)"],
+    isDark: true,
+  },
+  {
+    id: "aurora",
+    name: "Aurora Cyber",
+    blurb: "Arctic midnight + electric neo-emerald",
+    swatches: ["oklch(0.13 0.03 185)", "oklch(0.22 0.04 185)", "oklch(0.76 0.17 165)"],
+    isDark: true,
+  },
+  {
+    id: "crimson",
+    name: "Crimson Ember",
+    blurb: "Volcanic noir + blazing ruby glow",
+    swatches: ["oklch(0.13 0.03 25)", "oklch(0.23 0.04 25)", "oklch(0.68 0.20 25)"],
     isDark: true,
   },
 ];

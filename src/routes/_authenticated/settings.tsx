@@ -128,20 +128,18 @@ function SettingsPage() {
           <h2 className="font-display text-lg font-semibold">Soft Light Palettes</h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Hover to preview, click to keep. Soft pastel workspace themes.
+          Click to select your preferred soft pastel workspace theme.
         </p>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {lightThemes.map((t) => (
             <button
               key={t.id}
               type="button"
-              onMouseEnter={() => previewTheme(t.id as ThemeId)}
-              onMouseLeave={() => previewTheme(theme)}
               onClick={() => setTheme(t.id as ThemeId)}
-              className={`press relative overflow-hidden rounded-3xl border p-3 text-left transition-shadow ${
+              className={`press relative overflow-hidden rounded-3xl border p-3 text-left transition-all ${
                 theme === t.id
-                  ? "border-primary/50 shadow-soft ring-2 ring-primary/20"
-                  : "border-border"
+                  ? "border-primary shadow-soft ring-2 ring-primary/30"
+                  : "border-border hover:border-border/80"
               }`}
             >
               <span className="flex gap-1.5">
@@ -169,20 +167,18 @@ function SettingsPage() {
           <h2 className="font-display text-lg font-semibold">Rich Dark Palettes</h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Deep, immersive dark modes with luminous neon-pastel accents.
+          Deep, immersive dark modes with luminous neon-pastel accents. Click to select.
         </p>
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {darkThemes.map((t) => (
             <button
               key={t.id}
               type="button"
-              onMouseEnter={() => previewTheme(t.id as ThemeId)}
-              onMouseLeave={() => previewTheme(theme)}
               onClick={() => setTheme(t.id as ThemeId)}
-              className={`press relative overflow-hidden rounded-3xl border p-4 text-left transition-shadow ${
+              className={`press relative overflow-hidden rounded-3xl border p-4 text-left transition-all ${
                 theme === t.id
-                  ? "border-primary/50 shadow-soft ring-2 ring-primary/20"
-                  : "border-border"
+                  ? "border-primary shadow-soft ring-2 ring-primary/30"
+                  : "border-border hover:border-border/80"
               }`}
             >
               <span className="flex gap-2">
@@ -211,18 +207,16 @@ function SettingsPage() {
           <h2 className="font-display text-lg font-semibold">Typography</h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Choose a text style for your workspace.
+          Click to choose a text style for your workspace.
         </p>
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <button
             type="button"
-            onMouseEnter={() => previewFont("sans")}
-            onMouseLeave={() => previewFont(font)}
             onClick={() => setFont("sans")}
-            className={`press relative rounded-3xl border p-4 text-left transition-shadow ${
+            className={`press relative rounded-3xl border p-4 text-left transition-all ${
               font === "sans"
-                ? "border-primary/50 shadow-soft ring-2 ring-primary/20"
-                : "border-border"
+                ? "border-primary shadow-soft ring-2 ring-primary/30"
+                : "border-border hover:border-border/80"
             }`}
           >
             <span className="block font-sans text-lg font-medium">Default (Sans)</span>
@@ -234,13 +228,11 @@ function SettingsPage() {
 
           <button
             type="button"
-            onMouseEnter={() => previewFont("serif")}
-            onMouseLeave={() => previewFont(font)}
             onClick={() => setFont("serif")}
-            className={`press relative rounded-3xl border p-4 text-left transition-shadow ${
+            className={`press relative rounded-3xl border p-4 text-left transition-all ${
               font === "serif"
-                ? "border-primary/50 shadow-soft ring-2 ring-primary/20"
-                : "border-border"
+                ? "border-primary shadow-soft ring-2 ring-primary/30"
+                : "border-border hover:border-border/80"
             }`}
           >
             <span className="block font-serif text-lg font-medium">Serif</span>
@@ -252,18 +244,16 @@ function SettingsPage() {
 
           <button
             type="button"
-            onMouseEnter={() => previewFont("merienda")}
-            onMouseLeave={() => previewFont(font)}
             onClick={() => setFont("merienda")}
-            className={`press relative rounded-3xl border p-4 text-left transition-shadow ${
+            className={`press relative rounded-3xl border p-4 text-left transition-all ${
               font === "merienda"
-                ? "border-primary/50 shadow-soft ring-2 ring-primary/20"
-                : "border-border"
+                ? "border-primary shadow-soft ring-2 ring-primary/30"
+                : "border-border hover:border-border/80"
             }`}
           >
             <span className="block font-merienda text-2xl font-medium leading-none">Merienda</span>
             <span className="text-xs text-muted-foreground block mt-2">
-              Soft, friendly and flowing.
+              Friendly and expressive.
             </span>
             {font === "merienda" && (
               <Check className="absolute right-4 top-4 size-4 text-primary" aria-hidden />
