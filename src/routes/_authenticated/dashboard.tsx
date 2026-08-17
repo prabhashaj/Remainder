@@ -7,7 +7,6 @@ import {
   Layers,
   ListChecks,
   Plus,
-  Sparkles,
   Target,
 } from "lucide-react";
 import { useState } from "react";
@@ -28,8 +27,6 @@ import {
   updateTask,
 } from "@/lib/db";
 import { fetchDueFlashcardCount } from "@/lib/srs.functions";
-import { generateWeeklyReflection } from "@/lib/weekly.functions";
-import { MessageResponse } from "@/components/ai-elements/message";
 import { FlashcardReview } from "@/components/flashcard-review";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -81,18 +78,7 @@ function Dashboard() {
       }
     },
   });
-  const { data: reflection, isLoading: reflectionLoading } = useQuery({
-    queryKey: ["weekly-reflection"],
-    queryFn: async () => {
-      try {
-        return await generateWeeklyReflection();
-      } catch {
-        return { text: "" };
-      }
-    },
-    staleTime: 6 * 60 * 60 * 1000,
-    retry: false,
-  });
+
 
   const [newTask, setNewTask] = useState("");
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -314,26 +300,6 @@ function Dashboard() {
           </ul>
         </section>
 
-        {/* Weekly Reflection */}
-        <section className="card-soft p-4 sm:p-6 lg:col-span-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-5 text-primary" />
-            <h2 className="font-display text-base sm:text-lg font-semibold">Your week, seen</h2>
-          </div>
-          {reflectionLoading ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Remi is reviewing your week…
-            </p>
-          ) : reflection?.text ? (
-            <div className="mt-3 text-sm leading-relaxed">
-              <MessageResponse>{reflection.text}</MessageResponse>
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Once you've logged a few study sessions, I'll show your learning rhythm here.
-            </p>
-          )}
-        </section>
       </div>
 
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
