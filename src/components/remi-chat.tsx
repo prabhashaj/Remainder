@@ -822,7 +822,7 @@ export function RemiChat({
               </div>
             )}
 
-            {messages.map((message) => (
+            {messages.map((message, idx) => (
               <Message from={message.role} key={message.id}>
                 <MessageContent>
                   {(() => {
