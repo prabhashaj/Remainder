@@ -36,6 +36,7 @@ import {
   summarizeMaterial,
   generateNotebookFromTranscript,
   saveExtractedTextFn,
+  debugTranscriptFn,
 } from "@/lib/study.functions";
 
 const PdfReader = lazy(() => import("@/components/study/pdf-reader"));
@@ -114,6 +115,20 @@ function MaterialPage() {
     mutationFn: (force: boolean) => runSummary({ data: { resourceId, force } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["study-resource", resourceId] }),
   });
+  const runDebugTranscript = useServerFn(debugTranscriptFn);
+  const debugTranscript = useMutation({
+    mutationFn: (vid: string) => runDebugTranscript({ data: { videoId: vid } }),
+    onSuccess: (result) => {
+      const msg = `videoId=${result.videoId} | Node ${result.nodeVersion} | ${result.ms}ms | segments=${result.segments} | chars=${result.chars} | error=${result.error ?? "none"}`;
+      if (result.success) {
+        toast.success(`Transcript OK! ${result.segments} segments`, { description: msg, duration: 15000 });
+      } else {
+        toast.error(`Transcript failed`, { description: msg, duration: 30000 });
+      }
+    },
+    onError: (err: Error) => toast.error(`Debug call failed: ${err.message}`),
+  });
+
   const notebook = useMutation({
     mutationFn: () => {
       const vid = resource?.url ? extractYouTubeId(resource.url) : null;
@@ -267,14 +282,27 @@ function MaterialPage() {
         ) : summaryError ? (
           <div className="mt-4 space-y-2">
             <p className="text-sm text-destructive">{summaryError}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="press rounded-xl text-xs"
-              onClick={() => summarize.mutate(true)}
-            >
-              Try again
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                className="press rounded-xl text-xs"
+                onClick={() => summarize.mutate(true)}
+              >
+                Try again
+              </Button>
+              {videoId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="press rounded-xl text-xs text-muted-foreground"
+                  onClick={() => debugTranscript.mutate(videoId)}
+                  disabled={debugTranscript.isPending}
+                >
+                  {debugTranscript.isPending ? "Testing…" : "🔍 Test transcript"}
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <p className="mt-3 text-base text-muted-foreground">

@@ -96,6 +96,8 @@ export async function fetchYoutubeTranscript(
     };
   }
 
+  console.log(`[transcript] Fetching transcript for videoId=${videoId}`);
+
   // --- Strategy 1: youtube-caption-extractor (English) ---
   try {
     const subtitles = await getSubtitles({ videoID: videoId, lang: "en" });
@@ -109,14 +111,16 @@ export async function fetchYoutubeTranscript(
       );
 
       if (segments.length > 0) {
+        console.log(`[transcript] Strategy 1 OK: ${segments.length} segments`);
         return {
           segments,
           fullText: segments.map((s) => s.text).join(" "),
         };
       }
     }
+    console.warn(`[transcript] Strategy 1: empty result for ${videoId}`);
   } catch (err) {
-    // Continue to next strategy
+    console.error(`[transcript] Strategy 1 error:`, err instanceof Error ? err.message : err);
   }
 
   // --- Strategy 2: Multi-Client InnerTube Player API ---
@@ -125,11 +129,13 @@ export async function fetchYoutubeTranscript(
     if (captionTracks && captionTracks.length > 0) {
       const segments = await fetchSegmentsFromCaptionTracks(captionTracks);
       if (segments.length > 0) {
+        console.log(`[transcript] Strategy 2 OK: ${segments.length} segments`);
         return { segments, fullText: segments.map((s) => s.text).join(" ") };
       }
     }
-  } catch {
-    // Continue to next strategy
+    console.warn(`[transcript] Strategy 2: no caption tracks for ${videoId}`);
+  } catch (err) {
+    console.error(`[transcript] Strategy 2 error:`, err instanceof Error ? err.message : err);
   }
 
   // --- Strategy 3: HTML Page Parsing (captionTracks / ytInitialPlayerResponse) ---
@@ -149,12 +155,18 @@ export async function fetchYoutubeTranscript(
       if (captionTracks && captionTracks.length > 0) {
         const segments = await fetchSegmentsFromCaptionTracks(captionTracks);
         if (segments.length > 0) {
+          console.log(`[transcript] Strategy 3 OK: ${segments.length} segments`);
           return { segments, fullText: segments.map((s) => s.text).join(" ") };
         }
+        console.warn(`[transcript] Strategy 3: caption tracks found but no segments`);
+      } else {
+        console.warn(`[transcript] Strategy 3: HTML fetched (${html.length}b) but no caption tracks. Bot-detected: ${html.includes("<title>Before you continue</title>")}`);
       }
+    } else {
+      console.warn(`[transcript] Strategy 3: HTTP ${res.status} for ${watchUrl}`);
     }
-  } catch {
-    // Continue to next strategy
+  } catch (err) {
+    console.error(`[transcript] Strategy 3 error:`, err instanceof Error ? err.message : err);
   }
 
   // --- Strategy 4: Direct TimedText API ---
@@ -184,15 +196,22 @@ export async function fetchYoutubeTranscript(
           }
           const normalized = normalizeSegments(segs);
           if (normalized.length > 0) {
+            console.log(`[transcript] Strategy 4 OK via ${u.split("?")[0]}: ${normalized.length} segments`);
             return { segments: normalized, fullText: normalized.map((s) => s.text).join(" ") };
           }
+          console.warn(`[transcript] Strategy 4: ${u.split("?")[1]} → empty after parse (${content.length}b)`);
+        } else {
+          console.warn(`[transcript] Strategy 4: ${u.split("?")[1]} → empty response`);
         }
+      } else {
+        console.warn(`[transcript] Strategy 4: HTTP ${res.status} for ${u.split("?")[1]}`);
       }
     }
-  } catch {
-    // Continue
+  } catch (err) {
+    console.error(`[transcript] Strategy 4 error:`, err instanceof Error ? err.message : err);
   }
 
+  console.error(`[transcript] ALL strategies failed for videoId=${videoId}`);
   return {
     ...empty,
     error:

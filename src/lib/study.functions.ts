@@ -119,6 +119,25 @@ export const getYouTubeMetadataFn = createServerFn({ method: "POST" })
     return { success: true, metadata: meta };
   });
 
+/** Diagnostic: tests transcript fetching from within server function context. */
+export const debugTranscriptFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ videoId: z.string().min(1).max(100) }).parse(data))
+  .handler(async ({ data }) => {
+    const { fetchYoutubeTranscript } = await import("@/lib/transcript.server");
+    const startMs = Date.now();
+    const result = await fetchYoutubeTranscript(data.videoId);
+    return {
+      videoId: data.videoId,
+      success: result.segments.length > 0,
+      segments: result.segments.length,
+      chars: result.fullText.length,
+      error: result.error ?? null,
+      ms: Date.now() - startMs,
+      nodeVersion: process.version,
+    };
+  });
+
 /** Fetch YouTube transcript for a video resource. */
 export const fetchTranscript = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
