@@ -2,10 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  BookOpen,
   ChevronRight,
   Clock,
-  ExternalLink,
   Flame,
   ListPlus,
   Search,
@@ -22,7 +20,6 @@ import {
   dayOffset,
   fetchRoadmap,
   fetchRoadmapItems,
-  fetchRoadmapResources,
   fetchRoadmapStreakInfo,
   fetchTasks,
   today,
@@ -64,10 +61,7 @@ function RoadmapDetail() {
     queryKey: ["roadmap-items", roadmapId],
     queryFn: () => fetchRoadmapItems(roadmapId),
   });
-  const { data: resources = [] } = useQuery({
-    queryKey: ["roadmap-resources", roadmapId],
-    queryFn: () => fetchRoadmapResources(roadmapId),
-  });
+
   const { data: streakInfo } = useQuery({
     queryKey: ["roadmap-streak", roadmapId],
     queryFn: () => fetchRoadmapStreakInfo(roadmapId),
@@ -361,31 +355,7 @@ function RoadmapDetail() {
         ))}
       </div>
 
-      {resources.length > 0 && (
-        <section className="mt-10">
-          <h2 className="flex items-center gap-1.5 font-display text-sm font-bold uppercase tracking-wide text-primary">
-            <BookOpen className="size-4" /> Resource library
-          </h2>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {resources.map((res) => (
-              <Link
-                key={res.id}
-                to="/resource/$resourceId"
-                params={{ resourceId: res.id }}
-                className="press flex items-start gap-3 rounded-2xl border border-border p-3 transition-colors hover:bg-muted/50"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{res.title}</p>
-                  <span className="mt-1 inline-block rounded-full bg-muted px-2 py-0.5 text-xs capitalize text-muted-foreground">
-                    {res.kind}
-                  </span>
-                </div>
-                <ExternalLink className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+
 
       <div className="mt-8 flex flex-wrap gap-2">
         <Button asChild variant="outline" className="press gap-1.5 rounded-2xl">
