@@ -3,12 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
-  Brain,
   Compass,
-  Flame,
   Plus,
   Sparkles,
-  Zap,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -20,12 +17,9 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   createTask,
-  dayOffset,
   fetchGoals,
   fetchProfile,
   fetchRoadmapItems,
-  fetchRoadmaps,
-  fetchRoadmapStreakInfo,
   fetchTasks,
   today,
   updateTask,
@@ -39,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Today — Remispace" },
-      { name: "description", content: "Your day at a glance: tasks, roadmap streaks, and goal progress." },
+      { name: "description", content: "Your day at a glance: tasks and goal progress." },
       { property: "og:title", content: "Today — Remispace" },
       { property: "og:description", content: "Your day at a glance in Remispace." },
     ],
@@ -54,8 +48,6 @@ function greeting() {
   return "Good evening";
 }
 
-const LAST_7_DAYS = Array.from({ length: 7 }, (_, i) => dayOffset(-6 + i));
-
 function Dashboard() {
   const qc = useQueryClient();
   const day = today();
@@ -64,11 +56,6 @@ function Dashboard() {
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: fetchProfile });
   const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: fetchTasks });
   const { data: goals = [] } = useQuery({ queryKey: ["goals"], queryFn: fetchGoals });
-  const { data: roadmaps = [] } = useQuery({ queryKey: ["roadmaps"], queryFn: fetchRoadmaps });
-  const { data: roadmapStreak } = useQuery({
-    queryKey: ["roadmap-streak-overall"],
-    queryFn: () => fetchRoadmapStreakInfo(),
-  });
   const { data: roadmapItems = [] } = useQuery({
     queryKey: ["roadmap-items"],
     queryFn: () => fetchRoadmapItems(),
@@ -108,9 +95,6 @@ function Dashboard() {
   const doneToday = todaysTasks.length - openTasks.length;
 
   const dueCardCount = dueCardData?.count ?? 0;
-  const currentStreak = roadmapStreak?.currentStreak ?? 0;
-  const todayActive = roadmapStreak?.todayActive ?? false;
-  const activeDatesSet = new Set(roadmapStreak?.activeDates ?? []);
 
   // Next Best Action Determination (Deterministic ranking algorithm)
   const nextBestAction = (() => {
@@ -135,12 +119,12 @@ function Dashboard() {
       };
     }
 
-    // 3. Undone Roadmap Lesson (Keep streak going!)
+    // 3. Undone Roadmap Lesson
     const unreadItem = roadmapItems.find((item) => !item.done && item.content_status === "ready");
     if (unreadItem) {
       return {
-        category: "Roadmap Study Streak",
-        title: `${unreadItem.title} (${currentStreak}-day streak)`,
+        category: "Roadmap Lesson",
+        title: unreadItem.title,
         actionText: "Study lesson",
         link: `/lesson/${unreadItem.id}`,
       };
@@ -219,58 +203,6 @@ function Dashboard() {
                 </Link>
               </Button>
             )}
-          </div>
-        </section>
-
-        {/* Roadmap Study Momentum Banner */}
-        <section className="card-soft lg:col-span-3 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-              <Flame className="size-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-display text-lg font-bold">
-                  {currentStreak} Day{currentStreak === 1 ? "" : "s"} Learning Streak
-                </span>
-                {todayActive ? (
-                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    Active today
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                    Study today to continue
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {todayActive
-                  ? "Streak preserved! Keep expanding your knowledge."
-                  : "Complete a roadmap lesson or focus session today to build your streak."}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              {LAST_7_DAYS.map((d) => {
-                const isActive = activeDatesSet.has(d);
-                return (
-                  <span
-                    key={d}
-                    title={d}
-                    className={`size-2.5 rounded-full ${
-                      isActive ? "bg-primary" : "bg-muted-foreground/25"
-                    }`}
-                  />
-                );
-              })}
-            </div>
-            <Button asChild variant="outline" size="sm" className="rounded-xl press">
-              <Link to="/roadmaps">
-                Roadmaps <ArrowRight className="size-3.5 ml-1" />
-              </Link>
-            </Button>
           </div>
         </section>
 
