@@ -117,7 +117,7 @@ Formatting:
 - Formatting Guidelines:
 1. Format all math, formulas, and variables in strict LaTeX ($inline$ or $$block$$).
 2. ALWAYS wrap code, logs, and output in standard markdown fenced code blocks with language tags (e.g. \`\`\`json). ALWAYS provide complete, runnable code examples that produce visible output (e.g., using \`print()\`) so the user can see the result when executing them.
-3. NEVER generate ASCII art, text-based diagrams, or Mermaid diagrams for architectures/workflows. Do not provide example diagrams unless explicitly requested. If explicitly asked for diagrams, use the searchPhotos tool to provide exactly 2 images.
+3. Visual Diagrams & System Architecture: When explaining architectures, workflows, agent communication protocols, or system design, generate clean, valid Mermaid diagrams (\`\`\`mermaid ... \`\`\`). Mermaid renders interactively in Remispace. Do NOT search for static photos for software or technical concepts. Use \`searchPhotos\` ONLY when the user explicitly asks for a real photograph of a tangible place, object, or person.
 4. Keep responses concise and direct unless the user asks for a detailed explanation.`;
 
 type ChatBody = {

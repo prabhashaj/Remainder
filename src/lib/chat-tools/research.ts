@@ -212,9 +212,9 @@ export function getResearchTools(
 
     searchPhotos: tool({
       description:
-        "Search for high-quality photos, illustrations, visual diagrams, and images for a topic. Use ONLY when the user explicitly asks for an image, photo, or diagram in their prompt. Returns exactly 1 highly relevant image.",
+        "Search for real photographs of physical places, landmarks, nature, animals, or objects. Use ONLY when the user explicitly requests a real photograph or image. Do NOT use for technical workflows, software architectures, or abstract coding concepts (use Mermaid diagrams instead).",
       inputSchema: z.object({
-        query: z.string().describe("The visual topic or image search query"),
+        query: z.string().describe("The visual topic or photograph search query"),
       }),
       execute: async ({ query }: { query: string }) =>
         wrapTool(
@@ -228,7 +228,7 @@ export function getResearchTools(
               query,
               photos,
               instruction:
-                "Render the single relevant photo in your response text using markdown image syntax: ![caption](url). Give ONLY 1 example image per requested category. Do NOT list text bullets or output multiple images for a category.",
+                "Render the single relevant photo in your response text using markdown image syntax: ![caption](url). Do NOT call this tool multiple times.",
             };
           },
           supabase,
