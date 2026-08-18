@@ -177,12 +177,14 @@ export async function summarizeResource(params: {
       if (transcript && transcript.trim().length > 0) {
         summary = await summarizeTranscript(transcript, resource.title, params.apiKey);
       } else {
-        const { fetchYouTubeMetadata } = await import("@/lib/youtube.server");
-        const meta = await fetchYouTubeMetadata(effectiveVideoId);
-        const fallbackTopic = meta?.title ?? resource.title ?? "Educational Video";
-        const fallbackAuthor = meta?.author ?? "YouTube";
-        const fallbackSource = `Video: ${fallbackTopic}\nCreator: ${fallbackAuthor}\nURL: https://www.youtube.com/watch?v=${effectiveVideoId}\nEducational context on ${fallbackTopic}.`;
-        summary = await summarizeTranscript(fallbackSource, fallbackTopic, params.apiKey);
+        await supabase
+          .from("study_resources")
+          .update({ status: "ready" })
+          .eq("id", resourceId);
+        return {
+          success: false,
+          error: "Could not extract video transcript from YouTube. Please ensure closed captions are available.",
+        };
       }
 
       const keyPoints = summary

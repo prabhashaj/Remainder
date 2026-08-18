@@ -290,45 +290,25 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
       }
     }
 
-    if (segments && segments.length > 0) {
-      // 2. Extract the exact speech window (e.g. at 2:13 -> considers 2:03 to 2:23)
-      const { text: spokenText } = getTranscriptAtTimestamp(segments, data.seconds, 20);
-      if (spokenText && spokenText.trim().length > 0) {
-        return { success: true, note: spokenText };
-      }
+    if (!segments || segments.length === 0) {
+      return {
+        success: false,
+        error: "No transcript available for this video on YouTube.",
+      };
     }
 
-    // 3. Fallback: If transcript segments are not available, generate a focused contextual study note for this timestamp using AI
-    const key = getAiApiKey();
-    if (key) {
-      const { createAiGatewayProvider, getAiModelName } = await import("@/lib/ai-gateway.server");
-      const { fetchYouTubeMetadata } = await import("@/lib/youtube.server");
-      const { generateText } = await import("ai");
+    // 2. Extract the exact speech window (e.g. at 2:13 -> considers 2:03 to 2:23)
+    const { text: spokenText } = getTranscriptAtTimestamp(segments, data.seconds, 20);
 
-      const meta = await fetchYouTubeMetadata(cleanVid);
-      const videoTitle = meta?.title ?? resource?.title ?? "Educational Video";
-      const minutes = Math.floor(data.seconds / 60);
-      const secs = Math.floor(data.seconds % 60);
-      const timestampFormatted = `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-
-      const gateway = createAiGatewayProvider(key);
-      const aiRes = await generateText({
-        model: gateway(getAiModelName()),
-        system:
-          "You are an expert study assistant. Generate a concise, clear study note for this timestamp in the educational video. Focus on key definitions, core concepts, or critical takeaways for this part of the lecture.",
-        prompt: `Video Title: ${videoTitle}\nTimestamp: ${timestampFormatted} (${Math.round(data.seconds)}s)\n${resource?.extracted_text ? `Transcript context: ${resource.extracted_text.slice(0, 2000)}` : ""}\n\nWrite a 1-3 sentence concise study note for this moment:`,
-      });
-
-      const generatedNote = aiRes.text.trim();
-      if (generatedNote) {
-        return { success: true, note: generatedNote };
-      }
+    if (!spokenText || spokenText.trim().length === 0) {
+      return {
+        success: false,
+        error: "No spoken words found at this timestamp in the video.",
+      };
     }
 
-    return {
-      success: false,
-      error: "No transcript available for this video on YouTube.",
-    };
+    // 3. Plug in the exact transcript directly as requested
+    return { success: true, note: spokenText };
   });
 
 /** Generate a notebook from video transcript and create a page. */
