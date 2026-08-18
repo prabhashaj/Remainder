@@ -177,31 +177,14 @@ export async function summarizeResource(params: {
       if (transcript && transcript.trim().length > 0) {
         summary = await summarizeTranscript(transcript, resource.title, params.apiKey);
       } else {
-        // Fallback: summarize directly using video metadata and AI understanding
-        const { fetchYouTubeMetadata } = await import("@/lib/youtube.server");
-        const meta = await fetchYouTubeMetadata(effectiveVideoId);
-        const effectiveTitle = meta?.title || resource.title;
-        const channel = meta?.author ? ` (Channel: ${meta.author})` : "";
-        const gateway = createAiGatewayProvider(params.apiKey);
-        const aiRes = await generateText({
-          model: gateway(getAiModelName()),
-          system: SUMMARY_PROMPT,
-          prompt: `Resource title: ${effectiveTitle}${channel}\nKind: YouTube Video\nSource: https://www.youtube.com/watch?v=${effectiveVideoId}\n\nNote: Closed captions were unavailable from YouTube. Generate a structured technical study guide and key concepts for this video topic ("${effectiveTitle}"). Do not speculate on specific unseen video scenes or channel history. Ground explanations strictly in established facts about this subject.`,
-        });
-        summary = aiRes.text.trim();
-        // If resource had a placeholder title like "YouTube Video" or "Video", update with real title
-        if (
-          meta?.title &&
-          (resource.title === "YouTube Video" ||
-            resource.title === "Video" ||
-            resource.title === "connect tools" ||
-            resource.title.startsWith("http"))
-        ) {
-          await supabase
-            .from("study_resources")
-            .update({ title: meta.title })
-            .eq("id", resourceId);
-        }
+        await supabase
+          .from("study_resources")
+          .update({ status: "ready" })
+          .eq("id", resourceId);
+        return {
+          success: false,
+          error: "Could not extract video transcript from YouTube. Please ensure closed captions are available.",
+        };
       }
 
       const keyPoints = summary

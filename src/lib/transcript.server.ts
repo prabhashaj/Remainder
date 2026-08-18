@@ -203,13 +203,28 @@ export async function fetchYoutubeTranscript(
   try {
     const rawSegments = await (async () => {
       try {
-        return await YoutubeTranscript.fetchTranscript(videoId);
-      } catch {
-        try {
-          return await YoutubeTranscript.fetchTranscript(videoId, { lang: "en" });
-        } catch {
-          return null;
+        const yt =
+          typeof (YoutubeTranscript as any)?.fetchTranscript === "function"
+            ? YoutubeTranscript
+            : typeof (YoutubeTranscript as any)?.default?.fetchTranscript === "function"
+              ? (YoutubeTranscript as any).default
+              : YoutubeTranscript;
+
+        if (typeof yt?.fetchTranscript === "function") {
+          try {
+            return await yt.fetchTranscript(videoId);
+          } catch {
+            try {
+              return await yt.fetchTranscript(videoId, { lang: "en" });
+            } catch {
+              return null;
+            }
+          }
         }
+        return null;
+      } catch (e) {
+        debugLog.push(`Strategy 1 inner catch: ${e instanceof Error ? e.message : String(e)}`);
+        return null;
       }
     })();
 
