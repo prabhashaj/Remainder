@@ -175,9 +175,13 @@ export async function fetchYoutubeTranscript(
   try {
     const rawSegments = await (async () => {
       try {
-        return await YoutubeTranscript.fetchTranscript(videoId, { lang: "en" });
-      } catch {
         return await YoutubeTranscript.fetchTranscript(videoId);
+      } catch {
+        try {
+          return await YoutubeTranscript.fetchTranscript(videoId, { lang: "en" });
+        } catch {
+          return null;
+        }
       }
     })();
 
