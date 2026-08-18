@@ -241,7 +241,7 @@ function LessonPage() {
               {makeFlashcards.isPending
                 ? "Creating cards…"
                 : cardCount > 0
-                  ? `Flashcards (${cardCount})`
+                  ? `Flashcards (${Math.min(cardCount, 5)})`
                   : "Generate flashcards"}
             </Button>
           </>

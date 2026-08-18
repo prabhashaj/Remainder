@@ -146,8 +146,9 @@ export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
         .from("flashcards")
         .select("*")
         .eq("roadmap_item_id", data.itemId)
-        .order("created_at");
-      if (!error && cards) return cards as FlashcardRecord[];
+        .order("created_at")
+        .limit(5);
+      if (!error && cards) return (cards as FlashcardRecord[]).slice(0, 5);
     } catch {
       /* Fallback to agent_memories below */
     }
@@ -185,7 +186,7 @@ export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
       }
     }
 
-    return cards;
+    return cards.slice(0, 5);
   });
 
 /** Get count of due flashcards (for dashboard widget). */
@@ -238,7 +239,7 @@ export const fetchFlashcardCountForItem = createServerFn({ method: "GET" })
         .from("flashcards")
         .select("id", { count: "exact", head: true })
         .eq("roadmap_item_id", data.itemId);
-      if (!error && typeof count === "number") return { count };
+      if (!error && typeof count === "number") return { count: Math.min(count, 5) };
     } catch {
       /* Fallback to agent_memories below */
     }
@@ -262,7 +263,7 @@ export const fetchFlashcardCountForItem = createServerFn({ method: "GET" })
       }
     }
 
-    return { count };
+    return { count: Math.min(count, 5) };
   });
 
 /** Review a flashcard: apply SM-2 algorithm and schedule next review. */

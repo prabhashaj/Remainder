@@ -5,16 +5,23 @@ import {
   CheckCircle2,
   ChevronRight,
   PartyPopper,
+  RefreshCw,
   RotateCcw,
   Sparkles,
   Trophy,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { MessageResponse } from "@/components/ai-elements/message";
-import { fetchDueFlashcards, fetchFlashcardsForItem, reviewFlashcard } from "@/lib/srs.functions";
+import {
+  fetchDueFlashcards,
+  fetchFlashcardsForItem,
+  generateFlashcardsForItem,
+  reviewFlashcard,
+} from "@/lib/srs.functions";
 
 type Card = Awaited<ReturnType<typeof fetchDueFlashcards>>[number];
 
@@ -29,13 +36,14 @@ export function FlashcardReview({
   const runFetchDue = useServerFn(fetchDueFlashcards);
   const runFetchItemCards = useServerFn(fetchFlashcardsForItem);
   const runReview = useServerFn(reviewFlashcard);
+  const runGenerate = useServerFn(generateFlashcardsForItem);
 
   const { data: rawCards = [], isLoading } = useQuery({
     queryKey: itemId ? ["flashcards-item", itemId] : ["due-flashcards"],
     queryFn: () => (itemId ? runFetchItemCards({ data: { itemId } }) : runFetchDue()),
   });
 
-  // Limit to at most 5 cards in the session
+  // Strictly limit to 5 cards in the session
   const cards = rawCards.slice(0, 5);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -49,6 +57,27 @@ export function FlashcardReview({
   const card: Card | undefined = cards[currentIndex];
   const isFinished = !isLoading && cards.length > 0 && currentIndex >= cards.length;
   const progressPercent = cards.length > 0 ? Math.round((currentIndex / cards.length) * 100) : 0;
+
+  const regenerate = useMutation({
+    mutationFn: () => {
+      if (!itemId) throw new Error("No item ID");
+      return runGenerate({ data: { itemId } });
+    },
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(`Generated ${res.count ?? 5} fresh flashcards!`);
+        void qc.invalidateQueries({ queryKey: ["flashcards-item", itemId] });
+        void qc.invalidateQueries({ queryKey: ["flashcard-count-item", itemId] });
+        void qc.invalidateQueries({ queryKey: ["due-flashcards"] });
+        void qc.invalidateQueries({ queryKey: ["due-flashcard-count"] });
+        setCurrentIndex(0);
+        setFlipped(false);
+        setSessionStats({ mastered: 0, learning: 0, total: 0 });
+      } else {
+        toast.error(res.error || "Failed to regenerate flashcards");
+      }
+    },
+  });
 
   const review = useMutation({
     mutationFn: async ({ quality, isMastered }: { quality: number; isMastered: boolean }) => {
@@ -202,16 +231,29 @@ export function FlashcardReview({
           {accuracy}% Mastery Rate
         </div>
 
-        <div className="mt-8 flex w-full max-w-xs items-center gap-3">
+        <div className="mt-8 flex w-full max-w-sm items-center gap-2">
           <Button
             variant="outline"
-            className="press flex-1 rounded-2xl gap-1.5 border-border/80"
+            size="sm"
+            className="press flex-1 rounded-2xl gap-1 text-xs border-border/80"
             onClick={handleRestartDeck}
           >
             <RotateCcw className="size-3.5" /> Review Again
           </Button>
+          {itemId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="press flex-1 rounded-2xl gap-1 text-xs border-border/80"
+              onClick={() => regenerate.mutate()}
+              disabled={regenerate.isPending}
+            >
+              <RefreshCw className={`size-3.5 ${regenerate.isPending ? "animate-spin text-primary" : ""}`} />
+              Regenerate
+            </Button>
+          )}
           {onComplete && (
-            <Button className="press flex-1 rounded-2xl gap-1.5" onClick={onComplete}>
+            <Button size="sm" className="press flex-1 rounded-2xl gap-1 text-xs" onClick={onComplete}>
               Done
             </Button>
           )}
@@ -228,9 +270,26 @@ export function FlashcardReview({
           <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
             <Brain className="size-4" /> Card {currentIndex + 1} of {cards.length}
           </span>
-          <span className="text-[11px] font-medium text-muted-foreground">
-            {cards.length - currentIndex} remaining
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {cards.length - currentIndex} remaining
+            </span>
+            {itemId && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  regenerate.mutate();
+                }}
+                disabled={regenerate.isPending}
+                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                title="Regenerate 5 fresh cards"
+              >
+                <RefreshCw className={`size-3 ${regenerate.isPending ? "animate-spin text-primary" : ""}`} />
+                <span>Regenerate (5)</span>
+              </button>
+            )}
+          </div>
         </div>
         <Progress value={progressPercent} className="h-1.5 rounded-full bg-muted" />
       </div>
