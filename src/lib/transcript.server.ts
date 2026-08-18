@@ -23,6 +23,34 @@ type CaptionTrack = {
 
 const INNERTUBE_CLIENTS = [
   {
+    name: "android",
+    clientName: "ANDROID",
+    clientVersion: "20.10.38",
+    clientNameHeader: "3",
+    userAgent: "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip",
+    context: {
+      deviceMake: "Google",
+      deviceModel: "Pixel 8",
+      platform: "MOBILE",
+      osName: "Android",
+      osVersion: "14",
+      androidSdkVersion: 34,
+    },
+  },
+  {
+    name: "web",
+    clientName: "WEB",
+    clientVersion: "2.20250101.00.00",
+    clientNameHeader: "1",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    context: {
+      platform: "DESKTOP",
+      osName: "Windows",
+      osVersion: "10.0",
+    },
+  },
+  {
     name: "ios",
     clientName: "IOS",
     clientVersion: "20.10.4",

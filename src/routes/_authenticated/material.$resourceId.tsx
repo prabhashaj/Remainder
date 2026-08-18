@@ -189,7 +189,10 @@ function MaterialPage() {
     );
   }
 
-  const videoId = resource.url ? extractYouTubeId(resource.url) : null;
+  const videoId =
+    extractYouTubeId(resource.url) ??
+    extractYouTubeId(resource.title) ??
+    (resource.kind === "video" && resource.url ? resource.url.trim() : null);
   const isPdf = Boolean(resource.storage_path);
   const summaryError = summarize.data && !summarize.data.success ? summarize.data.error : null;
 

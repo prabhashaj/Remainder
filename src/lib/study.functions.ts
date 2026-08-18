@@ -268,14 +268,18 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
     } catch {
       return { success: false, error: "Too many requests. Please try again later." };
     }
-    const cleanVid = extractYouTubeId(data.videoId) ?? data.videoId.trim();
-    
     // 1. Check cached transcript or fetch fresh
     const { data: resource } = await context.supabase
       .from("study_resources")
-      .select("title, extracted_text")
+      .select("title, url, extracted_text")
       .eq("id", data.resourceId)
       .maybeSingle();
+
+    const cleanVid =
+      extractYouTubeId(data.videoId) ??
+      extractYouTubeId(resource?.url ?? "") ??
+      extractYouTubeId(resource?.title ?? "") ??
+      data.videoId.trim();
 
     let segments: TranscriptSegment[] = [];
     const result = await fetchYoutubeTranscript(cleanVid);
