@@ -294,11 +294,14 @@ export async function fetchYoutubeTranscript(
   }
 
   const proxyList = getProxyList();
-  const proxyAttempts = proxyList.length > 0 ? proxyList : [undefined];
+  const proxyAttempts: (string | undefined)[] =
+    proxyList.length > 0 ? [...proxyList, undefined] : [undefined];
 
   for (const currentProxy of proxyAttempts) {
     if (currentProxy) {
       debugLog.push(`Trying proxy: ${currentProxy.replace(/:[^:@]+@/, ":***@")}`);
+    } else if (proxyList.length > 0) {
+      debugLog.push(`Falling back to direct connection (no proxy)...`);
     }
 
     // --- Strategy 2: Multi-Client InnerTube Engine ---
@@ -343,6 +346,11 @@ export async function fetchYoutubeTranscript(
             proxyUrl: currentProxy,
           },
         );
+
+        if (res.status === 407) {
+          debugLog.push(`Proxy auth failed (HTTP 407) for ${currentProxy?.replace(/:[^:@]+@/, ":***@")}`);
+          break; // Skip remaining clients on this failing proxy
+        }
 
         debugLog.push(`Client ${client.name}: /player HTTP ${res.status}`);
 
