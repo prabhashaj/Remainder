@@ -59,35 +59,25 @@ export function getNotebookTools(
         }
 
         if (!sourceMaterial) {
-          // 2. Search YouTube & Web via Direct YouTube Search & Tavily
-          const [directVideos, webSearch] = await Promise.all([
-            searchYouTubeDirect(`${raw} tutorial`, 3),
-            tavilySearch(`${raw} comprehensive explanation overview guide`, {
+          // 2. Perform fast web research
+          try {
+            const webSearch = await tavilySearch(`${raw} comprehensive explanation overview guide`, {
               maxResults: 5,
-            }),
-          ]);
+            });
 
-          // Try extracting transcript from top video result
-          for (const v of directVideos) {
-            const vid = extractYouTubeId(v.id || v.url);
-            if (vid) {
-              const res = await fetchYoutubeTranscript(vid);
-              if (res.fullText) {
-                sourceMaterial = `Source Video: ${v.title} (${v.url})\n\nVideo Transcript:\n${res.fullText}\n\n`;
-                break;
-              }
+            const researchContext = [
+              webSearch.answer ? `Summary: ${webSearch.answer}` : "",
+              ...webSearch.results.map((r) => `### ${r.title}\nURL: ${r.url}\n${r.content}`),
+            ]
+              .filter(Boolean)
+              .join("\n\n");
+
+            if (researchContext) {
+              sourceMaterial = `Research Context on "${raw}":\n${researchContext}`;
             }
+          } catch (searchErr) {
+            // If search fails, source material will be synthesized by the notebook agent
           }
-
-          // Compile web research context
-          const researchContext = [
-            webSearch.answer ? `Summary: ${webSearch.answer}` : "",
-            ...webSearch.results.map((r) => `### ${r.title}\nURL: ${r.url}\n${r.content}`),
-          ]
-            .filter(Boolean)
-            .join("\n\n");
-
-          sourceMaterial += `Research Context on "${raw}":\n${researchContext}`;
         }
 
         const { data: page, error: pageErr } = await supabase

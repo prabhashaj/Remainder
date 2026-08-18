@@ -437,37 +437,62 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         let topicCount = 0;
         let subCount = 0;
 
+        const parentItemsToInsert: Database["public"]["Tables"]["roadmap_items"]["Insert"][] = [];
+        const parentMeta: { phaseIndex: number; topicIndex: number; subtopics: typeof phases[0]["topics"][0]["subtopics"] }[] = [];
+
         for (const [pi, phase] of phases.entries()) {
           for (const [ti, t] of phase.topics.entries()) {
-            const { data: parent, error: tErr } = await supabase
-              .from("roadmap_items")
-              .insert({
-                user_id: userId,
-                roadmap_id: roadmap.id,
-                phase: phase.name,
-                title: t.title,
-                detail: t.detail ?? null,
-                estimated_minutes: t.estimated_minutes ?? null,
-                position: pi * 1000 + ti * 10,
-              })
-              .select("id")
-              .single();
-            if (tErr) continue;
-            topicCount++;
-
-            const subs = (t.subtopics ?? []).map((s, si) => ({
+            parentItemsToInsert.push({
               user_id: userId,
               roadmap_id: roadmap.id,
-              parent_id: parent.id,
               phase: phase.name,
-              title: s.title,
-              detail: s.detail ?? null,
-              estimated_minutes: s.estimated_minutes ?? null,
-              position: pi * 1000 + ti * 10 + (si + 1) / 100,
-            }));
-            if (subs.length > 0) {
-              const { error: sErr } = await supabase.from("roadmap_items").insert(subs);
-              if (!sErr) subCount += subs.length;
+              title: t.title,
+              detail: t.detail ?? null,
+              estimated_minutes: t.estimated_minutes ?? null,
+              position: pi * 1000 + ti * 10,
+            });
+            parentMeta.push({ phaseIndex: pi, topicIndex: ti, subtopics: t.subtopics ?? [] });
+          }
+        }
+
+        const { data: insertedParents, error: parentInsertErr } = await supabase
+          .from("roadmap_items")
+          .insert(parentItemsToInsert)
+          .select("id, position");
+
+        if (!parentInsertErr && insertedParents) {
+          topicCount = insertedParents.length;
+          const parentMap = new Map<number, string>();
+          for (const p of insertedParents) {
+            parentMap.set(p.position, p.id);
+          }
+
+          const subItemsToInsert: Database["public"]["Tables"]["roadmap_items"]["Insert"][] = [];
+          for (const meta of parentMeta) {
+            const parentPos = meta.phaseIndex * 1000 + meta.topicIndex * 10;
+            const parentId = parentMap.get(parentPos);
+            if (!parentId) continue;
+
+            for (const [si, s] of meta.subtopics.entries()) {
+              subItemsToInsert.push({
+                user_id: userId,
+                roadmap_id: roadmap.id,
+                parent_id: parentId,
+                phase: phases[meta.phaseIndex]!.name,
+                title: s.title,
+                detail: s.detail ?? null,
+                estimated_minutes: s.estimated_minutes ?? null,
+                position: parentPos + (si + 1) / 100,
+              });
+            }
+          }
+
+          if (subItemsToInsert.length > 0) {
+            const { error: subInsertErr } = await supabase
+              .from("roadmap_items")
+              .insert(subItemsToInsert);
+            if (!subInsertErr) {
+              subCount = subItemsToInsert.length;
             }
           }
         }
@@ -518,7 +543,7 @@ function createPlannerTools(supabase: Supabase, userId: string) {
                       .describe("The specific concepts inside this topic"),
                   }),
                 )
-                .describe("Topics in this phase, in order"),
+                .describe("Topics within this phase"),
             }),
           )
           .describe("The updated phases of the roadmap, in order"),
@@ -546,37 +571,34 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           }[];
         }[];
       }) => {
-        // 1. Update the roadmap itself
+        // 1. Update Roadmap row
         const patch: Database["public"]["Tables"]["roadmaps"]["Update"] = {};
         if (topic !== undefined) patch.topic = topic;
         if (summary !== undefined) patch.summary = summary;
 
-        // Fetch existing roadmap to check for goal_id
-        const { data: existingRoadmap } = await supabase
+        // Ensure companion goal exists and is updated
+        const { data: currentRoadmap } = await supabase
           .from("roadmaps")
-          .select("goal_id, topic, summary")
+          .select("goal_id, topic")
           .eq("id", roadmap_id)
+          .eq("user_id", userId)
           .maybeSingle();
 
-        let goalId = existingRoadmap?.goal_id;
-
-        // If no goal exists yet for this roadmap, create one
+        let goalId = currentRoadmap?.goal_id;
         if (!goalId) {
-          const currentTopic = topic ?? existingRoadmap?.topic ?? "Learning Goal";
-          const currentSummary = summary ?? existingRoadmap?.summary;
-          const { data: createdGoal } = await supabase
+          const { data: newGoal } = await supabase
             .from("goals")
             .insert({
               user_id: userId,
-              title: `Master ${currentTopic}`,
-              description: currentSummary ?? `Learning roadmap and study goal for ${currentTopic}`,
+              title: `Master ${topic ?? currentRoadmap?.topic ?? "Topic"}`,
+              description: summary ?? `Learning goal for ${topic ?? currentRoadmap?.topic ?? "Topic"}`,
               status: "active",
               progress: 0,
             })
             .select("id")
             .single();
-          if (createdGoal?.id) {
-            goalId = createdGoal.id;
+          if (newGoal?.id) {
+            goalId = newGoal.id;
             patch.goal_id = goalId;
           }
         } else if (topic || summary) {
@@ -632,49 +654,71 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         let topicCount = 0;
         let subCount = 0;
 
-        // 4. Insert new items
+        // 4. Bulk insert new parent items
+        const parentItemsToInsert: Database["public"]["Tables"]["roadmap_items"]["Insert"][] = [];
+        const parentMeta: { phaseIndex: number; topicIndex: number; subtopics: typeof phases[0]["topics"][0]["subtopics"] }[] = [];
+
         for (const [pi, phase] of phases.entries()) {
           for (const [ti, t] of phase.topics.entries()) {
             const oldTopic = itemsByTitle.get(t.title.toLowerCase().trim());
-            const { data: parent, error: tErr } = await supabase
-              .from("roadmap_items")
-              .insert({
-                user_id: userId,
-                roadmap_id: roadmap_id,
-                phase: phase.name,
-                title: t.title,
-                detail: t.detail ?? null,
-                estimated_minutes: t.estimated_minutes ?? null,
-                position: pi * 1000 + ti * 10,
-                done: oldTopic?.done ?? false,
-                content: oldTopic?.content ?? null,
-                content_status: oldTopic?.content_status ?? "not_started",
-              })
-              .select("id")
-              .single();
-            if (tErr) continue;
-            topicCount++;
+            parentItemsToInsert.push({
+              user_id: userId,
+              roadmap_id: roadmap_id,
+              phase: phase.name,
+              title: t.title,
+              detail: t.detail ?? null,
+              estimated_minutes: t.estimated_minutes ?? null,
+              position: pi * 1000 + ti * 10,
+              done: oldTopic?.done ?? false,
+              content: oldTopic?.content ?? null,
+              content_status: oldTopic?.content_status ?? "not_started",
+            });
+            parentMeta.push({ phaseIndex: pi, topicIndex: ti, subtopics: t.subtopics ?? [] });
+          }
+        }
 
-            const subs = (t.subtopics ?? []).map((s, si) => {
+        const { data: insertedParents, error: parentInsertErr } = await supabase
+          .from("roadmap_items")
+          .insert(parentItemsToInsert)
+          .select("id, position");
+
+        if (!parentInsertErr && insertedParents) {
+          topicCount = insertedParents.length;
+          const parentMap = new Map<number, string>();
+          for (const p of insertedParents) {
+            parentMap.set(p.position, p.id);
+          }
+
+          const subItemsToInsert: Database["public"]["Tables"]["roadmap_items"]["Insert"][] = [];
+          for (const meta of parentMeta) {
+            const parentPos = meta.phaseIndex * 1000 + meta.topicIndex * 10;
+            const parentId = parentMap.get(parentPos);
+            if (!parentId) continue;
+
+            for (const [si, s] of meta.subtopics.entries()) {
               const oldSub = itemsByTitle.get(s.title.toLowerCase().trim());
-              return {
+              subItemsToInsert.push({
                 user_id: userId,
                 roadmap_id: roadmap_id,
-                parent_id: parent.id,
-                phase: phase.name,
+                parent_id: parentId,
+                phase: phases[meta.phaseIndex]!.name,
                 title: s.title,
                 detail: s.detail ?? null,
                 estimated_minutes: s.estimated_minutes ?? null,
-                position: pi * 1000 + ti * 10 + (si + 1) / 100,
+                position: parentPos + (si + 1) / 100,
                 done: oldSub?.done ?? false,
                 content: oldSub?.content ?? null,
                 content_status: oldSub?.content_status ?? "not_started",
-              };
-            });
+              });
+            }
+          }
 
-            if (subs.length > 0) {
-              const { error: sErr } = await supabase.from("roadmap_items").insert(subs);
-              if (!sErr) subCount += subs.length;
+          if (subItemsToInsert.length > 0) {
+            const { error: subInsertErr } = await supabase
+              .from("roadmap_items")
+              .insert(subItemsToInsert);
+            if (!subInsertErr) {
+              subCount = subItemsToInsert.length;
             }
           }
         }

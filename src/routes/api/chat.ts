@@ -1,3 +1,5 @@
+export const maxDuration = 120;
+
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import {

@@ -104,7 +104,8 @@ Formatting Rules:
       maxRetries: 5,
     });
 
-    const jsonStr = result.text.replace(/```json\n?|\n?```/g, "").trim();
+    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : result.text.replace(/```json\n?|\n?```/g, "").trim();
     const parsed: NotebookOutput = JSON.parse(jsonStr);
 
     if (parsed && Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
@@ -117,16 +118,15 @@ Formatting Rules:
         })
         .eq("id", pageId);
 
-      // 2. Insert native blocks
+      // 2. Prepare native blocks for a single fast bulk insert
       let position = 0;
-      let insertedCount = 0;
+      const validTypes = ["heading", "text", "todo", "quote", "divider"];
+      const blocksToInsert: Database["public"]["Tables"]["blocks"]["Insert"][] = [];
 
       for (const block of parsed.blocks) {
         if (!block.type) continue;
-        const validTypes = ["heading", "text", "todo", "quote", "divider"];
-        const blockType = validTypes.includes(block.type) ? block.type : "text";
-
-        const { error } = await supabase.from("blocks").insert({
+        const blockType = validTypes.includes(block.type) ? (block.type as any) : "text";
+        blocksToInsert.push({
           page_id: pageId,
           user_id: userId,
           type: blockType,
@@ -134,50 +134,53 @@ Formatting Rules:
           checked: Boolean(block.checked),
           position: position++,
         });
-
-        if (!error) insertedCount++;
       }
 
-      // 3. If images were requested, search the web and append visual diagrams at the end
+      // 3. If images were requested, search topic photos and append visual diagrams
       if (includeImages) {
-        const photos = await searchTopicPhotos(topicTitle);
-        if (photos.length > 0) {
-          await supabase.from("blocks").insert({
-            page_id: pageId,
-            user_id: userId,
-            type: "divider",
-            content: "",
-            checked: false,
-            position: position++,
-          });
-          insertedCount++;
-
-          await supabase.from("blocks").insert({
-            page_id: pageId,
-            user_id: userId,
-            type: "heading",
-            content: `Visual Reference & Diagrams — ${topicTitle}`,
-            checked: false,
-            position: position++,
-          });
-          insertedCount++;
-
-          for (const img of photos) {
-            const caption = img.description || `${topicTitle} diagram`;
-            await supabase.from("blocks").insert({
+        try {
+          const photos = await searchTopicPhotos(topicTitle);
+          if (photos.length > 0) {
+            blocksToInsert.push({
               page_id: pageId,
               user_id: userId,
-              type: "text",
-              content: `![${caption}](${img.url})`,
+              type: "divider",
+              content: "",
               checked: false,
               position: position++,
             });
-            insertedCount++;
+            blocksToInsert.push({
+              page_id: pageId,
+              user_id: userId,
+              type: "heading",
+              content: `Visual Reference & Diagrams — ${topicTitle}`,
+              checked: false,
+              position: position++,
+            });
+            for (const img of photos) {
+              const caption = img.description || `${topicTitle} diagram`;
+              blocksToInsert.push({
+                page_id: pageId,
+                user_id: userId,
+                type: "text",
+                content: `![${caption}](${img.url})`,
+                checked: false,
+                position: position++,
+              });
+            }
           }
+        } catch (photoErr) {
+          log("warn", "notebook_photo_search_failed", { error: String(photoErr) }, { userId });
         }
       }
 
-      return { success: true, blockCount: insertedCount };
+      if (blocksToInsert.length > 0) {
+        const { error: insertErr } = await supabase.from("blocks").insert(blocksToInsert);
+        if (!insertErr) {
+          return { success: true, blockCount: blocksToInsert.length };
+        }
+        console.error("[NotebookAgent Insert Error]", insertErr);
+      }
     }
   } catch (err) {
     console.error("[NotebookAgent Error]", err);
@@ -200,31 +203,25 @@ async function fallbackDefaultBlocks(
     .update({ title: `${topicTitle} — Study Notebook`, icon: "📒" })
     .eq("id", pageId);
 
-  const fallbackBlocks: NotebookBlockInput[] = [
-    { type: "heading", content: "Overview" },
-    { type: "text", content: `Study notebook generated for **${topicTitle}**.` },
+  const fallbackBlocks: Database["public"]["Tables"]["blocks"]["Insert"][] = [
+    { page_id: pageId, user_id: userId, type: "heading", content: "Overview", position: 0, checked: false },
+    { page_id: pageId, user_id: userId, type: "text", content: `Study notebook generated for **${topicTitle}**.`, position: 1, checked: false },
     {
-      type: "quote",
-      content: "Key takeaways and concepts extracted from web research and materials.",
-    },
-    { type: "divider", content: "" },
-    { type: "heading", content: "Highlights" },
-    { type: "text", content: material.slice(0, 800) },
-    { type: "divider", content: "" },
-    { type: "heading", content: "Action Items" },
-    { type: "todo", content: "Review concepts covered in notebook", checked: false },
-    { type: "todo", content: "Complete practice exercises", checked: false },
-  ];
-
-  let pos = 0;
-  for (const b of fallbackBlocks) {
-    await supabase.from("blocks").insert({
       page_id: pageId,
       user_id: userId,
-      type: b.type,
-      content: b.content,
-      checked: Boolean(b.checked),
-      position: pos++,
-    });
-  }
+      type: "quote",
+      content: "Key takeaways and concepts extracted from web research and study materials.",
+      position: 2,
+      checked: false,
+    },
+    { page_id: pageId, user_id: userId, type: "divider", content: "", position: 3, checked: false },
+    { page_id: pageId, user_id: userId, type: "heading", content: "Key Highlights & Core Concepts", position: 4, checked: false },
+    { page_id: pageId, user_id: userId, type: "text", content: material ? material.slice(0, 1200) : `Comprehensive breakdown of ${topicTitle}.`, position: 5, checked: false },
+    { page_id: pageId, user_id: userId, type: "divider", content: "", position: 6, checked: false },
+    { page_id: pageId, user_id: userId, type: "heading", content: "Action Items & Practice", position: 7, checked: false },
+    { page_id: pageId, user_id: userId, type: "todo", content: "Review core concepts covered in this notebook", checked: false, position: 8 },
+    { page_id: pageId, user_id: userId, type: "todo", content: "Complete practice questions and self-test", checked: false, position: 9 },
+  ];
+
+  await supabase.from("blocks").insert(fallbackBlocks);
 }
