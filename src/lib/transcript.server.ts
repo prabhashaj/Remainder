@@ -123,11 +123,11 @@ function getProxyAgent(customProxyUrl?: string): HttpsProxyAgent<string> | undef
 function httpRequest(
   urlStr: string,
   options: {
-    method?: string;
-    headers?: Record<string, string>;
-    body?: string;
-    timeoutMs?: number;
-    proxyUrl?: string;
+    method?: string | undefined;
+    headers?: Record<string, string> | undefined;
+    body?: string | undefined;
+    timeoutMs?: number | undefined;
+    proxyUrl?: string | undefined;
   } = {},
 ): Promise<{ status: number; text: string }> {
   return new Promise((resolve, reject) => {
