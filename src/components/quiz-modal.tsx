@@ -98,9 +98,20 @@ export function QuizModal({
       }
       setSubmitted(true);
       setResultScore(res.score);
-      toast.success(`Quiz completed! Score: ${res.score}%`);
+      if (res.score >= 60) {
+        toast.success(`🎉 Excellent! You scored ${res.score}% — lesson marked as completed!`, {
+          duration: 6000,
+        });
+      } else {
+        toast.info(
+          `Quiz finished with ${res.score}%. Score 60% or higher to automatically complete this lesson.`,
+        );
+      }
       void qc.invalidateQueries({ queryKey: ["roadmap-item", itemId] });
       void qc.invalidateQueries({ queryKey: ["roadmap-items"] });
+      void qc.invalidateQueries({ queryKey: ["roadmap"] });
+      void qc.invalidateQueries({ queryKey: ["roadmap-streak"] });
+      void qc.invalidateQueries({ queryKey: ["roadmap-streak-overall"] });
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Submission failed");
@@ -151,16 +162,19 @@ export function QuizModal({
             {submitted && resultScore !== null && (
               <div
                 className={`rounded-2xl p-4 text-center ${
-                  resultScore >= 70
-                    ? "bg-primary/10 text-primary border border-primary/20"
+                  resultScore >= 60
+                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
                     : "bg-muted text-foreground border border-border"
                 }`}
               >
-                <h4 className="font-display text-lg font-bold">Score: {resultScore}%</h4>
+                <div className="flex items-center justify-center gap-1.5">
+                  {resultScore >= 60 && <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />}
+                  <h4 className="font-display text-lg font-bold">Score: {resultScore}%</h4>
+                </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {resultScore >= 70
-                    ? "Great understanding! Keep up the good work."
-                    : "Review the lesson content to strengthen your grasp."}
+                  {resultScore >= 60
+                    ? "🎉 Passed! Lesson automatically marked as completed — no self-check needed."
+                    : "Score 60% or higher to automatically pass and complete this lesson."}
                 </p>
               </div>
             )}

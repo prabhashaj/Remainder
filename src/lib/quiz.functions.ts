@@ -54,43 +54,91 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
     const correct = data.questions.filter((q) => q.is_correct).length;
     const total = data.questions.length;
     const score = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const passed = score >= 60;
+    let markedCompleted = false;
 
     // 1. Try quiz_attempts table
     try {
-      const { error } = await context.supabase.from("quiz_attempts").insert({
+      await context.supabase.from("quiz_attempts").insert({
         user_id: context.userId,
         roadmap_item_id: data.itemId,
         questions: data.questions as never,
         score,
         total,
       });
-
-      if (!error) {
-        return { success: true, score, correct, total };
+    } catch {
+      // 2. Fallback to agent_memories
+      try {
+        await context.supabase.from("agent_memories").insert({
+          user_id: context.userId,
+          category: "quiz_attempt",
+          content: JSON.stringify({
+            roadmap_item_id: data.itemId,
+            questions: data.questions,
+            score,
+            total,
+            created_at: new Date().toISOString(),
+          }),
+          importance: 1,
+        });
+      } catch {
+        /* ignore fallback error */
       }
-    } catch {
-      /* Fallback below */
     }
 
-    // 2. Fallback to agent_memories
-    try {
-      await context.supabase.from("agent_memories").insert({
-        user_id: context.userId,
-        category: "quiz_attempt",
-        content: JSON.stringify({
-          roadmap_item_id: data.itemId,
-          questions: data.questions,
-          score,
-          total,
-          created_at: new Date().toISOString(),
-        }),
-        importance: 1,
-      });
-    } catch {
-      /* ignore fallback error */
+    // Automatically mark lesson as completed if score is 60% or higher
+    if (passed) {
+      try {
+        const { data: updatedItem } = await context.supabase
+          .from("roadmap_items")
+          .update({ done: true })
+          .eq("id", data.itemId)
+          .select("roadmap_id")
+          .maybeSingle();
+
+        markedCompleted = true;
+
+        if (updatedItem?.roadmap_id) {
+          const { data: allItems } = await context.supabase
+            .from("roadmap_items")
+            .select("id, done")
+            .eq("roadmap_id", updatedItem.roadmap_id);
+
+          if (allItems && allItems.length > 0 && allItems.every((i) => i.done === true)) {
+            const { data: roadmap } = await context.supabase
+              .from("roadmaps")
+              .select("id, topic, user_id")
+              .eq("id", updatedItem.roadmap_id)
+              .maybeSingle();
+
+            if (roadmap?.topic) {
+              const { data: existing } = await context.supabase
+                .from("agent_memories")
+                .select("id")
+                .eq("user_id", context.userId)
+                .ilike(
+                  "content",
+                  `%Mastered Skill: User completed 100% of the "${roadmap.topic}" roadmap%`,
+                )
+                .maybeSingle();
+
+              if (!existing) {
+                await context.supabase.from("agent_memories").insert({
+                  user_id: context.userId,
+                  category: "skill",
+                  content: `Mastered Skill: User completed 100% of the "${roadmap.topic}" roadmap.`,
+                  importance: 5,
+                });
+              }
+            }
+          }
+        }
+      } catch {
+        /* ignore completion error */
+      }
     }
 
-    return { success: true, score, correct, total };
+    return { success: true, score, correct, total, passed, markedCompleted };
   });
 
 /** Generate confidence checkpoint questions for a roadmap item. */
