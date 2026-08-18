@@ -339,7 +339,7 @@ export async function fetchYoutubeTranscript(
             method: "POST",
             headers,
             body,
-            timeoutMs: 3500,
+            timeoutMs: 8000,
             proxyUrl: currentProxy,
           },
         );
@@ -363,33 +363,46 @@ export async function fetchYoutubeTranscript(
               tracks[0];
 
             if (track?.baseUrl) {
-              for (const fmtUrl of [
+              const formats = [
                 track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=srv3`,
                 track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=json3`,
                 track.baseUrl,
-              ]) {
-                const capRes = await httpRequest(fmtUrl, {
-                  headers: {
-                    "User-Agent":
-                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                    Referer: `https://www.youtube.com/watch?v=${videoId}`,
-                  },
-                  timeoutMs: 3500,
-                  proxyUrl: currentProxy,
-                });
+              ];
 
-                if (capRes.status === 200 && capRes.text && capRes.text.length > 0) {
-                  let segs = capRes.text.trim().startsWith("{")
-                    ? parseTranscriptJson3(capRes.text)
-                    : parseTranscriptXml(capRes.text);
-                  segs = normalizeSegments(segs);
-                  if (segs.length > 0) {
-                    debugLog.push(`Success via ${client.name}: ${segs.length} segments`);
-                    return {
-                      segments: segs,
-                      fullText: segs.map((s) => s.text).join(" "),
-                      debugLog,
-                    };
+              for (const fmtUrl of formats) {
+                for (const pUrl of [currentProxy, undefined]) {
+                  try {
+                    const capRes = await httpRequest(fmtUrl, {
+                      headers: {
+                        "User-Agent": client.userAgent,
+                        Referer: `https://www.youtube.com/watch?v=${videoId}`,
+                      },
+                      timeoutMs: 8000,
+                      proxyUrl: pUrl,
+                    });
+
+                    debugLog.push(
+                      `Client ${client.name}: timedtext fetch (proxy=${pUrl ? "yes" : "no"}) HTTP ${capRes.status} (len: ${capRes.text.length})`,
+                    );
+
+                    if (capRes.status === 200 && capRes.text && capRes.text.length > 0) {
+                      let segs = capRes.text.trim().startsWith("{")
+                        ? parseTranscriptJson3(capRes.text)
+                        : parseTranscriptXml(capRes.text);
+                      segs = normalizeSegments(segs);
+                      if (segs.length > 0) {
+                        debugLog.push(`Success via ${client.name}: ${segs.length} segments`);
+                        return {
+                          segments: segs,
+                          fullText: segs.map((s) => s.text).join(" "),
+                          debugLog,
+                        };
+                      }
+                    }
+                  } catch (e) {
+                    debugLog.push(
+                      `Client ${client.name}: timedtext error (proxy=${pUrl ? "yes" : "no"}): ${e instanceof Error ? e.message : String(e)}`,
+                    );
                   }
                 }
               }
@@ -409,7 +422,7 @@ export async function fetchYoutubeTranscript(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
           "Accept-Language": "en-US,en;q=0.9",
         },
-        timeoutMs: 3500,
+        timeoutMs: 8000,
         proxyUrl: currentProxy,
       });
 
@@ -432,7 +445,7 @@ export async function fetchYoutubeTranscript(
                     const rend = caps?.["playerCaptionsTracklistRenderer"] as
                       | Record<string, unknown>
                       | undefined;
-                    tracks = rend?.["captionTracks"] as CaptionTrack[] | undefined ?? null;
+                    tracks = (rend?.["captionTracks"] as CaptionTrack[] | undefined) ?? null;
                   } catch {
                     /* ignore */
                   }
@@ -451,33 +464,47 @@ export async function fetchYoutubeTranscript(
             tracks[0];
 
           if (track?.baseUrl) {
-            for (const fmtUrl of [
+            const formats = [
               track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=srv3`,
               track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=json3`,
               track.baseUrl,
-            ]) {
-              const capRes = await httpRequest(fmtUrl, {
-                headers: {
-                  "User-Agent":
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                  Referer: `https://www.youtube.com/watch?v=${videoId}`,
-                },
-                timeoutMs: 6000,
-                proxyUrl: currentProxy,
-              });
+            ];
 
-              if (capRes.status === 200 && capRes.text.length > 0) {
-                let segs = capRes.text.trim().startsWith("{")
-                  ? parseTranscriptJson3(capRes.text)
-                  : parseTranscriptXml(capRes.text);
-                segs = normalizeSegments(segs);
-                if (segs.length > 0) {
-                  debugLog.push(`Strategy 3 (Watch Page) OK: ${segs.length} segments`);
-                  return {
-                    segments: segs,
-                    fullText: segs.map((s) => s.text).join(" "),
-                    debugLog,
-                  };
+            for (const fmtUrl of formats) {
+              for (const pUrl of [currentProxy, undefined]) {
+                try {
+                  const capRes = await httpRequest(fmtUrl, {
+                    headers: {
+                      "User-Agent":
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                      Referer: `https://www.youtube.com/watch?v=${videoId}`,
+                    },
+                    timeoutMs: 8000,
+                    proxyUrl: pUrl,
+                  });
+
+                  debugLog.push(
+                    `Strategy 3: timedtext fetch (proxy=${pUrl ? "yes" : "no"}) HTTP ${capRes.status} (len: ${capRes.text.length})`,
+                  );
+
+                  if (capRes.status === 200 && capRes.text.length > 0) {
+                    let segs = capRes.text.trim().startsWith("{")
+                      ? parseTranscriptJson3(capRes.text)
+                      : parseTranscriptXml(capRes.text);
+                    segs = normalizeSegments(segs);
+                    if (segs.length > 0) {
+                      debugLog.push(`Strategy 3 (Watch Page) OK: ${segs.length} segments`);
+                      return {
+                        segments: segs,
+                        fullText: segs.map((s) => s.text).join(" "),
+                        debugLog,
+                      };
+                    }
+                  }
+                } catch (e) {
+                  debugLog.push(
+                    `Strategy 3: timedtext error (proxy=${pUrl ? "yes" : "no"}): ${e instanceof Error ? e.message : String(e)}`,
+                  );
                 }
               }
             }
