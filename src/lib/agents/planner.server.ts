@@ -736,6 +736,279 @@ export function createPlannerTools(supabase: Supabase, userId: string) {
   };
 }
 
+export type PlannerAgentBrief = {
+  topic: string;
+  experience_level?: string | null | undefined;
+  end_goal?: string | null | undefined;
+  time_commitment?: string | null | undefined;
+  additional_context?: string | null | undefined;
+  apiKey: string;
+  supabase: Supabase;
+  userId: string;
+  traceId?: string | undefined;
+};
+
+export type RoadmapGeneratedOutput = {
+  topic: string;
+  summary: string;
+  phases: {
+    name: string;
+    topics: {
+      title: string;
+      detail?: string | null | undefined;
+      estimated_minutes?: number | null | undefined;
+      subtopics: {
+        title: string;
+        detail?: string | null | undefined;
+        estimated_minutes?: number | null | undefined;
+      }[];
+    }[];
+  }[];
+};
+
+/**
+ * Specialized Planner Sub-Agent Engine:
+ * Takes a structured pedagogical brief (topic, starting experience, end-goal, pace)
+ * and generates a tailored multi-phase curriculum with companion goal & milestones.
+ */
+export async function runPlannerAgent(params: PlannerAgentBrief): Promise<{
+  success: boolean;
+  roadmap_id?: string;
+  goal_id?: string;
+  topic?: string;
+  phases?: number;
+  topics?: number;
+  subtopics?: number;
+  summary?: string;
+  limitReached?: boolean;
+  error?: string;
+}> {
+  const { getRemainingLimitsServer, getCurrentWeekStart } = await import("@/lib/limits");
+  const limits = await getRemainingLimitsServer(params.supabase, params.userId);
+  if (!limits.roadmaps.canCreate) {
+    return {
+      success: false,
+      limitReached: true,
+      summary: `Upgrade Required! You have reached your limit of ${limits.roadmaps.limit} roadmaps this week. Tell the user to upgrade to premium.`,
+    };
+  }
+
+  log(
+    "info",
+    "agent_start",
+    { agent: "planner_subagent", topic: params.topic, level: params.experience_level },
+    { userId: params.userId, traceId: params.traceId },
+  );
+
+  const gateway = createAiGatewayProvider(params.apiKey);
+  const model = gateway(getAiModelName());
+
+  const prompt = `You are a master curriculum architect and learning specialist. Design a production-grade, highly structured, progressive learning roadmap tailored specifically for this learner.
+
+=== LEARNER PROFILE & REQUIREMENTS ===
+- Topic / Domain: ${params.topic}
+- Starting Experience Level: ${params.experience_level || "Not specified (assume progressive beginner-to-advanced progression)"}
+- Target End Goal / Ambition: ${params.end_goal || "Mastery of practical applications and core concepts"}
+- Time Commitment / Pace: ${params.time_commitment || "Standard study pace (10-15 hours/week)"}
+${params.additional_context ? `- Special Requests / Context: ${params.additional_context}` : ""}
+
+=== CURRICULUM ARCHITECTURE RULES ===
+1. STRUCTURE:
+   - Create 3 to 5 progressive phases (e.g. Phase 1: Core Foundations & Mental Models, Phase 2: Deep Mechanics & Patterns, Phase 3: Applied Architecture & Projects, Phase 4: Production Mastery & Capstone).
+   - Each phase MUST contain 3 to 6 distinct topics.
+   - Each topic MUST contain 3 to 6 concrete, named sub-topics detailing the exact concepts, algorithms, tools, or techniques to learn.
+2. PEDAGOGICAL ADAPTATION:
+   - Calibrate the starting depth based on the learner's experience level (skip elementary syntax for intermediate/advanced learners; build intuition for beginners).
+   - Tailor the final phase directly to their target end goal (e.g. job preparation, building a production app, or research).
+   - Give realistic estimated_minutes for each topic and subtopic.
+3. CONCRETE CONCEPT NAMING:
+   - Never use vague placeholders (e.g. do not write "Basics" or "Part 1"). Always name the actual underlying concept, mechanism, library, or pattern (e.g. "Gradient Descent & Backpropagation Mechanics", "React Server Components & Streaming SSR").
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "topic": "${params.topic}",
+  "summary": "2-sentence overview of the roadmap journey and milestone goals.",
+  "phases": [
+    {
+      "name": "Phase 1: Foundations & Core Concepts",
+      "topics": [
+        {
+          "title": "Topic Name",
+          "detail": "One-line description of the topic outcome",
+          "estimated_minutes": 120,
+          "subtopics": [
+            {
+              "title": "Specific Concept Name",
+              "detail": "One-line explanation of the subtopic",
+              "estimated_minutes": 30
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}`;
+
+  try {
+    const result = await generateText({
+      model,
+      system:
+        "You are an expert JSON curriculum planner. Return strictly a valid JSON object matching the requested schema with no surrounding text or commentary.",
+      prompt,
+      maxRetries: 5,
+    });
+
+    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : result.text.replace(/```json\n?|\n?```/g, "").trim();
+    const parsed: RoadmapGeneratedOutput = JSON.parse(jsonStr);
+
+    if (parsed && Array.isArray(parsed.phases) && parsed.phases.length > 0) {
+      const topicName = parsed.topic || params.topic;
+      const summaryText = parsed.summary || `Comprehensive personalized learning roadmap for ${topicName}`;
+
+      // 1. Create companion Goal
+      const { data: goal } = await params.supabase
+        .from("goals")
+        .insert({
+          user_id: params.userId,
+          title: `Master ${topicName}`,
+          description: summaryText,
+          status: "active",
+          progress: 0,
+        })
+        .select("id")
+        .single();
+
+      // 2. Create phase Milestones
+      if (goal?.id && parsed.phases.length > 0) {
+        const milestoneRows = parsed.phases.map((p, idx) => ({
+          user_id: params.userId,
+          goal_id: goal.id,
+          title: p.name,
+          position: idx,
+          done: false,
+        }));
+        await params.supabase.from("milestones").insert(milestoneRows);
+      }
+
+      // 3. Create the Roadmap
+      const { data: roadmap, error: rErr } = await params.supabase
+        .from("roadmaps")
+        .insert({
+          user_id: params.userId,
+          topic: topicName,
+          summary: summaryText,
+          goal_id: goal?.id ?? null,
+        })
+        .select("id")
+        .single();
+
+      if (rErr || !roadmap) {
+        return { success: false, error: rErr?.message ?? "Failed to create roadmap." };
+      }
+
+      // Record usage
+      const weekStart = getCurrentWeekStart();
+      await params.supabase.from("usage_logs").upsert(
+        {
+          user_id: params.userId,
+          week_start_date: weekStart,
+          roadmaps_generated: limits.roadmaps.used + 1,
+        },
+        { onConflict: "user_id,week_start_date" },
+      );
+
+      // 4. Bulk insert parent topics & subtopics
+      let topicCount = 0;
+      let subCount = 0;
+
+      const parentItemsToInsert: Database["public"]["Tables"]["roadmap_items"]["Insert"][] = [];
+      const parentMeta: {
+        phaseIndex: number;
+        topicIndex: number;
+        subtopics: (typeof parsed.phases)[0]["topics"][0]["subtopics"];
+      }[] = [];
+
+      for (const [pi, phase] of parsed.phases.entries()) {
+        for (const [ti, t] of (phase.topics || []).entries()) {
+          parentItemsToInsert.push({
+            user_id: params.userId,
+            roadmap_id: roadmap.id,
+            phase: phase.name,
+            title: t.title,
+            detail: t.detail ?? null,
+            estimated_minutes: t.estimated_minutes ?? null,
+            position: pi * 1000 + ti * 10,
+          });
+          parentMeta.push({ phaseIndex: pi, topicIndex: ti, subtopics: t.subtopics ?? [] });
+        }
+      }
+
+      const { data: insertedParents, error: parentInsertErr } = await params.supabase
+        .from("roadmap_items")
+        .insert(parentItemsToInsert)
+        .select("id, position");
+
+      if (!parentInsertErr && insertedParents) {
+        topicCount = insertedParents.length;
+        const parentMap = new Map<number, string>();
+        for (const p of insertedParents) {
+          parentMap.set(p.position, p.id);
+        }
+
+        const subItemsToInsert: Database["public"]["Tables"]["roadmap_items"]["Insert"][] = [];
+        for (const meta of parentMeta) {
+          const parentPos = meta.phaseIndex * 1000 + meta.topicIndex * 10;
+          const parentId = parentMap.get(parentPos);
+          if (!parentId) continue;
+
+          for (const [si, s] of (meta.subtopics || []).entries()) {
+            subItemsToInsert.push({
+              user_id: params.userId,
+              roadmap_id: roadmap.id,
+              parent_id: parentId,
+              phase: parsed.phases[meta.phaseIndex]!.name,
+              title: s.title,
+              detail: s.detail ?? null,
+              estimated_minutes: s.estimated_minutes ?? null,
+              position: parentPos + (si + 1) / 100,
+            });
+          }
+        }
+
+        if (subItemsToInsert.length > 0) {
+          const { error: subInsertErr } = await params.supabase
+            .from("roadmap_items")
+            .insert(subItemsToInsert);
+          if (!subInsertErr) {
+            subCount = subItemsToInsert.length;
+          }
+        }
+      }
+
+      return {
+        success: true,
+        roadmap_id: roadmap.id,
+        ...(goal?.id ? { goal_id: goal.id } : {}),
+        topic: topicName,
+        phases: parsed.phases.length,
+        topics: topicCount,
+        subtopics: subCount,
+        summary: summaryText,
+      };
+    }
+  } catch (err) {
+    log(
+      "error",
+      "agent_error",
+      { agent: "planner_subagent", error: err instanceof Error ? err.message : String(err) },
+      { userId: params.userId, traceId: params.traceId },
+    );
+  }
+
+  return { success: false, error: "Failed to generate roadmap curriculum." };
+}
+
 export async function runPlanner(params: {
   instruction: string;
   apiKey: string;

@@ -4,7 +4,7 @@ import { wrapTool } from "./wrap-tool";
 import type { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
-import { runPlanner, createPlannerTools } from "@/lib/agents/planner.server";
+import { runPlanner, runPlannerAgent, createPlannerTools } from "@/lib/agents/planner.server";
 import { writeLesson } from "@/lib/agents/curriculum.server";
 
 export function getRoadmapTools(
@@ -17,7 +17,58 @@ export function getRoadmapTools(
   const plannerTools = createPlannerTools(supabase as any, userId);
 
   return {
-    createRoadmap: plannerTools.createRoadmap,
+    createRoadmap: tool({
+      description:
+        "Delegate to the specialized curriculum planning sub-agent to construct a complete, tailored learning roadmap with progressive phases, topics, and subtopics directly in the workspace. Call this tool whenever the user wants to build or generate a study roadmap.",
+      inputSchema: z.object({
+        topic: z.string().describe("The core topic, skill, subject, or technology to learn"),
+        experience_level: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "The user's current background, familiarity, or starting experience level (e.g. beginner, intermediate, advanced, or specific prior stacks)",
+          ),
+        end_goal: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "The user's target outcome, project, career ambition, or milestone they want to achieve (e.g. land a job, build a production SaaS, exam prep)",
+          ),
+        time_commitment: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "The user's weekly availability, time commitment, or learning pace (e.g. 15 hours/week, 1 hour daily)",
+          ),
+        additional_context: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "Any additional preferences, specific frameworks, tools, or project domains requested",
+          ),
+      }),
+      execute: async (input) =>
+        wrapTool(
+          "createRoadmap",
+          () =>
+            runPlannerAgent({
+              ...input,
+              apiKey: key,
+              supabase: supabase as any,
+              userId,
+              traceId,
+            }),
+          supabase,
+          userId,
+          traceId,
+          threadId,
+          input,
+        ),
+    }),
     updateRoadmap: plannerTools.updateRoadmap,
 
     delegateToPlanner: tool({
