@@ -994,35 +994,41 @@ export function RemiChat({
               <AttachButton />
               <VoiceInputButton textareaRef={textareaRef} />
             </div>
-            <div className="flex items-center gap-2">
-              {!isPremium && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLimitType("chat");
-                    setUpgradeModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
-                  title="Daily free AI messages limit. Click to upgrade."
-                >
-                  <span
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      (usageData?.daily?.used ?? 0) >= (usageData?.daily?.limit ?? 20)
-                        ? "bg-amber-500 animate-pulse"
-                        : "bg-primary/70",
-                    )}
-                  />
-                  <span className="font-medium tabular-nums">
-                    {usageData?.daily?.used ?? 0}/{usageData?.daily?.limit ?? 20}
-                  </span>
-                  <span className="text-[11px] opacity-75">daily free</span>
-                </button>
-              )}
-              <PromptInputSubmit status={status} onStop={stop} disabled={status === "submitted"} />
-            </div>
+            <PromptInputSubmit status={status} onStop={stop} disabled={status === "submitted"} />
           </PromptInputFooter>
         </PromptInput>
+
+        {!isPremium && (
+          <div className="mt-2.5 flex items-center justify-between px-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "inline-block size-2 rounded-full",
+                  (usageData?.daily?.used ?? 0) >= (usageData?.daily?.limit ?? 20)
+                    ? "bg-amber-500 animate-pulse"
+                    : "bg-primary/80",
+                )}
+              />
+              <span>
+                <strong className="font-semibold text-foreground">
+                  {usageData?.daily?.used ?? 0}/{usageData?.daily?.limit ?? 20}
+                </strong>{" "}
+                daily free messages used
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLimitType("chat");
+                setUpgradeModalOpen(true);
+              }}
+              className="font-medium text-primary hover:underline transition-colors flex items-center gap-1"
+            >
+              <Zap className="size-3" />
+              Upgrade to Pro for Unlimited →
+            </button>
+          </div>
+        )}
       </div>
 
       <AlertDialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
