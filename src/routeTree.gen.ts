@@ -29,6 +29,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLogErrorRouteImport } from './routes/api/log-error'
 import { Route as ApiMaterialChatRouteImport } from './routes/api/material-chat'
 import { Route as ApiUploadDocumentRouteImport } from './routes/api/upload-document'
+import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as AuthenticatedConversationIndexRouteImport } from './routes/_authenticated/conversation.index'
 import { Route as AuthenticatedConversationThreadIdRouteImport } from './routes/_authenticated/conversation.$threadId'
 import { Route as AuthenticatedLessonItemIdRouteImport } from './routes/_authenticated/lesson.$itemId'
@@ -137,6 +138,11 @@ const ApiUploadDocumentRoute = ApiUploadDocumentRouteImport.update({
   path: '/api/upload-document',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedConversationIndexRoute =
   AuthenticatedConversationIndexRouteImport.update({
     id: '/conversation/',
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/api/upload-document': typeof ApiUploadDocumentRoute
+  '/share/$token': typeof ShareTokenRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
   '/material/$resourceId': typeof AuthenticatedMaterialResourceIdRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/api/upload-document': typeof ApiUploadDocumentRoute
+  '/share/$token': typeof ShareTokenRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
   '/material/$resourceId': typeof AuthenticatedMaterialResourceIdRoute
@@ -264,6 +272,7 @@ export interface FileRoutesById {
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
   '/api/upload-document': typeof ApiUploadDocumentRoute
+  '/share/$token': typeof ShareTokenRoute
   '/_authenticated/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
   '/_authenticated/lesson/$itemId': typeof AuthenticatedLessonItemIdRoute
   '/_authenticated/material/$resourceId': typeof AuthenticatedMaterialResourceIdRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '/api/log-error'
     | '/api/material-chat'
     | '/api/upload-document'
+    | '/share/$token'
     | '/conversation/$threadId'
     | '/lesson/$itemId'
     | '/material/$resourceId'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/api/log-error'
     | '/api/material-chat'
     | '/api/upload-document'
+    | '/share/$token'
     | '/conversation/$threadId'
     | '/lesson/$itemId'
     | '/material/$resourceId'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/api/log-error'
     | '/api/material-chat'
     | '/api/upload-document'
+    | '/share/$token'
     | '/_authenticated/conversation/$threadId'
     | '/_authenticated/lesson/$itemId'
     | '/_authenticated/material/$resourceId'
@@ -373,6 +385,7 @@ export interface RootRouteChildren {
   ApiLogErrorRoute: typeof ApiLogErrorRoute
   ApiMaterialChatRoute: typeof ApiMaterialChatRoute
   ApiUploadDocumentRoute: typeof ApiUploadDocumentRoute
+  ShareTokenRoute: typeof ShareTokenRoute
   ApiWebhooksRazorpayRoute: typeof ApiWebhooksRazorpayRoute
 }
 
@@ -518,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadDocumentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/conversation/': {
       id: '/_authenticated/conversation/'
       path: '/conversation'
@@ -634,6 +654,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLogErrorRoute: ApiLogErrorRoute,
   ApiMaterialChatRoute: ApiMaterialChatRoute,
   ApiUploadDocumentRoute: ApiUploadDocumentRoute,
+  ShareTokenRoute: ShareTokenRoute,
   ApiWebhooksRazorpayRoute: ApiWebhooksRazorpayRoute,
 }
 export const routeTree = rootRouteImport

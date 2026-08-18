@@ -22,12 +22,14 @@ import {
   Target,
   Timer,
   Trash2,
+  Share2,
   Activity,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import remiLogo from "@/assets/remi.png";
+import { ShareConversationDialog } from "@/components/share-conversation-dialog";
 import {
   FocusTimerButton,
   FocusTimerChip,
@@ -83,6 +85,7 @@ import {
   fetchRoadmaps,
   fetchTasks,
   fetchThreads,
+  fetchThreadMessages,
   type Page,
 } from "@/lib/db";
 
@@ -703,6 +706,7 @@ function ConversationsGroup() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isConversationActive = pathname.startsWith("/conversation");
   const [open, setOpen] = useState(true);
+  const [shareThread, setShareThread] = useState<{ id: string; title: string; messages: any[] } | null>(null);
 
   useEffect(() => {
     if (isConversationActive) {
@@ -727,6 +731,18 @@ function ConversationsGroup() {
     },
   });
 
+  async function handleOpenShare(threadId: string, title: string) {
+    try {
+      const rows = await fetchThreadMessages(threadId);
+      const messages = (rows ?? [])
+        .map((row) => row.message)
+        .filter((m) => m && typeof m === "object");
+      setShareThread({ id: threadId, title, messages });
+    } catch (e) {
+      toast.error("Failed to load conversation details");
+    }
+  }
+
   async function startNew() {
     const thread = await createThread();
     await queryClient.invalidateQueries({ queryKey: ["threads"] });
@@ -738,76 +754,106 @@ function ConversationsGroup() {
   }
 
   return (
-    <SidebarGroup>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Conversations"
-              isActive={pathname.startsWith("/conversation")}
-              onClick={() => setOpen((v) => !v)}
-              className="h-10 rounded-xl text-[15px] [&>svg]:size-5"
-            >
-              <MessagesSquare className="size-5" />
-              <span>Conversations</span>
-              <ChevronRight
-                className={`ml-auto size-4 transition-transform group-data-[collapsible=icon]:hidden ${
-                  open ? "rotate-90" : ""
-                }`}
-              />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+    <>
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Conversations"
+                isActive={pathname.startsWith("/conversation")}
+                onClick={() => setOpen((v) => !v)}
+                className="h-10 rounded-xl text-[15px] [&>svg]:size-5"
+              >
+                <MessagesSquare className="size-5" />
+                <span>Conversations</span>
+                <ChevronRight
+                  className={`ml-auto size-4 transition-transform group-data-[collapsible=icon]:hidden ${
+                    open ? "rotate-90" : ""
+                  }`}
+                />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
 
-          {open && (
-            <>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => void startNew()}
-                  tooltip="New conversation"
-                  className="h-9 rounded-xl pl-6 text-[14px] text-muted-foreground [&>svg]:size-4"
-                >
-                  <Plus className="size-4" />
-                  <span>New conversation</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {threads.map((thread) => (
-                <SidebarMenuItem key={thread.id} className="group/item flex items-center pr-1">
+            {open && (
+              <>
+                <SidebarMenuItem>
                   <SidebarMenuButton
-                    asChild
-                    isActive={pathname === `/conversation/${thread.id}`}
-                    tooltip={thread.title}
-                    className="h-9 min-w-0 flex-1 rounded-xl pl-6 text-[14px] [&>svg]:size-4"
+                    onClick={() => void startNew()}
+                    tooltip="New conversation"
+                    className="h-9 rounded-xl pl-6 text-[14px] text-muted-foreground [&>svg]:size-4"
                   >
-                    <Link to="/conversation/$threadId" params={{ threadId: thread.id }} search={{}}>
-                      <MessageCircle className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{thread.title}</span>
-                    </Link>
+                    <Plus className="size-4" />
+                    <span>New conversation</span>
                   </SidebarMenuButton>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Delete conversation"
-                    title="Delete conversation"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      deleteThreadMutation.mutate(thread.id);
-                    }}
-                    className="size-7 shrink-0 rounded-lg text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/item:opacity-100 group-data-[collapsible=icon]:hidden"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
                 </SidebarMenuItem>
-              ))}
-              {threads.length === 0 && (
-                <p className="px-6 py-1.5 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                  No conversations yet.
-                </p>
-              )}
-            </>
-          )}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+                {threads.map((thread) => (
+                  <SidebarMenuItem key={thread.id} className="group/item flex items-center pr-1">
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === `/conversation/${thread.id}`}
+                      tooltip={thread.title}
+                      className="h-9 min-w-0 flex-1 rounded-xl pl-6 text-[14px] [&>svg]:size-4"
+                    >
+                      <Link to="/conversation/$threadId" params={{ threadId: thread.id }} search={{}}>
+                        <MessageCircle className="size-4 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{thread.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    <div className="flex items-center opacity-0 transition-opacity group-hover/item:opacity-100 group-data-[collapsible=icon]:hidden">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Share conversation"
+                        title="Share conversation"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          void handleOpenShare(thread.id, thread.title);
+                        }}
+                        className="size-7 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <Share2 className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Delete conversation"
+                        title="Delete conversation"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          deleteThreadMutation.mutate(thread.id);
+                        }}
+                        className="size-7 shrink-0 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </SidebarMenuItem>
+                ))}
+                {threads.length === 0 && (
+                  <p className="px-6 py-1.5 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                    No conversations yet.
+                  </p>
+                )}
+              </>
+            )}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      {shareThread && (
+        <ShareConversationDialog
+          open={!!shareThread}
+          onOpenChange={(open) => {
+            if (!open) setShareThread(null);
+          }}
+          threadId={shareThread.id}
+          threadTitle={shareThread.title}
+          messages={shareThread.messages}
+        />
+      )}
+    </>
   );
 }
