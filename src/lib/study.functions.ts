@@ -287,6 +287,36 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
     }
 
     if (!segments || segments.length === 0) {
+      const key = getAiApiKey();
+      if (key) {
+        try {
+          const { createAiGatewayProvider, getAiModelName } = await import(
+            "@/lib/ai-gateway.server"
+          );
+          const { fetchYouTubeMetadata } = await import("@/lib/youtube.server");
+          const { generateText } = await import("ai");
+
+          const meta = await fetchYouTubeMetadata(cleanVid);
+          const videoTitle = meta?.title ?? resource?.title ?? "Educational Video";
+          const currMins = Math.floor(data.seconds / 60);
+          const currSecs = String(Math.floor(data.seconds % 60)).padStart(2, "0");
+          const timeStr = `${currMins}:${currSecs}`;
+
+          const gateway = createAiGatewayProvider(key);
+          const aiRes = await generateText({
+            model: gateway(getAiModelName()),
+            system: `You are Remi, an expert study assistant. A learner is watching "${videoTitle}" at timestamp ${timeStr}. Provide a concise, high-yield study takeaway note about this concept for timestamp ${timeStr}. Ground it in the technical subject matter. Return ONLY 1-2 direct sentences without filler.`,
+            prompt: `Video topic: ${videoTitle}\nTimestamp: ${timeStr}\nGenerate a concise study note now:`,
+          });
+          const note = aiRes.text.trim().replace(/^["']|["']$/g, "").replace(/^Note:\s*/i, "");
+          if (note) {
+            return { success: true, note };
+          }
+        } catch {
+          // Fallback to error below
+        }
+      }
+
       return {
         success: false,
         error: "No transcript available for this video to extract timestamped notes.",
