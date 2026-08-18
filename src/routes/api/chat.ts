@@ -275,6 +275,11 @@ async function buildUserContext(
 // In-memory short-TTL cache for user workspace context (20s TTL)
 const contextCache = new Map<string, { text: string; expiresAt: number }>();
 
+export function invalidateUserContextCache(userId?: string) {
+  if (userId) contextCache.delete(userId);
+  else contextCache.clear();
+}
+
 async function getOrBuildUserContext(
   supabase: ReturnType<typeof createClient<Database>>,
   userId: string,

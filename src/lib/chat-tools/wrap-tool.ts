@@ -1,5 +1,6 @@
 import type { createClient } from "@supabase/supabase-js";
 import { log } from "@/lib/logger.server";
+import { invalidateUserContextCache } from "@/routes/api/chat";
 import type { Database } from "@/integrations/supabase/types";
 
 /**
@@ -24,6 +25,17 @@ export async function wrapTool<T>(
   try {
     output = await execute();
     log("info", "tool_call", { toolName, durationMs: Date.now() - start }, { userId, traceId });
+    if (
+      toolName.startsWith("create") ||
+      toolName.startsWith("update") ||
+      toolName.startsWith("delete") ||
+      toolName.startsWith("add") ||
+      toolName.startsWith("save") ||
+      toolName.startsWith("edit") ||
+      toolName === "delegateToPlanner"
+    ) {
+      invalidateUserContextCache(userId);
+    }
     return output as T;
   } catch (err) {
     status = "error";

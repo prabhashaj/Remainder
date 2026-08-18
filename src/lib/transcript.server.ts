@@ -339,7 +339,7 @@ export async function fetchYoutubeTranscript(
             method: "POST",
             headers,
             body,
-            timeoutMs: 6000,
+            timeoutMs: 3500,
             proxyUrl: currentProxy,
           },
         );
@@ -374,7 +374,7 @@ export async function fetchYoutubeTranscript(
                       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
                     Referer: `https://www.youtube.com/watch?v=${videoId}`,
                   },
-                  timeoutMs: 6000,
+                  timeoutMs: 3500,
                   proxyUrl: currentProxy,
                 });
 
@@ -409,7 +409,7 @@ export async function fetchYoutubeTranscript(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
           "Accept-Language": "en-US,en;q=0.9",
         },
-        timeoutMs: 6000,
+        timeoutMs: 3500,
         proxyUrl: currentProxy,
       });
 
