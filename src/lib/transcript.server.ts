@@ -291,7 +291,7 @@ export async function fetchYoutubeTranscript(
       }
 
       const res = await httpRequest(
-        "https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false",
+        "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
         {
           method: "POST",
           headers,
@@ -483,20 +483,34 @@ function parseTranscriptJson3(jsonString: string): TranscriptSegment[] {
 
 function parseTranscriptXml(xml: string): TranscriptSegment[] {
   const segments: TranscriptSegment[] = [];
-  const tagRegex = /<text([^>]*)>([\s\S]*?)<\/text>/gi;
-  let match: RegExpExecArray | null;
 
-  while ((match = tagRegex.exec(xml)) !== null) {
+  // Format 1: Classic <text start="seconds" dur="seconds">...</text>
+  const textRegex = /<text([^>]*)>([\s\S]*?)<\/text>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = textRegex.exec(xml)) !== null) {
     const attrs = match[1] ?? "";
     const rawText = match[2] ?? "";
-
     const startMatch = /start="([\d.]+)"/i.exec(attrs);
     const durMatch = /dur="([\d.]+)"/i.exec(attrs);
-
     if (startMatch && rawText) {
       const offset = parseFloat(startMatch[1] ?? "0") || 0;
       const duration = durMatch ? parseFloat(durMatch[1] ?? "0") || 0 : 3;
       const text = decodeXmlEntities(rawText);
+      if (text) {
+        segments.push({ text, offset, duration });
+      }
+    }
+  }
+
+  // Format 2: srv3 format <p t="milliseconds" d="milliseconds">...</p>
+  if (segments.length === 0) {
+    const pRegex = /<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>/gi;
+    let pMatch: RegExpExecArray | null;
+    while ((pMatch = pRegex.exec(xml)) !== null) {
+      const offset = parseInt(pMatch[1] ?? "0", 10) / 1000;
+      const duration = parseInt(pMatch[2] ?? "0", 10) / 1000;
+      const rawText = pMatch[3] ?? "";
+      const text = decodeXmlEntities(rawText.replace(/<[^>]+>/g, ""));
       if (text) {
         segments.push({ text, offset, duration });
       }
