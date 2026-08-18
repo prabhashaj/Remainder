@@ -40,7 +40,7 @@ const subtopicSchema = z.object({
     .describe("Rough time estimate in minutes, or null"),
 });
 
-function createPlannerTools(supabase: Supabase, userId: string) {
+export function createPlannerTools(supabase: Supabase, userId: string) {
   return {
     webSearch: tool({
       description:

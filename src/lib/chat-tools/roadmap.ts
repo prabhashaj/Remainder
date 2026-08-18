@@ -4,7 +4,7 @@ import { wrapTool } from "./wrap-tool";
 import type { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
-import { runPlanner } from "@/lib/agents/planner.server";
+import { runPlanner, createPlannerTools } from "@/lib/agents/planner.server";
 import { writeLesson } from "@/lib/agents/curriculum.server";
 
 export function getRoadmapTools(
@@ -14,10 +14,15 @@ export function getRoadmapTools(
   threadId: string | null,
   key: string,
 ) {
+  const plannerTools = createPlannerTools(supabase as any, userId);
+
   return {
+    createRoadmap: plannerTools.createRoadmap,
+    updateRoadmap: plannerTools.updateRoadmap,
+
     delegateToPlanner: tool({
       description:
-        "Delegate to the planning specialist to create NEW or UPDATE existing roadmaps, goals, or tasks in the user's workspace. IMPORTANT: For new roadmaps, always ask the user 2-3 diagnostic calibration questions (experience level, end-goal, and time commitment) before calling this tool, unless they provided them upfront.",
+        "Delegate complex workspace planning tasks to the planner agent.",
       inputSchema: z.object({
         instruction: z
           .string()
@@ -29,7 +34,7 @@ export function getRoadmapTools(
         wrapTool(
           "delegateToPlanner",
           async () => {
-            return runPlanner({ instruction, apiKey: key, supabase, userId, traceId });
+            return runPlanner({ instruction, apiKey: key, supabase: supabase as any, userId, traceId });
           },
           supabase,
           userId,
