@@ -19,6 +19,7 @@ import { Route as AuthenticatedFocusRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedPdfConverterRouteImport } from './routes/_authenticated/pdf-converter'
 import { Route as AuthenticatedPricingRouteImport } from './routes/_authenticated/pricing'
 import { Route as AuthenticatedRoadmapsRouteImport } from './routes/_authenticated/roadmaps'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -37,6 +38,7 @@ import { Route as AuthenticatedPagePageIdRouteImport } from './routes/_authentic
 import { Route as AuthenticatedResourceResourceIdRouteImport } from './routes/_authenticated/resource.$resourceId'
 import { Route as AuthenticatedRoadmapRoadmapIdRouteImport } from './routes/_authenticated/roadmap.$roadmapId'
 import { Route as ApiWebhooksRazorpayRouteImport } from './routes/api/webhooks/razorpay'
+import { Route as PdfShareTokenRouteImport } from './routes/pdf/share/$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -87,6 +89,12 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPdfConverterRoute =
+  AuthenticatedPdfConverterRouteImport.update({
+    id: '/pdf-converter',
+    path: '/pdf-converter',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPricingRoute = AuthenticatedPricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -183,6 +191,11 @@ const ApiWebhooksRazorpayRoute = ApiWebhooksRazorpayRouteImport.update({
   path: '/api/webhooks/razorpay',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PdfShareTokenRoute = PdfShareTokenRouteImport.update({
+  id: '/pdf/share/$token',
+  path: '/pdf/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -194,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/goals': typeof AuthenticatedGoalsRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/pdf-converter': typeof AuthenticatedPdfConverterRoute
   '/pricing': typeof AuthenticatedPricingRoute
   '/roadmaps': typeof AuthenticatedRoadmapsRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -211,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/resource/$resourceId': typeof AuthenticatedResourceResourceIdRoute
   '/roadmap/$roadmapId': typeof AuthenticatedRoadmapRoadmapIdRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
+  '/pdf/share/$token': typeof PdfShareTokenRoute
   '/conversation/': typeof AuthenticatedConversationIndexRoute
 }
 export interface FileRoutesByTo {
@@ -223,6 +238,7 @@ export interface FileRoutesByTo {
   '/goals': typeof AuthenticatedGoalsRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/pdf-converter': typeof AuthenticatedPdfConverterRoute
   '/pricing': typeof AuthenticatedPricingRoute
   '/roadmaps': typeof AuthenticatedRoadmapsRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -240,6 +256,7 @@ export interface FileRoutesByTo {
   '/resource/$resourceId': typeof AuthenticatedResourceResourceIdRoute
   '/roadmap/$roadmapId': typeof AuthenticatedRoadmapRoadmapIdRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
+  '/pdf/share/$token': typeof PdfShareTokenRoute
   '/conversation': typeof AuthenticatedConversationIndexRoute
 }
 export interface FileRoutesById {
@@ -254,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/pdf-converter': typeof AuthenticatedPdfConverterRoute
   '/_authenticated/pricing': typeof AuthenticatedPricingRoute
   '/_authenticated/roadmaps': typeof AuthenticatedRoadmapsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -271,6 +289,7 @@ export interface FileRoutesById {
   '/_authenticated/resource/$resourceId': typeof AuthenticatedResourceResourceIdRoute
   '/_authenticated/roadmap/$roadmapId': typeof AuthenticatedRoadmapRoadmapIdRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
+  '/pdf/share/$token': typeof PdfShareTokenRoute
   '/_authenticated/conversation/': typeof AuthenticatedConversationIndexRoute
 }
 export interface FileRouteTypes {
@@ -285,6 +304,7 @@ export interface FileRouteTypes {
     | '/goals'
     | '/library'
     | '/onboarding'
+    | '/pdf-converter'
     | '/pricing'
     | '/roadmaps'
     | '/settings'
@@ -302,6 +322,7 @@ export interface FileRouteTypes {
     | '/resource/$resourceId'
     | '/roadmap/$roadmapId'
     | '/api/webhooks/razorpay'
+    | '/pdf/share/$token'
     | '/conversation/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -314,6 +335,7 @@ export interface FileRouteTypes {
     | '/goals'
     | '/library'
     | '/onboarding'
+    | '/pdf-converter'
     | '/pricing'
     | '/roadmaps'
     | '/settings'
@@ -331,6 +353,7 @@ export interface FileRouteTypes {
     | '/resource/$resourceId'
     | '/roadmap/$roadmapId'
     | '/api/webhooks/razorpay'
+    | '/pdf/share/$token'
     | '/conversation'
   id:
     | '__root__'
@@ -344,6 +367,7 @@ export interface FileRouteTypes {
     | '/_authenticated/goals'
     | '/_authenticated/library'
     | '/_authenticated/onboarding'
+    | '/_authenticated/pdf-converter'
     | '/_authenticated/pricing'
     | '/_authenticated/roadmaps'
     | '/_authenticated/settings'
@@ -361,6 +385,7 @@ export interface FileRouteTypes {
     | '/_authenticated/resource/$resourceId'
     | '/_authenticated/roadmap/$roadmapId'
     | '/api/webhooks/razorpay'
+    | '/pdf/share/$token'
     | '/_authenticated/conversation/'
   fileRoutesById: FileRoutesById
 }
@@ -374,6 +399,7 @@ export interface RootRouteChildren {
   ApiMaterialChatRoute: typeof ApiMaterialChatRoute
   ApiUploadDocumentRoute: typeof ApiUploadDocumentRoute
   ApiWebhooksRazorpayRoute: typeof ApiWebhooksRazorpayRoute
+  PdfShareTokenRoute: typeof PdfShareTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -446,6 +472,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pdf-converter': {
+      id: '/_authenticated/pdf-converter'
+      path: '/pdf-converter'
+      fullPath: '/pdf-converter'
+      preLoaderRoute: typeof AuthenticatedPdfConverterRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/pricing': {
@@ -574,6 +607,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksRazorpayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pdf/share/$token': {
+      id: '/pdf/share/$token'
+      path: '/pdf/share/$token'
+      fullPath: '/pdf/share/$token'
+      preLoaderRoute: typeof PdfShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -585,6 +625,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedPdfConverterRoute: typeof AuthenticatedPdfConverterRoute
   AuthenticatedPricingRoute: typeof AuthenticatedPricingRoute
   AuthenticatedRoadmapsRoute: typeof AuthenticatedRoadmapsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -607,6 +648,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedPdfConverterRoute: AuthenticatedPdfConverterRoute,
   AuthenticatedPricingRoute: AuthenticatedPricingRoute,
   AuthenticatedRoadmapsRoute: AuthenticatedRoadmapsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
@@ -635,6 +677,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMaterialChatRoute: ApiMaterialChatRoute,
   ApiUploadDocumentRoute: ApiUploadDocumentRoute,
   ApiWebhooksRazorpayRoute: ApiWebhooksRazorpayRoute,
+  PdfShareTokenRoute: PdfShareTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
