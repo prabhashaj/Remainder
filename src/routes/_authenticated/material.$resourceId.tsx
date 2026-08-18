@@ -67,6 +67,8 @@ function MaterialPage() {
   const runNotebook = useServerFn(generateNotebookFromTranscript);
   const runSaveText = useServerFn(saveExtractedTextFn);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [showPasteTranscript, setShowPasteTranscript] = useState(false);
+  const [pastedTranscript, setPastedTranscript] = useState("");
 
   const { data: resource, isLoading } = useQuery({
     queryKey: ["study-resource", resourceId],
@@ -307,17 +309,63 @@ function MaterialPage() {
                 Try again
               </Button>
               {videoId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="press rounded-xl text-xs text-muted-foreground"
-                  onClick={() => debugTranscript.mutate(videoId)}
-                  disabled={debugTranscript.isPending}
-                >
-                  {debugTranscript.isPending ? "Testing…" : "🔍 Test transcript"}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="press rounded-xl text-xs"
+                    onClick={() => setShowPasteTranscript(!showPasteTranscript)}
+                  >
+                    📋 Paste transcript
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="press rounded-xl text-xs text-muted-foreground"
+                    onClick={() => debugTranscript.mutate(videoId)}
+                    disabled={debugTranscript.isPending}
+                  >
+                    {debugTranscript.isPending ? "Testing…" : "🔍 Test transcript"}
+                  </Button>
+                </>
               )}
             </div>
+            {showPasteTranscript && (
+              <div className="mt-3 p-4 rounded-2xl bg-card border border-border shadow-sm space-y-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Paste transcript from YouTube ("Show transcript" on YouTube):
+                </p>
+                <textarea
+                  value={pastedTranscript}
+                  onChange={(e) => setPastedTranscript(e.target.value)}
+                  placeholder="Paste the full transcript or captions text here..."
+                  className="w-full h-32 rounded-xl border border-input bg-background p-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-xl text-xs"
+                    onClick={() => setShowPasteTranscript(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-8 rounded-xl text-xs"
+                    disabled={!pastedTranscript.trim() || saveText.isPending}
+                    onClick={async () => {
+                      await saveText.mutateAsync({ text: pastedTranscript.trim(), pages: 1 });
+                      setShowPasteTranscript(false);
+                      setPastedTranscript("");
+                      summarize.mutate(true);
+                    }}
+                  >
+                    {saveText.isPending ? "Saving…" : "Save & Summarize"}
+                  </Button>
+                </div>
+              </div>
+            )}
             {debugResult && (
               <div className="mt-3 p-3 rounded-xl bg-muted/60 border border-border text-xs font-mono space-y-1">
                 <p className="font-bold text-foreground">

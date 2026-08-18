@@ -95,6 +95,21 @@ const INNERTUBE_CLIENTS = [
   },
 ];
 
+import { HttpsProxyAgent } from "https-proxy-agent";
+
+function getProxyAgent(): HttpsProxyAgent<string> | undefined {
+  const proxyUrl =
+    process.env["YOUTUBE_PROXY"] ||
+    process.env["HTTPS_PROXY"] ||
+    process.env["HTTP_PROXY"];
+  if (!proxyUrl) return undefined;
+  try {
+    return new HttpsProxyAgent(proxyUrl);
+  } catch {
+    return undefined;
+  }
+}
+
 function httpRequest(
   urlStr: string,
   options: {
@@ -115,6 +130,8 @@ function httpRequest(
         reqHeaders["Content-Length"] = String(Buffer.byteLength(options.body));
       }
 
+      const agent = isHttps ? getProxyAgent() : undefined;
+
       const req = lib.request(
         {
           hostname: url.hostname,
@@ -124,6 +141,7 @@ function httpRequest(
           headers: reqHeaders,
           rejectUnauthorized: false,
           timeout: options.timeoutMs ?? 10000,
+          ...(agent ? { agent } : {}),
         },
         (res) => {
           let data = "";
