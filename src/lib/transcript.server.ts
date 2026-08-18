@@ -23,6 +23,20 @@ type CaptionTrack = {
 
 const INNERTUBE_CLIENTS = [
   {
+    name: "ios",
+    clientName: "IOS",
+    clientVersion: "20.10.4",
+    clientNameHeader: "5",
+    userAgent: "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)",
+    context: {
+      deviceMake: "Apple",
+      deviceModel: "iPhone16,2",
+      platform: "MOBILE",
+      osName: "iOS",
+      osVersion: "18.3.2.22D82",
+    },
+  },
+  {
     name: "android",
     clientName: "ANDROID",
     clientVersion: "20.10.38",
@@ -48,20 +62,6 @@ const INNERTUBE_CLIENTS = [
       platform: "DESKTOP",
       osName: "Windows",
       osVersion: "10.0",
-    },
-  },
-  {
-    name: "ios",
-    clientName: "IOS",
-    clientVersion: "20.10.4",
-    clientNameHeader: "5",
-    userAgent: "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)",
-    context: {
-      deviceMake: "Apple",
-      deviceModel: "iPhone16,2",
-      platform: "MOBILE",
-      osName: "iOS",
-      osVersion: "18.3.2.22D82",
     },
   },
   {
@@ -97,6 +97,15 @@ const INNERTUBE_CLIENTS = [
 
 import { HttpsProxyAgent } from "https-proxy-agent";
 
+export function getWorkerProxyUrl(): string | undefined {
+  const custom =
+    process.env["YOUTUBE_WORKER_PROXY"] ||
+    process.env["CLOUDFLARE_PROXY_URL"] ||
+    process.env["WORKER_PROXY_URL"] ||
+    "https://remispace-youtube-proxy.aajprabhash.workers.dev";
+  return custom?.trim() || undefined;
+}
+
 export function getProxyList(): string[] {
   const raw =
     process.env["YOUTUBE_PROXY"] ||
@@ -117,10 +126,9 @@ export function getProxyList(): string[] {
 }
 
 function getProxyAgent(customProxyUrl?: string): HttpsProxyAgent<string> | undefined {
-  const url = customProxyUrl || getProxyList()[0];
-  if (!url) return undefined;
+  if (!customProxyUrl) return undefined;
   try {
-    return new HttpsProxyAgent(url);
+    return new HttpsProxyAgent(customProxyUrl);
   } catch {
     return undefined;
   }
@@ -190,10 +198,10 @@ function httpRequest(
 
 /**
  * Robustly fetches YouTube transcripts using multiple layered strategies:
- * 1. Primary: Native Node https InnerTube API with genuine VisitorData token
- * 2. Secondary: youtube-caption-extractor
- * 3. Tertiary: Watch page direct caption extraction
- * 4. Quaternary: Direct TimedText API endpoints
+ * 0. Primary Cloud Strategy: Ultra-fast Cloudflare Edge Worker Proxy (100k free req/day)
+ * 1. Native Node https InnerTube API with genuine VisitorData token
+ * 2. Multi-client InnerTube Engine with proxy pool
+ * 3. Watch page direct caption extraction
  */
 export async function fetchYoutubeTranscript(
   videoIdOrUrl: string,
@@ -211,6 +219,108 @@ export async function fetchYoutubeTranscript(
   }
 
   debugLog.push(`Starting fetch for videoId=${videoId}`);
+
+  // --- Strategy 0: Cloudflare Edge Worker Proxy Engine ---
+  const workerUrl = getWorkerProxyUrl();
+  if (workerUrl) {
+    debugLog.push(`Checking Cloudflare Worker proxy: ${workerUrl}`);
+    for (const client of INNERTUBE_CLIENTS) {
+      try {
+        const body = JSON.stringify({
+          context: {
+            client: {
+              clientName: client.clientName,
+              clientVersion: client.clientVersion,
+              hl: "en",
+              gl: "US",
+              ...client.context,
+            },
+            user: { lockedSafetyMode: false },
+            request: { useSsl: true },
+          },
+          videoId,
+          contentCheckOk: true,
+          racyCheckOk: true,
+        });
+
+        const playerTarget = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
+        const playerRes = await fetch(`${workerUrl}?url=${encodeURIComponent(playerTarget)}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": client.userAgent,
+            "X-YouTube-Client-Name": client.clientNameHeader,
+            "X-YouTube-Client-Version": client.clientVersion,
+            Origin: "https://www.youtube.com",
+          },
+          body,
+        });
+
+        if (playerRes.status === 200) {
+          const text = await playerRes.text();
+          let data: Record<string, unknown> | null = null;
+          try {
+            data = JSON.parse(text);
+          } catch {
+            continue;
+          }
+
+          const captions = data?.["captions"] as Record<string, unknown> | undefined;
+          const renderer = captions?.["playerCaptionsTracklistRenderer"] as
+            | Record<string, unknown>
+            | undefined;
+          const tracks = renderer?.["captionTracks"] as CaptionTrack[] | undefined;
+
+          if (Array.isArray(tracks) && tracks.length > 0) {
+            const track =
+              tracks.find((t) => t.vssId === ".en" || t.languageCode === "en") ??
+              tracks.find((t) => t.vssId === "a.en" || t.languageCode?.startsWith("en")) ??
+              tracks.find((t) => t.vssId?.includes(".en") || t.languageCode?.includes("en")) ??
+              tracks[0];
+
+            if (track?.baseUrl) {
+              for (const fmtUrl of [
+                track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=srv3`,
+                track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=json3`,
+                track.baseUrl,
+              ]) {
+                const capRes = await fetch(`${workerUrl}?url=${encodeURIComponent(fmtUrl)}`, {
+                  headers: {
+                    "User-Agent": client.userAgent,
+                    Referer: `https://www.youtube.com/watch?v=${videoId}`,
+                  },
+                });
+
+                if (capRes.status === 200) {
+                  const capText = await capRes.text();
+                  if (capText && capText.length > 0) {
+                    let segs = capText.trim().startsWith("{")
+                      ? parseTranscriptJson3(capText)
+                      : parseTranscriptXml(capText);
+                    segs = normalizeSegments(segs);
+                    if (segs.length > 0) {
+                      debugLog.push(
+                        `Strategy 0 (Cloudflare Worker - ${client.name}) OK: ${segs.length} segments`,
+                      );
+                      return {
+                        segments: segs,
+                        fullText: segs.map((s) => s.text).join(" "),
+                        debugLog,
+                      };
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        debugLog.push(
+          `Strategy 0 (${client.name}) error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+  }
 
   // Step 0: Extract VisitorData from YouTube Watch Page to bypass bot/login blocks
   let visitorData: string | undefined;
