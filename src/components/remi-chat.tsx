@@ -18,6 +18,7 @@ import {
   Sparkles,
   Wrench,
   X,
+  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -490,14 +491,21 @@ export function RemiChat({
       },
     }),
     onError: (error) => {
-      if (error.message.includes("Plan limit reached") || error.message.includes("403")) {
+      void queryClient.invalidateQueries({ queryKey: ["planUsage"] });
+      if (
+        error.message.includes("Plan limit reached") ||
+        error.message.includes("403") ||
+        error.message.includes("Limit Exceeded")
+      ) {
         setLimitType("chat");
         setUpgradeModalOpen(true);
+        toast.error("You've reached your free daily message limit of 20. Upgrade to Pro for unlimited messages.");
         return;
       }
       toast.error(error.message || "Remi couldn't reply just now.");
     },
     onFinish: () => {
+      void queryClient.invalidateQueries({ queryKey: ["planUsage"] });
       void queryClient.invalidateQueries({ queryKey: ["roadmaps"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       void queryClient.invalidateQueries({ queryKey: ["goals"] });
@@ -620,6 +628,25 @@ export function RemiChat({
   async function submit(text: string, files: FileUIPart[] = []) {
     const trimmed = text.trim();
     if (!trimmed && files.length === 0) return;
+
+    if (
+      !isPremium &&
+      usageData?.daily &&
+      !usageData.daily.isUnlimited &&
+      usageData.daily.used >= usageData.daily.limit
+    ) {
+      setLimitType("chat");
+      setUpgradeModalOpen(true);
+      toast.error("You've reached your daily limit of 20 messages. Upgrade to Pro for unlimited messages.", {
+        action: {
+          label: "Upgrade",
+          onClick: () => navigate({ to: "/pricing" }),
+        },
+        duration: 8000,
+      });
+      return;
+    }
+
     onActivity?.();
     if (!renamed.current && trimmed) {
       renamed.current = true;
@@ -970,9 +997,45 @@ export function RemiChat({
             <PromptInputSubmit status={status} onStop={stop} disabled={status === "submitted"} />
           </PromptInputFooter>
         </PromptInput>
-        {!isPremium && usageData && usageData.daily && !usageData.daily.isUnlimited && (
-          <div className="text-center mt-2 text-xs text-muted-foreground">
-            {usageData.daily.used} / {usageData.daily.limit} daily messages used.
+        {!isPremium ? (
+          <div className="mt-2.5 flex items-center justify-between px-1.5 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  "inline-block size-2 rounded-full",
+                  (usageData?.daily?.used ?? 0) >= (usageData?.daily?.limit ?? 20)
+                    ? "bg-amber-500 animate-pulse"
+                    : "bg-emerald-500",
+                )}
+              />
+              <span>
+                <strong className="font-semibold text-foreground">
+                  {usageData?.daily?.used ?? 0}/{usageData?.daily?.limit ?? 20}
+                </strong>{" "}
+                daily messages used
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLimitType("chat");
+                setUpgradeModalOpen(true);
+              }}
+              className="font-medium text-primary hover:underline transition-colors flex items-center gap-1"
+            >
+              <Zap className="size-3" />
+              Upgrade to Pro for Unlimited →
+            </button>
+          </div>
+        ) : (
+          <div className="mt-2.5 flex items-center justify-between px-1.5 text-xs text-muted-foreground/70">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block size-2 rounded-full bg-emerald-500" />
+              <span className="text-emerald-400 font-medium flex items-center gap-1">
+                <Zap className="size-3" />
+                Pro Plan Active • Unlimited Messages
+              </span>
+            </div>
           </div>
         )}
       </div>

@@ -104,17 +104,8 @@ export const getPlanUsage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { checkPlanUsage } = await import("./rate-limit.server");
-    try {
-      return await checkPlanUsage(supabase, userId, "api_chat");
-    } catch {
-      // If checkPlanUsage throws an error, it means the limit is reached.
-      // We return 20/20 or 200/200 so the UI displays correctly instead of 0.
-      return {
-        daily: { used: 20, limit: 20, isUnlimited: false },
-        monthly: { used: 200, limit: 200, isUnlimited: false },
-      };
-    }
+    const { getPlanUsageStatus } = await import("./rate-limit.server");
+    return await getPlanUsageStatus(supabase, userId, "api_chat");
   });
 
 export const createRazorpayOrderFn = createServerFn({ method: "POST" })

@@ -23,16 +23,16 @@ export async function checkRateLimit(
   const windowStart = new Date();
   windowStart.setMinutes(windowStart.getMinutes() - windowMinutes);
 
-  // 1. Count events in the time window
+  // 1. Count events in the time window for this specific user
   const { count, error: countError } = await supabase
     .from("rate_limit_events")
     .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
     .eq("event_type", eventType)
     .gte("created_at", windowStart.toISOString());
 
   if (countError) {
     console.error(`Rate limit check failed for ${eventType}:`, countError);
-    // Fail open or fail closed? Usually fail closed on error, but let's throw a 500 equivalent
     throw new Error("500: Internal Server Error checking rate limits");
   }
 
@@ -53,9 +53,9 @@ export async function checkRateLimit(
 }
 
 /**
- * Checks if the user has exceeded their daily/monthly limit based on their active plan.
+ * Retrieves the user's daily and monthly plan usage status without throwing errors.
  */
-export async function checkPlanUsage(
+export async function getPlanUsageStatus(
   supabase: SupabaseClient<Database>,
   userId: string,
   eventType: string,
@@ -78,28 +78,34 @@ export async function checkPlanUsage(
   monthStartUtc.setUTCDate(1);
   monthStartUtc.setUTCHours(0, 0, 0, 0);
 
-  // Count events for today
+  // Count events for today for this specific user
   const { count: dailyCount } = await supabase
     .from("rate_limit_events")
     .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
     .eq("event_type", eventType)
     .gte("created_at", todayStartUtc.toISOString());
 
-  // Count events for this month
+  // Count events for this month for this specific user
   const { count: monthlyCount } = await supabase
     .from("rate_limit_events")
     .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
     .eq("event_type", eventType)
     .gte("created_at", monthStartUtc.toISOString());
 
+  const usedDaily = dailyCount || 0;
+  const usedMonthly = monthlyCount || 0;
+
   if (isPremium) {
     return {
-      daily: { used: dailyCount || 0, limit: 999999, isUnlimited: true },
-      monthly: { used: monthlyCount || 0, limit: 999999, isUnlimited: true },
+      isPremium: true,
+      daily: { used: usedDaily, limit: 999999, isUnlimited: true, isExceeded: false },
+      monthly: { used: usedMonthly, limit: 999999, isUnlimited: true, isExceeded: false },
     };
   }
 
-  let dailyLimit = 20; // Default Free Tier Limit
+  let dailyLimit = 20; // Default Free Tier Limit: 20 messages / day
   let monthlyLimit = 200; // Default Free Tier Monthly Limit
 
   if (subData && subData.status === "active" && subData.plans) {
@@ -109,21 +115,36 @@ export async function checkPlanUsage(
     monthlyLimit = plan.monthly_message_limit ?? monthlyLimit;
   }
 
-  if (dailyCount !== null && dailyCount >= dailyLimit) {
+  const isDailyExceeded = usedDaily >= dailyLimit;
+  const isMonthlyExceeded = usedMonthly >= monthlyLimit;
+
+  return {
+    isPremium: false,
+    daily: { used: usedDaily, limit: dailyLimit, isUnlimited: false, isExceeded: isDailyExceeded },
+    monthly: { used: usedMonthly, limit: monthlyLimit, isUnlimited: false, isExceeded: isMonthlyExceeded },
+  };
+}
+
+/**
+ * Checks if the user has exceeded their daily/monthly limit based on their active plan.
+ * Throws 403 error if exceeded.
+ */
+export async function checkPlanUsage(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  eventType: string,
+) {
+  const status = await getPlanUsageStatus(supabase, userId, eventType);
+
+  if (status.daily.isExceeded) {
     throw new Error("403: Plan Daily Limit Exceeded");
   }
 
-  if (monthlyCount !== null && monthlyCount >= monthlyLimit) {
+  if (status.monthly.isExceeded) {
     throw new Error("403: Plan Monthly Limit Exceeded");
   }
 
-  // We don't record the event here, we rely on checkRateLimit to record it
-  // to avoid double-recording in rate_limit_events
-
-  return {
-    daily: { used: dailyCount || 0, limit: dailyLimit, isUnlimited: false },
-    monthly: { used: monthlyCount || 0, limit: monthlyLimit, isUnlimited: false },
-  };
+  return status;
 }
 
 /**
