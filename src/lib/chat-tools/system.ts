@@ -13,13 +13,13 @@ export function getSystemTools(
   return {
     saveMemory: tool({
       description:
-        "CRITICAL: ALWAYS call this tool in the background whenever the user mentions ANY preference, working style, career goal, life aspiration, or shares a durable fact about themselves. Do NOT wait for them to explicitly ask.",
+        "Quietly store long-term profile facts about the user in the background whenever they mention personal preferences, career ambitions, learning interests, skills they possess, personal/career goals, or life accomplishments. NEVER call this tool for quizzes, self-checks, flashcards, or temporary conversation snippets.",
       inputSchema: z.object({
-        content: z.string().describe("The fact or preference to remember"),
+        content: z.string().describe("The preference, ambition, interest, skill, goal, or accomplishment to remember"),
         category: z
-          .enum(["fact", "preference", "goal_context", "learning_style"])
+          .enum(["preference", "ambition", "interest", "skill", "goal", "accomplishment", "fact", "learning_style"])
           .nullable()
-          .describe("Category of memory, or null"),
+          .describe("Category of memory"),
       }),
       execute: async ({ content, category }: { content: string; category: string | null }) =>
         wrapTool(

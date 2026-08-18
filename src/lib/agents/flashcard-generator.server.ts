@@ -146,7 +146,6 @@ Generate EXACTLY 5 flashcards now as JSON {"cards": [{"front": "...", "back": ".
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Try saving to flashcards table first, fallback to agent_memories
   try {
     await supabase.from("flashcards").delete().eq("roadmap_item_id", itemId).eq("user_id", userId);
 
@@ -160,63 +159,15 @@ Generate EXACTLY 5 flashcards now as JSON {"cards": [{"front": "...", "back": ".
       })),
     );
 
-    if (!insertErr) {
-      return { success: true, count: cards.length };
-    }
-  } catch {
-    /* Fallback below */
-  }
-
-  // Fallback: Store in agent_memories table
-  try {
-    // Delete previous memory flashcards for this item
-    const { data: existingMemories } = await supabase
-      .from("agent_memories")
-      .select("id, content")
-      .eq("user_id", userId)
-      .eq("category", "flashcard");
-
-    if (existingMemories) {
-      const toDelete = existingMemories
-        .filter((m) => {
-          try {
-            const parsed = JSON.parse(m.content);
-            return parsed.roadmap_item_id === itemId;
-          } catch {
-            return false;
-          }
-        })
-        .map((m) => m.id);
-
-      if (toDelete.length > 0) {
-        await supabase.from("agent_memories").delete().in("id", toDelete);
-      }
+    if (insertErr) {
+      return { success: false, error: insertErr.message };
     }
 
-    // Insert new memory cards
-    const memoryInserts = cards.map((c, i) => ({
-      user_id: userId,
-      category: "flashcard",
-      content: JSON.stringify({
-        id: `fc_${itemId}_${i}_${Date.now()}`,
-        roadmap_item_id: itemId,
-        front: c.front,
-        back: c.back,
-        ease: 2.5,
-        interval_days: 0,
-        repetitions: 0,
-        due_date: today,
-        created_at: new Date().toISOString(),
-      }),
-      importance: 1,
-    }));
-
-    await supabase.from("agent_memories").insert(memoryInserts);
     return { success: true, count: cards.length };
-  } catch (errMem) {
+  } catch (err) {
     return {
       success: false,
-      error: errMem instanceof Error ? errMem.message : "Failed to save flashcards",
+      error: err instanceof Error ? err.message : "Failed to save flashcards",
     };
   }
 }

@@ -74,13 +74,22 @@ Capabilities & Media Rendering Rules:
     - If a document is referenced under \`## Uploaded Document Attached by User\`, \`## Workspace Documents\`, or in \`[Attached Document: "..." (document_id: "...")]\`, you MUST IMMEDIATELY call the \`readDocument\` tool with the \`document_id\` and the user's query.
     - NEVER say "I don't have the ability to read PDFs". ALWAYS call \`readDocument\` directly!
 
+- **Roadmap & Diagnostic Assessment Rules (CRITICAL):**
+  - When the user asks to create, build, generate, or plan a learning roadmap for a topic (e.g. "Create a Python roadmap", "Teach me Machine Learning", "I want to learn Next.js"):
+    1. **DO NOT call \`delegateToPlanner\` immediately on the very first prompt** unless the user has ALREADY provided their background experience, target end-goal, and time commitment.
+    2. **FIRST, ask the user 2-3 concise diagnostic questions** in a friendly, conversational manner to personalize the roadmap:
+       - **Experience Level:** What is your current familiarity with this topic or related programming/subject fundamentals? (e.g., complete beginner, intermediate, or coming from another stack)
+       - **End Goal / Ambition:** What specific outcome or project do you want to achieve? (e.g., build a production full-stack project, crack job interviews, exam prep, or casual exploration)
+       - **Pace / Availability:** How many hours per week or what timeline are you aiming for?
+    3. Once the user replies to these questions (or if they explicitly ask to skip or provide all details upfront), **call \`delegateToPlanner\`** with a rich instruction containing their topic, background level, specific end-goals, and pace.
+
 Tool Execution Rules:
 - webSearch: Proactively search the web whenever answering technical topics, recent facts, APIs, libraries, or whenever unsure or confused.
-- delegateToPlanner: Use when the user asks to build or generate a study roadmap.
+- delegateToPlanner: Use to build or generate a study roadmap. Ensure you ask the 2-3 diagnostic questions first to personalize the curriculum, unless the user already provided their background and goals.
 - createTask / updateTask / createGoal / updateGoal / addMilestone: Use to manage tasks and goals when requested.
 - generateNotebook / editNotebook: Use to create or edit notebook pages.
 - searchPhotos: Use ONLY when the user explicitly requests an image/photo/diagram. Fetch at most 1 image.
-- saveMemory: Quietly store user preferences or skill levels in the background.
+- saveMemory: Quietly store user preferences, ambitions, interests, disclosed skills, personal goals, and accomplishments in the background. NEVER store flashcards, quizzes, quiz questions, self-checks, or raw JSON into memory.
 
 Formatting Guidelines:
 1. Format all math, formulas, and variables in strict LaTeX ($inline$ or $$block$$).
@@ -105,10 +114,7 @@ async function buildUserContext(
 ): Promise<string> {
   const now = new Date();
   const todayStr = fmtDate(now);
-  const weekAgo = new Date(now);
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  const thirtyDaysAgo = new Date(now);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const [
     { data: tasks },
@@ -123,19 +129,13 @@ async function buildUserContext(
   ] = await Promise.all([
     supabase
       .from("tasks")
-      .select("id,title,due_date,done")
+      .select("id,title,done,due_date,created_at,roadmap_id")
       .eq("done", false)
-      .order("due_date", { nullsFirst: false })
-      .limit(5),
-    supabase
-      .from("goals")
-      .select("id,title,description,target_date,progress,status")
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(50),
+    supabase.from("goals").select("id,title,progress,status,target_date,created_at").limit(20),
     supabase
       .from("roadmaps")
-      .select("id,topic,summary")
+      .select("id,topic,goal_id,created_at")
       .order("created_at", { ascending: false })
       .limit(5),
     supabase
@@ -147,9 +147,10 @@ async function buildUserContext(
     supabase
       .from("agent_memories")
       .select("content,category")
+      .not("category", "in", "(flashcard,quiz,quiz_attempt)")
       .order("importance", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(25),
     supabase
       .from("study_resources")
       .select("id,title,kind,status")
@@ -164,11 +165,17 @@ async function buildUserContext(
   const lines: string[] = [];
 
   if (memories && memories.length > 0) {
-    lines.push("## What I know about this person");
-    for (const m of memories) {
-      lines.push(`- ${m.content}`);
+    const cleanMemories = memories.filter((m) => {
+      const trimmed = (m.content || "").trim();
+      return !trimmed.startsWith("{") && !trimmed.startsWith("[");
+    });
+    if (cleanMemories.length > 0) {
+      lines.push("## What I know about this person (Preferences, Ambitions, Interests, Skills, Goals, Accomplishments)");
+      for (const m of cleanMemories) {
+        lines.push(`- [${m.category || "fact"}] ${m.content}`);
+      }
+      lines.push("");
     }
-    lines.push("");
   }
 
   lines.push("## Their workspace right now");

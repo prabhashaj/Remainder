@@ -279,14 +279,14 @@ export async function checkAndRecordRoadmapCompletion(roadmapId: string): Promis
     .from("agent_memories")
     .select("id")
     .eq("user_id", roadmap.user_id)
-    .ilike("content", `%Mastered Skill: User completed 100% of the "${roadmap.topic}" roadmap%`)
+    .ilike("content", `%Skilled in ${roadmap.topic}%`)
     .maybeSingle();
 
   if (!existing) {
     await supabase.from("agent_memories").insert({
       user_id: roadmap.user_id,
       category: "skill",
-      content: `Mastered Skill: User completed 100% of the "${roadmap.topic}" roadmap.`,
+      content: `Skilled in ${roadmap.topic} (completed the whole roadmap)`,
       importance: 5,
     });
     return true;
@@ -663,13 +663,30 @@ export async function forkSharedConversation(token: string): Promise<ChatThread>
 /* ---------- memories ---------- */
 
 export async function fetchMemories(): Promise<AgentMemory[]> {
-  return unwrap(
+  const userId = await requireUserId();
+
+  // Background cleanup of any legacy corrupted flashcard or quiz rows
+  void supabase
+    .from("agent_memories")
+    .delete()
+    .eq("user_id", userId)
+    .in("category", ["flashcard", "quiz", "quiz_attempt"])
+    .then(() => {});
+
+  const rows = unwrap(
     await supabase
       .from("agent_memories")
       .select("*")
+      .eq("user_id", userId)
+      .not("category", "in", "(flashcard,quiz,quiz_attempt)")
       .order("importance", { ascending: false })
       .order("created_at", { ascending: false }),
   );
+
+  return (rows ?? []).filter((m) => {
+    const trimmed = (m.content || "").trim();
+    return !trimmed.startsWith("{") && !trimmed.startsWith("[");
+  });
 }
 
 export async function clearMemories(): Promise<void> {

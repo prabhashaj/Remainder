@@ -57,7 +57,7 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
     const passed = score >= 60;
     let markedCompleted = false;
 
-    // 1. Try quiz_attempts table
+    // Save to quiz_attempts table
     try {
       await context.supabase.from("quiz_attempts").insert({
         user_id: context.userId,
@@ -67,23 +67,7 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
         total,
       });
     } catch {
-      // 2. Fallback to agent_memories
-      try {
-        await context.supabase.from("agent_memories").insert({
-          user_id: context.userId,
-          category: "quiz_attempt",
-          content: JSON.stringify({
-            roadmap_item_id: data.itemId,
-            questions: data.questions,
-            score,
-            total,
-            created_at: new Date().toISOString(),
-          }),
-          importance: 1,
-        });
-      } catch {
-        /* ignore fallback error */
-      }
+      /* ignore attempt insert error */
     }
 
     // Automatically mark lesson as completed if score is 60% or higher
@@ -116,17 +100,14 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
                 .from("agent_memories")
                 .select("id")
                 .eq("user_id", context.userId)
-                .ilike(
-                  "content",
-                  `%Mastered Skill: User completed 100% of the "${roadmap.topic}" roadmap%`,
-                )
+                .ilike("content", `%Skilled in ${roadmap.topic}%`)
                 .maybeSingle();
 
               if (!existing) {
                 await context.supabase.from("agent_memories").insert({
                   user_id: context.userId,
                   category: "skill",
-                  content: `Mastered Skill: User completed 100% of the "${roadmap.topic}" roadmap.`,
+                  content: `Skilled in ${roadmap.topic} (completed the whole roadmap)`,
                   importance: 5,
                 });
               }

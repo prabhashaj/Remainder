@@ -84,7 +84,6 @@ export const fetchDueFlashcards = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const today = todayStr();
 
-    // 1. Try flashcards table
     try {
       const { data, error } = await context.supabase
         .from("flashcards")
@@ -94,43 +93,10 @@ export const fetchDueFlashcards = createServerFn({ method: "GET" })
         .limit(50);
       if (!error && data) return data as FlashcardRecord[];
     } catch {
-      /* Fallback to agent_memories below */
+      /* ignore */
     }
 
-    // 2. Fallback to agent_memories
-    const { data: memories } = await context.supabase
-      .from("agent_memories")
-      .select("id, content")
-      .eq("user_id", context.userId)
-      .eq("category", "flashcard");
-
-    const cards: FlashcardRecord[] = [];
-    if (memories) {
-      for (const m of memories) {
-        try {
-          const parsed = JSON.parse(m.content);
-          if (parsed.due_date <= today) {
-            cards.push({
-              id: m.id,
-              roadmap_item_id: parsed.roadmap_item_id ?? null,
-              front: parsed.front ?? "",
-              back: parsed.back ?? "",
-              ease: parsed.ease ?? 2.5,
-              interval_days: parsed.interval_days ?? 0,
-              repetitions: parsed.repetitions ?? 0,
-              due_date: parsed.due_date ?? today,
-              user_id: context.userId,
-              created_at: parsed.created_at ?? new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-          }
-        } catch {
-          /* ignore unparseable memory */
-        }
-      }
-    }
-
-    return cards;
+    return [];
   });
 
 /** Fetch all flashcards for a specific roadmap item. */
@@ -138,9 +104,6 @@ export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
-    const today = todayStr();
-
-    // 1. Try flashcards table
     try {
       const { data: cards, error } = await context.supabase
         .from("flashcards")
@@ -150,43 +113,10 @@ export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
         .limit(5);
       if (!error && cards) return (cards as FlashcardRecord[]).slice(0, 5);
     } catch {
-      /* Fallback to agent_memories below */
+      /* ignore */
     }
 
-    // 2. Fallback to agent_memories
-    const { data: memories } = await context.supabase
-      .from("agent_memories")
-      .select("id, content")
-      .eq("user_id", context.userId)
-      .eq("category", "flashcard");
-
-    const cards: FlashcardRecord[] = [];
-    if (memories) {
-      for (const m of memories) {
-        try {
-          const parsed = JSON.parse(m.content);
-          if (parsed.roadmap_item_id === data.itemId) {
-            cards.push({
-              id: m.id,
-              roadmap_item_id: parsed.roadmap_item_id,
-              front: parsed.front ?? "",
-              back: parsed.back ?? "",
-              ease: parsed.ease ?? 2.5,
-              interval_days: parsed.interval_days ?? 0,
-              repetitions: parsed.repetitions ?? 0,
-              due_date: parsed.due_date ?? today,
-              user_id: context.userId,
-              created_at: parsed.created_at ?? new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-          }
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-
-    return cards.slice(0, 5);
+    return [];
   });
 
 /** Get count of due flashcards (for dashboard widget). */
@@ -195,7 +125,6 @@ export const fetchDueFlashcardCount = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const today = todayStr();
 
-    // 1. Try flashcards table
     try {
       const { count, error } = await context.supabase
         .from("flashcards")
@@ -203,29 +132,10 @@ export const fetchDueFlashcardCount = createServerFn({ method: "GET" })
         .lte("due_date", today);
       if (!error && typeof count === "number") return { count };
     } catch {
-      /* Fallback to agent_memories below */
+      /* ignore */
     }
 
-    // 2. Fallback to agent_memories
-    const { data: memories } = await context.supabase
-      .from("agent_memories")
-      .select("content")
-      .eq("user_id", context.userId)
-      .eq("category", "flashcard");
-
-    let count = 0;
-    if (memories) {
-      for (const m of memories) {
-        try {
-          const parsed = JSON.parse(m.content);
-          if (parsed.due_date <= today) count++;
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-
-    return { count };
+    return { count: 0 };
   });
 
 /** Fetch flashcard count for a specific roadmap item. */
@@ -233,7 +143,6 @@ export const fetchFlashcardCountForItem = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
-    // 1. Try flashcards table
     try {
       const { count, error } = await context.supabase
         .from("flashcards")
@@ -241,29 +150,10 @@ export const fetchFlashcardCountForItem = createServerFn({ method: "GET" })
         .eq("roadmap_item_id", data.itemId);
       if (!error && typeof count === "number") return { count: Math.min(count, 5) };
     } catch {
-      /* Fallback to agent_memories below */
+      /* ignore */
     }
 
-    // 2. Fallback to agent_memories
-    const { data: memories } = await context.supabase
-      .from("agent_memories")
-      .select("content")
-      .eq("user_id", context.userId)
-      .eq("category", "flashcard");
-
-    let count = 0;
-    if (memories) {
-      for (const m of memories) {
-        try {
-          const parsed = JSON.parse(m.content);
-          if (parsed.roadmap_item_id === data.itemId) count++;
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-
-    return { count: Math.min(count, 5) };
+    return { count: 0 };
   });
 
 /** Review a flashcard: apply SM-2 algorithm and schedule next review. */
@@ -283,7 +173,7 @@ export const reviewFlashcard = createServerFn({ method: "POST" })
     } catch {
       return { success: false, error: "Too many requests. Please try again later." };
     }
-    // 1. Try updating flashcards table
+
     try {
       const { data: card, error: fetchErr } = await context.supabase
         .from("flashcards")
@@ -315,44 +205,7 @@ export const reviewFlashcard = createServerFn({ method: "POST" })
         return { success: true, nextDue: newDueDate };
       }
     } catch {
-      /* Fallback to agent_memories below */
-    }
-
-    // 2. Fallback to agent_memories update
-    const { data: memory } = await context.supabase
-      .from("agent_memories")
-      .select("content")
-      .eq("id", data.cardId)
-      .maybeSingle();
-
-    if (memory) {
-      try {
-        const parsed = JSON.parse(memory.content);
-        const result = sm2({
-          quality: data.quality,
-          ease: parsed.ease ?? 2.5,
-          interval: parsed.interval_days ?? 0,
-          repetitions: parsed.repetitions ?? 0,
-        });
-
-        const newDueDate = addDays(todayStr(), result.interval);
-        parsed.ease = result.ease;
-        parsed.interval_days = result.interval;
-        parsed.repetitions = result.repetitions;
-        parsed.due_date = newDueDate;
-
-        await context.supabase
-          .from("agent_memories")
-          .update({
-            content: JSON.stringify(parsed),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", data.cardId);
-
-        return { success: true, nextDue: newDueDate };
-      } catch {
-        /* ignore */
-      }
+      /* ignore */
     }
 
     return { success: true, nextDue: addDays(todayStr(), 1) };

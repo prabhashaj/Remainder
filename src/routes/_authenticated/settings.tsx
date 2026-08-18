@@ -253,7 +253,14 @@ function SettingsPage() {
                   key={m.id}
                   className="flex items-center justify-between rounded-2xl border border-border/50 bg-background/50 px-4 py-3 shadow-sm"
                 >
-                  <span className="text-sm text-foreground pr-4 break-words">{m.content}</span>
+                  <div className="flex flex-col gap-1 pr-4 min-w-0">
+                    {m.category && (
+                      <span className="inline-flex w-fit items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                        {m.category}
+                      </span>
+                    )}
+                    <span className="text-sm text-foreground break-words">{m.content}</span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -280,7 +287,7 @@ function SettingsPage() {
             <Input
               value={newMemoryContent}
               onChange={(e) => setNewMemoryContent(e.target.value)}
-              placeholder="Tell Remi a preference or fact (e.g. 'I prefer concise answers')"
+              placeholder="Tell Remi a preference, ambition, or goal (e.g. 'I prefer concise answers')"
               className="min-w-48 flex-1 rounded-2xl"
             />
             <Button
@@ -288,7 +295,7 @@ function SettingsPage() {
               disabled={!newMemoryContent.trim() || addMemory.isPending}
               className="press rounded-2xl"
             >
-              Add Preference
+              Add Memory
             </Button>
           </form>
         </div>

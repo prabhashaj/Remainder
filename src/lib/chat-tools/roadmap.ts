@@ -17,11 +17,13 @@ export function getRoadmapTools(
   return {
     delegateToPlanner: tool({
       description:
-        "Delegate to the planning specialist to create NEW or UPDATE existing roadmaps, goals, or tasks in the user's workspace. The planner will build or restructure them.",
+        "Delegate to the planning specialist to create NEW or UPDATE existing roadmaps, goals, or tasks in the user's workspace. IMPORTANT: For new roadmaps, always ask the user 2-3 diagnostic calibration questions (experience level, end-goal, and time commitment) before calling this tool, unless they provided them upfront.",
       inputSchema: z.object({
         instruction: z
           .string()
-          .describe("What the planner should create, with all necessary details"),
+          .describe(
+            "Detailed instruction for the planner, including the topic, user's current experience level, target goal/project, and pace/timeline",
+          ),
       }),
       execute: async ({ instruction }: { instruction: string }) =>
         wrapTool(
