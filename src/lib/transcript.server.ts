@@ -97,14 +97,24 @@ const INNERTUBE_CLIENTS = [
 
 import { HttpsProxyAgent } from "https-proxy-agent";
 
-function getProxyAgent(): HttpsProxyAgent<string> | undefined {
-  const proxyUrl =
+export function getProxyList(): string[] {
+  const raw =
     process.env["YOUTUBE_PROXY"] ||
     process.env["HTTPS_PROXY"] ||
-    process.env["HTTP_PROXY"];
-  if (!proxyUrl) return undefined;
+    process.env["HTTP_PROXY"] ||
+    "";
+  if (!raw.trim()) return [];
+  return raw
+    .split(/[,\n;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function getProxyAgent(customProxyUrl?: string): HttpsProxyAgent<string> | undefined {
+  const url = customProxyUrl || getProxyList()[0];
+  if (!url) return undefined;
   try {
-    return new HttpsProxyAgent(proxyUrl);
+    return new HttpsProxyAgent(url);
   } catch {
     return undefined;
   }
@@ -117,6 +127,7 @@ function httpRequest(
     headers?: Record<string, string>;
     body?: string;
     timeoutMs?: number;
+    proxyUrl?: string;
   } = {},
 ): Promise<{ status: number; text: string }> {
   return new Promise((resolve, reject) => {
@@ -130,7 +141,7 @@ function httpRequest(
         reqHeaders["Content-Length"] = String(Buffer.byteLength(options.body));
       }
 
-      const agent = isHttps ? getProxyAgent() : undefined;
+      const agent = isHttps ? getProxyAgent(options.proxyUrl) : undefined;
 
       const req = lib.request(
         {
@@ -276,60 +287,157 @@ export async function fetchYoutubeTranscript(
     );
   }
 
-  // --- Strategy 2: Multi-Client InnerTube Engine with VisitorData ---
-  for (const client of INNERTUBE_CLIENTS) {
-    try {
-      const body = JSON.stringify({
-        context: {
-          client: {
-            clientName: client.clientName,
-            clientVersion: client.clientVersion,
-            hl: "en",
-            gl: "US",
-            ...(visitorData ? { visitorData } : {}),
-            ...client.context,
+  const proxyList = getProxyList();
+  const proxyAttempts = proxyList.length > 0 ? proxyList : [undefined];
+
+  for (const currentProxy of proxyAttempts) {
+    if (currentProxy) {
+      debugLog.push(`Trying proxy: ${currentProxy.replace(/:[^:@]+@/, ":***@")}`);
+    }
+
+    // --- Strategy 2: Multi-Client InnerTube Engine ---
+    for (const client of INNERTUBE_CLIENTS) {
+      try {
+        const body = JSON.stringify({
+          context: {
+            client: {
+              clientName: client.clientName,
+              clientVersion: client.clientVersion,
+              hl: "en",
+              gl: "US",
+              ...(visitorData ? { visitorData } : {}),
+              ...client.context,
+            },
+            user: { lockedSafetyMode: false },
+            request: { useSsl: true },
           },
-          user: { lockedSafetyMode: false },
-          request: { useSsl: true },
+          videoId,
+          contentCheckOk: true,
+          racyCheckOk: true,
+        });
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "User-Agent": client.userAgent,
+          "X-YouTube-Client-Name": client.clientNameHeader,
+          "X-YouTube-Client-Version": client.clientVersion,
+          Origin: "https://www.youtube.com",
+        };
+        if (visitorData) {
+          headers["X-Goog-Visitor-Id"] = visitorData;
+        }
+
+        const res = await httpRequest(
+          "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+          {
+            method: "POST",
+            headers,
+            body,
+            timeoutMs: 6000,
+            proxyUrl: currentProxy,
+          },
+        );
+
+        debugLog.push(`Client ${client.name}: /player HTTP ${res.status}`);
+
+        if (res.status === 200 && res.text) {
+          const data = JSON.parse(res.text) as Record<string, unknown>;
+          const captions = data["captions"] as Record<string, unknown> | undefined;
+          const renderer = captions?.["playerCaptionsTracklistRenderer"] as
+            | Record<string, unknown>
+            | undefined;
+          const tracks = renderer?.["captionTracks"] as CaptionTrack[] | undefined;
+
+          if (Array.isArray(tracks) && tracks.length > 0) {
+            debugLog.push(`Client ${client.name}: found ${tracks.length} caption tracks`);
+            const track =
+              tracks.find((t) => t.vssId === ".en" || t.languageCode === "en") ??
+              tracks.find((t) => t.vssId === "a.en" || t.languageCode?.startsWith("en")) ??
+              tracks.find((t) => t.vssId?.includes(".en") || t.languageCode?.includes("en")) ??
+              tracks[0];
+
+            if (track?.baseUrl) {
+              for (const fmtUrl of [
+                track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=srv3`,
+                track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=json3`,
+                track.baseUrl,
+              ]) {
+                const capRes = await httpRequest(fmtUrl, {
+                  headers: {
+                    "User-Agent":
+                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                    Referer: `https://www.youtube.com/watch?v=${videoId}`,
+                  },
+                  timeoutMs: 6000,
+                  proxyUrl: currentProxy,
+                });
+
+                if (capRes.status === 200 && capRes.text && capRes.text.length > 0) {
+                  let segs = capRes.text.trim().startsWith("{")
+                    ? parseTranscriptJson3(capRes.text)
+                    : parseTranscriptXml(capRes.text);
+                  segs = normalizeSegments(segs);
+                  if (segs.length > 0) {
+                    debugLog.push(`Success via ${client.name}: ${segs.length} segments`);
+                    return {
+                      segments: segs,
+                      fullText: segs.map((s) => s.text).join(" "),
+                      debugLog,
+                    };
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        debugLog.push(`Client ${client.name} error: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // --- Strategy 3: Watch Page Direct Extraction ---
+    try {
+      const pageRes = await httpRequest(`https://www.youtube.com/watch?v=${videoId}`, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Accept-Language": "en-US,en;q=0.9",
         },
-        videoId,
-        contentCheckOk: true,
-        racyCheckOk: true,
+        timeoutMs: 6000,
+        proxyUrl: currentProxy,
       });
 
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        "User-Agent": client.userAgent,
-        "X-YouTube-Client-Name": client.clientNameHeader,
-        "X-YouTube-Client-Version": client.clientVersion,
-        Origin: "https://www.youtube.com",
-      };
-      if (visitorData) {
-        headers["X-Goog-Visitor-Id"] = visitorData;
-      }
+      if (pageRes.status === 200 && pageRes.text) {
+        const html = pageRes.text;
+        let tracks: CaptionTrack[] | null = null;
+        const pIdx = html.indexOf("ytInitialPlayerResponse = ");
+        if (pIdx !== -1) {
+          let depth = 0;
+          const start = html.indexOf("{", pIdx);
+          if (start !== -1) {
+            for (let i = start; i < html.length; i++) {
+              if (html[i] === "{") depth++;
+              else if (html[i] === "}") {
+                depth--;
+                if (depth === 0) {
+                  try {
+                    const obj = JSON.parse(html.slice(start, i + 1)) as Record<string, unknown>;
+                    const caps = obj?.["captions"] as Record<string, unknown> | undefined;
+                    const rend = caps?.["playerCaptionsTracklistRenderer"] as
+                      | Record<string, unknown>
+                      | undefined;
+                    tracks = rend?.["captionTracks"] as CaptionTrack[] | undefined ?? null;
+                  } catch {
+                    /* ignore */
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        }
 
-      const res = await httpRequest(
-        "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
-        {
-          method: "POST",
-          headers,
-          body,
-          timeoutMs: 6000,
-        },
-      );
-
-      debugLog.push(`Client ${client.name}: /player HTTP ${res.status}`);
-
-      if (res.status === 200 && res.text) {
-        const data = JSON.parse(res.text) as Record<string, unknown>;
-        const captions = data["captions"] as Record<string, unknown> | undefined;
-        const renderer = captions?.["playerCaptionsTracklistRenderer"] as
-          | Record<string, unknown>
-          | undefined;
-        const tracks = renderer?.["captionTracks"] as CaptionTrack[] | undefined;
-
-        if (Array.isArray(tracks) && tracks.length > 0) {
-          debugLog.push(`Client ${client.name}: found ${tracks.length} caption tracks`);
+        if (tracks && tracks.length > 0) {
           const track =
             tracks.find((t) => t.vssId === ".en" || t.languageCode === "en") ??
             tracks.find((t) => t.vssId === "a.en" || t.languageCode?.startsWith("en")) ??
@@ -349,15 +457,16 @@ export async function fetchYoutubeTranscript(
                   Referer: `https://www.youtube.com/watch?v=${videoId}`,
                 },
                 timeoutMs: 6000,
+                proxyUrl: currentProxy,
               });
 
-              if (capRes.status === 200 && capRes.text && capRes.text.length > 0) {
+              if (capRes.status === 200 && capRes.text.length > 0) {
                 let segs = capRes.text.trim().startsWith("{")
                   ? parseTranscriptJson3(capRes.text)
                   : parseTranscriptXml(capRes.text);
                 segs = normalizeSegments(segs);
                 if (segs.length > 0) {
-                  debugLog.push(`Success via ${client.name}: ${segs.length} segments`);
+                  debugLog.push(`Strategy 3 (Watch Page) OK: ${segs.length} segments`);
                   return {
                     segments: segs,
                     fullText: segs.map((s) => s.text).join(" "),
@@ -370,93 +479,8 @@ export async function fetchYoutubeTranscript(
         }
       }
     } catch (err) {
-      debugLog.push(`Client ${client.name} error: ${err instanceof Error ? err.message : String(err)}`);
+      debugLog.push(`Strategy 3 error: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }
-
-  // --- Strategy 3: Watch Page Direct Extraction ---
-  try {
-    const pageRes = await httpRequest(`https://www.youtube.com/watch?v=${videoId}`, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-      timeoutMs: 6000,
-    });
-
-    if (pageRes.status === 200 && pageRes.text) {
-      const html = pageRes.text;
-      let tracks: CaptionTrack[] | null = null;
-      const pIdx = html.indexOf("ytInitialPlayerResponse = ");
-      if (pIdx !== -1) {
-        let depth = 0;
-        const start = html.indexOf("{", pIdx);
-        if (start !== -1) {
-          for (let i = start; i < html.length; i++) {
-            if (html[i] === "{") depth++;
-            else if (html[i] === "}") {
-              depth--;
-              if (depth === 0) {
-                try {
-                  const obj = JSON.parse(html.slice(start, i + 1)) as Record<string, unknown>;
-                  const caps = obj?.["captions"] as Record<string, unknown> | undefined;
-                  const rend = caps?.["playerCaptionsTracklistRenderer"] as
-                    | Record<string, unknown>
-                    | undefined;
-                  tracks = rend?.["captionTracks"] as CaptionTrack[] | undefined ?? null;
-                } catch {
-                  /* ignore */
-                }
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if (tracks && tracks.length > 0) {
-        const track =
-          tracks.find((t) => t.vssId === ".en" || t.languageCode === "en") ??
-          tracks.find((t) => t.vssId === "a.en" || t.languageCode?.startsWith("en")) ??
-          tracks.find((t) => t.vssId?.includes(".en") || t.languageCode?.includes("en")) ??
-          tracks[0];
-
-        if (track?.baseUrl) {
-          for (const fmtUrl of [
-            track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=srv3`,
-            track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}&fmt=json3`,
-            track.baseUrl,
-          ]) {
-            const capRes = await httpRequest(fmtUrl, {
-              headers: {
-                "User-Agent":
-                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                Referer: `https://www.youtube.com/watch?v=${videoId}`,
-              },
-              timeoutMs: 6000,
-            });
-
-            if (capRes.status === 200 && capRes.text.length > 0) {
-              let segs = capRes.text.trim().startsWith("{")
-                ? parseTranscriptJson3(capRes.text)
-                : parseTranscriptXml(capRes.text);
-              segs = normalizeSegments(segs);
-              if (segs.length > 0) {
-                debugLog.push(`Strategy 3 (Watch Page) OK: ${segs.length} segments`);
-                return {
-                  segments: segs,
-                  fullText: segs.map((s) => s.text).join(" "),
-                  debugLog,
-                };
-              }
-            }
-          }
-        }
-      }
-    }
-  } catch (err) {
-    debugLog.push(`Strategy 3 error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   return {
