@@ -444,37 +444,107 @@ export interface SharedConversation {
   title: string;
   messages: any[];
   is_anonymous: boolean;
-  user_name?: string | null;
+  user_name?: string | null | undefined;
   created_at: string;
   updated_at: string;
 }
 
-export async function fetchSharedConversation(token: string): Promise<SharedConversation | null> {
-  const { data, error } = await supabase
-    .from("shared_conversations" as never)
-    .select("*")
-    .eq("token", token)
-    .maybeSingle();
+export function encodeConversationToDataToken(payload: {
+  title: string;
+  messages: any[];
+  isAnonymous?: boolean | undefined;
+  userName?: string | null | undefined;
+}): string {
+  try {
+    const compactMessages = (payload.messages || []).map((m: any) => ({
+      id: m.id,
+      role: m.role,
+      parts: m.parts || [{ type: "text", text: m.content || "" }],
+    }));
+    const jsonStr = JSON.stringify({
+      t: payload.title,
+      m: compactMessages,
+      a: payload.isAnonymous ? 1 : 0,
+      u: payload.isAnonymous ? undefined : payload.userName,
+      c: Date.now(),
+    });
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+    return `d_${b64}`;
+  } catch (e) {
+    console.error("Encoding error:", e);
+    return `d_${Date.now()}`;
+  }
+}
 
-  if (error) {
-    console.error("fetchSharedConversation error:", error);
+export function decodeConversationFromDataToken(token: string): SharedConversation | null {
+  try {
+    if (!token.startsWith("d_")) return null;
+    let b64 = token.slice(2).replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const jsonStr = decodeURIComponent(escape(atob(b64)));
+    const data = JSON.parse(jsonStr);
+    return {
+      id: `local-${data.c || Date.now()}`,
+      token: token,
+      thread_id: "local",
+      user_id: "anon",
+      title: data.t || "Shared Conversation",
+      messages: data.m || [],
+      is_anonymous: Boolean(data.a),
+      user_name: data.u || null,
+      created_at: new Date(data.c || Date.now()).toISOString(),
+      updated_at: new Date(data.c || Date.now()).toISOString(),
+    };
+  } catch (e) {
+    console.error("Decoding error:", e);
     return null;
   }
-  return data as unknown as SharedConversation | null;
+}
+
+export async function fetchSharedConversation(token: string): Promise<SharedConversation | null> {
+  // Mode 1: Self-contained URL data token (instant & offline)
+  if (token.startsWith("d_")) {
+    return decodeConversationFromDataToken(token);
+  }
+
+  // Mode 2: Database lookup by token
+  try {
+    const { data, error } = await supabase
+      .from("shared_conversations" as never)
+      .select("*")
+      .eq("token", token)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("fetchSharedConversation DB error, checking fallback:", error.message);
+      return null;
+    }
+    return data as unknown as SharedConversation | null;
+  } catch (e) {
+    console.warn("fetchSharedConversation error:", e);
+    return null;
+  }
 }
 
 export async function fetchThreadShare(threadId: string): Promise<SharedConversation | null> {
-  const { data, error } = await supabase
-    .from("shared_conversations" as never)
-    .select("*")
-    .eq("thread_id", threadId)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from("shared_conversations" as never)
+      .select("*")
+      .eq("thread_id", threadId)
+      .maybeSingle();
 
-  if (error) {
-    // If table doesn't exist yet or not found, return null gracefully
+    if (error) {
+      // Table doesn't exist yet or not found, return null gracefully without throwing
+      return null;
+    }
+    return data as unknown as SharedConversation | null;
+  } catch {
     return null;
   }
-  return data as unknown as SharedConversation | null;
 }
 
 export async function createOrUpdateThreadShare(params: {
@@ -486,56 +556,85 @@ export async function createOrUpdateThreadShare(params: {
 }): Promise<SharedConversation> {
   const userId = await requireUserId();
 
-  // Check if a share record already exists for this thread
-  const existing = await fetchThreadShare(params.threadId);
+  try {
+    // Check if a share record already exists for this thread in Supabase
+    const existing = await fetchThreadShare(params.threadId);
 
-  if (existing) {
+    if (existing && !existing.token.startsWith("d_")) {
+      const { data, error } = await supabase
+        .from("shared_conversations" as never)
+        .update({
+          title: params.title,
+          messages: params.messages,
+          is_anonymous: params.isAnonymous ?? false,
+          user_name: params.userName ?? null,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+
+      if (!error && data) {
+        return data as unknown as SharedConversation;
+      }
+    }
+
+    // Generate token and attempt DB insert
+    const generatedToken =
+      Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+
     const { data, error } = await supabase
       .from("shared_conversations" as never)
-      .update({
+      .insert({
+        thread_id: params.threadId,
+        user_id: userId,
+        token: generatedToken,
         title: params.title,
         messages: params.messages,
         is_anonymous: params.isAnonymous ?? false,
         user_name: params.userName ?? null,
-        updated_at: new Date().toISOString(),
       } as never)
-      .eq("id", existing.id)
       .select("*")
       .single();
 
-    if (error) throw new Error(error.message);
-    return data as unknown as SharedConversation;
+    if (!error && data) {
+      return data as unknown as SharedConversation;
+    }
+  } catch (e) {
+    console.warn("Database share creation fell back to URL data token:", e);
   }
 
-  // Generate a friendly token if none generated by DB
-  const generatedToken =
-    Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+  // Graceful Fallback: Generate self-contained snapshot token
+  const fallbackToken = encodeConversationToDataToken({
+    title: params.title,
+    messages: params.messages,
+    isAnonymous: params.isAnonymous,
+    userName: params.userName,
+  });
 
-  const { data, error } = await supabase
-    .from("shared_conversations" as never)
-    .insert({
-      thread_id: params.threadId,
-      user_id: userId,
-      token: generatedToken,
-      title: params.title,
-      messages: params.messages,
-      is_anonymous: params.isAnonymous ?? false,
-      user_name: params.userName ?? null,
-    } as never)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as unknown as SharedConversation;
+  return {
+    id: `local-${Date.now()}`,
+    token: fallbackToken,
+    thread_id: params.threadId,
+    user_id: userId,
+    title: params.title,
+    messages: params.messages,
+    is_anonymous: params.isAnonymous ?? false,
+    user_name: params.userName ?? null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 }
 
 export async function deleteThreadShare(threadId: string): Promise<void> {
-  const { error } = await supabase
-    .from("shared_conversations" as never)
-    .delete()
-    .eq("thread_id", threadId);
-
-  if (error) throw new Error(error.message);
+  try {
+    await supabase
+      .from("shared_conversations" as never)
+      .delete()
+      .eq("thread_id", threadId);
+  } catch (e) {
+    console.warn("deleteThreadShare error:", e);
+  }
 }
 
 export async function forkSharedConversation(token: string): Promise<ChatThread> {

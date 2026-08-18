@@ -55,11 +55,13 @@ export function ShareConversationDialog({
   const [copied, setCopied] = useState(false);
   const [customTitle, setCustomTitle] = useState(threadTitle);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [createdShare, setCreatedShare] = useState<SharedConversation | null>(null);
 
   useEffect(() => {
     if (open) {
       setCustomTitle(threadTitle || "Conversation with Remi");
       setCopied(false);
+      setCreatedShare(null);
     }
   }, [open, threadTitle]);
 
@@ -74,7 +76,8 @@ export function ShareConversationDialog({
     enabled: open && !!threadId,
   });
 
-  const shareToken = shareData?.token;
+  const activeShare = shareData || createdShare;
+  const shareToken = activeShare?.token;
   const shareUrl =
     typeof window !== "undefined" && shareToken
       ? `${window.location.origin}/share/${shareToken}`
@@ -94,6 +97,7 @@ export function ShareConversationDialog({
       });
     },
     onSuccess: (newShare) => {
+      setCreatedShare(newShare);
       void queryClient.invalidateQueries({ queryKey: ["thread-share", threadId] });
       void refetch();
       const url = `${window.location.origin}/share/${newShare.token}`;
@@ -113,6 +117,7 @@ export function ShareConversationDialog({
       await deleteThreadShare(threadId);
     },
     onSuccess: () => {
+      setCreatedShare(null);
       void queryClient.invalidateQueries({ queryKey: ["thread-share", threadId] });
       void refetch();
       toast.success("Share link revoked. This conversation is now private.");
