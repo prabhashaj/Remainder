@@ -295,13 +295,73 @@ export async function checkAndRecordRoadmapCompletion(roadmapId: string): Promis
   return false;
 }
 
+export async function syncRoadmapGoalProgress(roadmapId: string): Promise<void> {
+  try {
+    const { data: roadmap } = await supabase
+      .from("roadmaps")
+      .select("goal_id")
+      .eq("id", roadmapId)
+      .maybeSingle();
+
+    if (!roadmap?.goal_id) return;
+
+    const { data: items } = await supabase
+      .from("roadmap_items")
+      .select("id,phase,done")
+      .eq("roadmap_id", roadmapId);
+
+    if (!items || items.length === 0) return;
+
+    const totalItems = items.length;
+    const doneItems = items.filter((i) => i.done === true).length;
+    const overallProgress = Math.round((doneItems / totalItems) * 100);
+
+    // Group items by phase to check if each phase is 100% finished
+    const phaseMap = new Map<string, boolean>();
+    for (const item of items) {
+      if (!item.phase) continue;
+      const current = phaseMap.get(item.phase) ?? true;
+      phaseMap.set(item.phase, current && item.done === true);
+    }
+
+    // Update milestones matching phase names
+    const { data: milestones } = await supabase
+      .from("milestones")
+      .select("id,title")
+      .eq("goal_id", roadmap.goal_id);
+
+    if (milestones && milestones.length > 0) {
+      for (const ms of milestones) {
+        const isPhaseDone = phaseMap.get(ms.title);
+        if (typeof isPhaseDone === "boolean") {
+          await supabase.from("milestones").update({ done: isPhaseDone }).eq("id", ms.id);
+        }
+      }
+    }
+
+    // Update goal progress percentage and completion status
+    await supabase
+      .from("goals")
+      .update({
+        progress: overallProgress,
+        status: overallProgress === 100 ? "done" : "active",
+      })
+      .eq("id", roadmap.goal_id);
+  } catch {
+    /* ignore sync error */
+  }
+}
+
 export async function updateRoadmapItem(id: string, patch: Tables["roadmap_items"]["Update"]) {
   const updated = unwrap(
     await supabase.from("roadmap_items").update(patch).eq("id", id).select("*").single(),
   );
 
-  if (patch.done && updated.roadmap_id) {
-    void checkAndRecordRoadmapCompletion(updated.roadmap_id);
+  if (updated.roadmap_id) {
+    if (patch.done) {
+      void checkAndRecordRoadmapCompletion(updated.roadmap_id);
+    }
+    void syncRoadmapGoalProgress(updated.roadmap_id);
   }
 
   return updated;

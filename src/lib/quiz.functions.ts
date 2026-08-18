@@ -85,16 +85,55 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
         if (updatedItem?.roadmap_id) {
           const { data: allItems } = await context.supabase
             .from("roadmap_items")
-            .select("id, done")
+            .select("id, done, phase")
             .eq("roadmap_id", updatedItem.roadmap_id);
 
-          if (allItems && allItems.length > 0 && allItems.every((i) => i.done === true)) {
-            const { data: roadmap } = await context.supabase
-              .from("roadmaps")
-              .select("id, topic, user_id")
-              .eq("id", updatedItem.roadmap_id)
-              .maybeSingle();
+          const { data: roadmap } = await context.supabase
+            .from("roadmaps")
+            .select("id, topic, goal_id, user_id")
+            .eq("id", updatedItem.roadmap_id)
+            .maybeSingle();
 
+          if (roadmap?.goal_id && allItems && allItems.length > 0) {
+            const total = allItems.length;
+            const doneCount = allItems.filter((i) => i.done === true).length;
+            const overallProgress = Math.round((doneCount / total) * 100);
+
+            // Sync phase milestones
+            const phaseMap = new Map<string, boolean>();
+            for (const item of allItems) {
+              if (!item.phase) continue;
+              const current = phaseMap.get(item.phase) ?? true;
+              phaseMap.set(item.phase, current && item.done === true);
+            }
+
+            const { data: milestones } = await context.supabase
+              .from("milestones")
+              .select("id, title")
+              .eq("goal_id", roadmap.goal_id);
+
+            if (milestones && milestones.length > 0) {
+              for (const ms of milestones) {
+                const isPhaseDone = phaseMap.get(ms.title);
+                if (typeof isPhaseDone === "boolean") {
+                  await context.supabase
+                    .from("milestones")
+                    .update({ done: isPhaseDone })
+                    .eq("id", ms.id);
+                }
+              }
+            }
+
+            await context.supabase
+              .from("goals")
+              .update({
+                progress: overallProgress,
+                status: overallProgress === 100 ? "done" : "active",
+              })
+              .eq("id", roadmap.goal_id);
+          }
+
+          if (allItems && allItems.length > 0 && allItems.every((i) => i.done === true)) {
             if (roadmap?.topic) {
               const { data: existing } = await context.supabase
                 .from("agent_memories")

@@ -382,9 +382,40 @@ function createPlannerTools(supabase: Supabase, userId: string) {
           };
         }
 
+        // 1. Automatically create companion Goal for this learning roadmap
+        const { data: goal } = await supabase
+          .from("goals")
+          .insert({
+            user_id: userId,
+            title: `Master ${topic}`,
+            description: summary ?? `Comprehensive learning roadmap and study goal for ${topic}`,
+            status: "active",
+            progress: 0,
+          })
+          .select("id")
+          .single();
+
+        // 2. Automatically create Milestones for each phase in the roadmap
+        if (goal?.id && phases.length > 0) {
+          const milestoneRows = phases.map((p, idx) => ({
+            user_id: userId,
+            goal_id: goal.id,
+            title: p.name,
+            position: idx,
+            done: false,
+          }));
+          await supabase.from("milestones").insert(milestoneRows);
+        }
+
+        // 3. Create the roadmap linked to the goal
         const { data: roadmap, error: rErr } = await supabase
           .from("roadmaps")
-          .insert({ user_id: userId, topic, summary: summary ?? null })
+          .insert({
+            user_id: userId,
+            topic,
+            summary: summary ?? null,
+            goal_id: goal?.id ?? null,
+          })
           .select("id")
           .single();
         if (rErr) return { success: false, error: rErr.message };
@@ -444,6 +475,7 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         return {
           success: true,
           roadmap_id: roadmap.id,
+          goal_id: goal?.id ?? null,
           topic,
           phases: phases.length,
           topics: topicCount,
@@ -518,6 +550,57 @@ function createPlannerTools(supabase: Supabase, userId: string) {
         const patch: Database["public"]["Tables"]["roadmaps"]["Update"] = {};
         if (topic !== undefined) patch.topic = topic;
         if (summary !== undefined) patch.summary = summary;
+
+        // Fetch existing roadmap to check for goal_id
+        const { data: existingRoadmap } = await supabase
+          .from("roadmaps")
+          .select("goal_id, topic, summary")
+          .eq("id", roadmap_id)
+          .maybeSingle();
+
+        let goalId = existingRoadmap?.goal_id;
+
+        // If no goal exists yet for this roadmap, create one
+        if (!goalId) {
+          const currentTopic = topic ?? existingRoadmap?.topic ?? "Learning Goal";
+          const currentSummary = summary ?? existingRoadmap?.summary;
+          const { data: createdGoal } = await supabase
+            .from("goals")
+            .insert({
+              user_id: userId,
+              title: `Master ${currentTopic}`,
+              description: currentSummary ?? `Learning roadmap and study goal for ${currentTopic}`,
+              status: "active",
+              progress: 0,
+            })
+            .select("id")
+            .single();
+          if (createdGoal?.id) {
+            goalId = createdGoal.id;
+            patch.goal_id = goalId;
+          }
+        } else if (topic || summary) {
+          await supabase
+            .from("goals")
+            .update({
+              ...(topic ? { title: `Master ${topic}` } : {}),
+              ...(summary ? { description: summary } : {}),
+            })
+            .eq("id", goalId);
+        }
+
+        // Sync milestones with the updated phases
+        if (goalId && phases.length > 0) {
+          await supabase.from("milestones").delete().eq("goal_id", goalId);
+          const milestoneRows = phases.map((p, idx) => ({
+            user_id: userId,
+            goal_id: goalId,
+            title: p.name,
+            position: idx,
+            done: false,
+          }));
+          await supabase.from("milestones").insert(milestoneRows);
+        }
 
         if (Object.keys(patch).length > 0) {
           const { error: rErr } = await supabase
