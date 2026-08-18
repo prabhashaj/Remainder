@@ -30,14 +30,14 @@ function flashcardFromUnknown(value: unknown) {
 const FLASHCARD_PROMPT = `You generate spaced-repetition flashcards from a lesson written by Remispace, a calm learning workspace.
 
 Rules:
-- Create 5-8 cards from the lesson content provided
-- Each card tests ONE concept — never bundle multiple ideas
+- Create EXACTLY 5 flashcards from the lesson content provided. Never generate more than 5 cards.
+- Each card tests ONE core concept — never bundle multiple ideas
 - Front: a clear question, fill-in-the-blank, or "Explain…" prompt
-- Back: a concise, correct answer. Include standard LaTeX for formulas ($inline$ or $$display$$), inline code for identifiers
+- Back: a concise, crystal-clear answer. Include standard LaTeX for formulas ($inline$ or $$display$$), inline code for identifiers
 - Vary question types: definition, application, comparison, "what happens if…"
-- Never test trivia or wording — test understanding
+- Never test trivia or wording — test deep understanding
 - Cards should be self-contained (a learner who sees the card months later should understand it without context)
-- Output MUST be JSON format with key "cards": [{"front": "...", "back": "..."}]`;
+- Output MUST be JSON format with key "cards": [{"front": "...", "back": "..."}] containing exactly 5 flashcards`;
 
 /**
  * Generate flashcards with multi-stage fallback to handle model schema differences.
@@ -92,7 +92,7 @@ Sub-topic: ${item.title}
 Lesson content:
 ${item.content}
 
-Generate 5 to 8 flashcards now as JSON {"cards": [{"front": "...", "back": "..."}]}.`;
+Generate EXACTLY 5 flashcards now as JSON {"cards": [{"front": "...", "back": "..."}]}. Do not generate more than 5 cards.`;
 
   let cards: { front: string; back: string }[] = [];
 
@@ -138,8 +138,8 @@ Generate 5 to 8 flashcards now as JSON {"cards": [{"front": "...", "back": "..."
     }
   }
 
-  // Filter out empty cards
-  cards = cards.filter((c) => c.front.trim() && c.back.trim());
+  // Filter out empty cards and strictly limit to 5 cards
+  cards = cards.filter((c) => c.front.trim() && c.back.trim()).slice(0, 5);
   if (cards.length === 0) {
     return { success: false, error: "No valid flashcards generated." };
   }

@@ -288,8 +288,8 @@ function Dashboard() {
       </div>
 
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent className="rounded-3xl sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="rounded-3xl sm:max-w-lg p-6">
+          <DialogHeader className="pb-1">
             <DialogTitle className="font-display text-lg font-bold">
               Spaced Repetition Review
             </DialogTitle>
