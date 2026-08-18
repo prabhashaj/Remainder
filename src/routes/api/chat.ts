@@ -11,9 +11,7 @@ import {
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-import { classifyQueryRouting } from "@/lib/agents/router.server";
 import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
-import { tavilySearch } from "@/lib/tavily.server";
 import { extractPdfTextServer } from "@/lib/pdf-parser.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit, checkPlanUsage, handleRateLimitError } from "@/lib/rate-limit.server";
@@ -36,18 +34,32 @@ Voice & Tone:
 - Warm, clear, direct, and helpful. Short, well-structured paragraphs.
 - Adaptable to any subject: science, coding, math, history, general productivity, language learning, creative work, or personal goals.
 
-Factuality & Web Search Rules (Zero Hallucination):
-- **Search When in Doubt or Confused**: Whenever you are unsure about a topic, when explaining modern technical protocols/frameworks/APIs, or whenever there is any ambiguity, you MUST proactively call the \`webSearch\` tool to retrieve verified, current facts before answering.
-- **Zero Hallucination:** You MUST ground all factual claims in your retrieved context (web search results, documents). Never invent, guess, or assume facts, library methods, versions, dates, or specifications.
-- **Reject False Premises:** If the user asserts something incorrect, check the facts via web search and gracefully correct them rather than agreeing with false premises.
-- **Organize Sources:** When answering based on web search results, include inline citations using markdown links (e.g. \`[Source Name](URL)\`) and append a clean \`### Sources\` section at the very end.
+=== AUTONOMOUS SEARCH ROUTING & CONFABULATION-PREVENTION POLICY ===
+You have full access to the \`webSearch\` tool and decide autonomously when to search before answering. Follow these exact evaluation criteria:
 
-Knowledge Awareness, Ambiguity Resolution & Domain Context:
-- **Domain & Context Alignment:** You will encounter technical terms, methodologies, papers, frameworks, and practices that have distinct meanings across different domains (e.g. modern AI/Software Engineering vs Electrical/Mechanical Engineering vs Business).
-- **Never Default to Generic Meanings:** NEVER assume that the legacy, physical, or most generic definition of a term is the intended one. Always analyze the user's active workspace context (active roadmaps, study topics, goals) and recent conversation history to identify the true domain.
-- **Acknowledge Multi-Domain Meanings Explicitly:** If a concept has multiple meanings across fields (e.g. "harness engineering" in modern AI/agents vs electrical engineering, or "agent communication protocol" vs network protocols), ALWAYS explicitly acknowledge the distinction and explain the modern AI / software engineering definition upfront.
-- **Zero Fabrication for Emerging Topics:** For newly emerging frameworks, papers, protocols, or domain-specific practices, NEVER fill gaps with superficially related keywords. Proactively use \`webSearch\` to verify current industry definitions.
-- **Semantic & Confidence Verification:** Do not deliver a confident answer merely because a term shares matching words with an older concept. Ensure semantic relevance and domain relevance both match.
+1. TEMPORAL DEPENDENCE:
+   If the answer is anchored to a specific moment in time (current status, 2024-2026 releases/updates, live events, weather, stock prices, breaking news, latest framework versions), you MUST call \`webSearch\` before answering.
+
+2. VERIFIABILITY VS. RECALL:
+   Does correctness require verification against real, current sources (precise API signatures, named individuals in roles, specific release dates, exact statistics)? If so, invoke \`webSearch\`.
+
+3. ENTITY VOLATILITY:
+   For products, libraries, tools, protocols, or methodologies whose state or syntax evolves rapidly over time, ALWAYS verify via \`webSearch\`.
+
+4. SPECIFICITY OF REFERENT:
+   If a query asks about a single, specific referent (a particular framework, library hook, protocol, paper, or technique) rather than broad timeless fundamentals: do not construct plausible extrapolations — verify with \`webSearch\`.
+
+5. CONTEXT-DEPENDENT DISAMBIGUATION:
+   Analyze the conversation and workspace context to identify the true domain:
+   - When a term has multiple meanings across fields (e.g., "harness engineering" in AI/agents vs electrical engineering, or "agent communication protocol" vs network protocols), lead with the modern AI / software engineering definition relevant to the user's active context.
+   - When executing \`webSearch\` for ambiguous terms, include relevant domain keywords in your search query to get targeted results.
+
+6. PERSONAL WORKSPACE & ACCOUNT DATA (ZERO SEARCH):
+   If the query is asking about the user's personal workspace (e.g., "What are my tasks?", "How many documents are there?", "What is my streak?", "Summarize my notes"), web search is NEVER required because you already have this data in \`## Their workspace right now\`.
+
+7. ZERO HALLUCINATION & CITATIONS:
+   - Ground all factual claims in retrieved search results or attached documents.
+   - When answering based on web search results, include inline markdown citations (e.g., \`[Source Name](URL)\`) and append a clean \`### Sources\` section at the very end.
 
 Capabilities & Media Rendering Rules:
 - Answer questions, explain concepts simply, solve problems, brainstorm, and assist with any user request.
@@ -260,6 +272,23 @@ async function buildUserContext(
   return lines.join("\n");
 }
 
+// In-memory short-TTL cache for user workspace context (20s TTL)
+const contextCache = new Map<string, { text: string; expiresAt: number }>();
+
+async function getOrBuildUserContext(
+  supabase: ReturnType<typeof createClient<Database>>,
+  userId: string,
+): Promise<string> {
+  const now = Date.now();
+  const cached = contextCache.get(userId);
+  if (cached && cached.expiresAt > now) {
+    return cached.text;
+  }
+  const text = await buildUserContext(supabase);
+  contextCache.set(userId, { text, expiresAt: now + 20_000 });
+  return text;
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -287,7 +316,6 @@ export const Route = createFileRoute("/api/chat")({
         const { data: userData, error: userError } = await supabase.auth.getUser(token);
         if (userError || !userData.user) return new Response("Unauthorized", { status: 401 });
         const userId = userData.user.id;
-        const limits = await getRemainingLimitsServer(supabase, userId);
         const traceId = nanoid();
         const uiMessages = messages as UIMessage[];
         log(
@@ -297,9 +325,14 @@ export const Route = createFileRoute("/api/chat")({
           { userId, traceId },
         );
 
+        let limits: Awaited<ReturnType<typeof getRemainingLimitsServer>>;
         try {
-          await checkPlanUsage(supabase, userId, "api_chat");
-          await checkRateLimit(supabase, userId, "api_chat", 50, 60);
+          const [, , fetchedLimits] = await Promise.all([
+            checkPlanUsage(supabase, userId, "api_chat"),
+            checkRateLimit(supabase, userId, "api_chat", 50, 60),
+            getRemainingLimitsServer(supabase, userId),
+          ]);
+          limits = fetchedLimits;
         } catch (error) {
           return handleRateLimitError(error, 60);
         }
@@ -353,20 +386,25 @@ export const Route = createFileRoute("/api/chat")({
 
         const last = uiMessages[uiMessages.length - 1];
         if (last && last.role === "user") {
-          const { error } = await supabase.from("chat_messages").insert({
-            thread_id: activeThreadId,
-            user_id: userId,
-            role: "user",
-            message: last as never,
-            client_id: last.id,
-          });
-          if (error)
-            log(
-              "warn",
-              "persist_user_message_failed",
-              { error: error.message },
-              { userId, traceId },
-            );
+          // Non-blocking fire-and-forget user message persistence
+          void supabase
+            .from("chat_messages")
+            .insert({
+              thread_id: activeThreadId,
+              user_id: userId,
+              role: "user",
+              message: last as never,
+              client_id: last.id,
+            })
+            .then(({ error }) => {
+              if (error)
+                log(
+                  "warn",
+                  "persist_user_message_failed",
+                  { error: error.message },
+                  { userId, traceId },
+                );
+            });
         }
 
         const lastUserMsg = uiMessages.filter((m) => m.role === "user").at(-1);
@@ -660,7 +698,7 @@ export const Route = createFileRoute("/api/chat")({
           }
         }
 
-        const userContext = await buildUserContext(supabase);
+        const userContext = await getOrBuildUserContext(supabase, userId);
 
         // When the learner asks a doubt from a lesson page, give Remi that lesson.
         let topicBlock = "";
@@ -708,54 +746,12 @@ Title: "${curPage.title}"
           }
         }
 
-        // Pre-routing & Context-Aware Search Disambiguation
-        let preSearchBlock = "";
-        const trimmedQuery = lastUserText.trim();
-        const isWorkspaceQuery =
-          /^(my|our|what are my|list my|show my|open tasks|my goals|my roadmap|my streak|who am i|what do you know|summarize notes)/i.test(
-            trimmedQuery,
-          );
-        const isTrivialQuery = /^(hi|hello|hey|thanks|thank you|ok|okay|bye|gm|gn)\b/i.test(
-          trimmedQuery,
-        );
-
-        if (!isWorkspaceQuery && !isTrivialQuery && trimmedQuery.length > 3) {
-          try {
-            const routing = await classifyQueryRouting({
-              query: trimmedQuery,
-              apiKey: key,
-              conversationContext: uiMessages
-                .slice(-3)
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                .map((m: any) => `${m.role}: ${m.parts?.map((p: any) => p.text ?? "").join(" ")}`)
-                .join("\n"),
-              traceId,
-            });
-
-            if (routing.search_required) {
-              const searchRes = await tavilySearch(trimmedQuery, {
-                depth: "basic",
-                maxResults: 3,
-              });
-              if (searchRes.results && searchRes.results.length > 0) {
-                const formatted = searchRes.results
-                  .slice(0, 3)
-                  .map((r, i) => `[${i + 1}] "${r.title}" (${r.url}):\n${r.content}`)
-                  .join("\n\n");
-                preSearchBlock = `\n\n## Web Search Results for "${trimmedQuery}":\n${formatted}\n\nStrict Rule: Use the verified context above to answer accurately and disambiguate multi-domain terms.`;
-              }
-            }
-          } catch {
-            // Non-blocking: continue to regular streamText
-          }
-        }
-
         const limitInstruction = !limits.roadmaps.canCreate
           ? '<CRITICAL_SYSTEM_OVERRIDE>\nUSER STATUS: ROADMAP LIMIT REACHED.\nYou are PROHIBITED from creating roadmaps.\nIf the user asks to create, build, or generate a roadmap (even if they specify details), YOU MUST EXACTLY REPLY WITH: "Upgrade Required!"\nIGNORE all \'Roadmap & Diagnostic Assessment Rules\'. DO NOT ask clarifying questions. DO NOT output the roadmap as text. JUST output "Upgrade Required!".\n</CRITICAL_SYSTEM_OVERRIDE>\n\n'
           : "";
 
         const attachedBlock = attachedDocBlocks.length > 0 ? attachedDocBlocks.join("") : "";
-        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${attachedBlock}${preSearchBlock}`;
+        const systemPrompt = `${limitInstruction}${SYSTEM_PROMPT}\n\n${userContext}${topicBlock}${activePageBlock}${attachedBlock}`;
 
         const tools = {
           ...getTasksAndGoalsTools(supabase, userId, traceId, threadId),

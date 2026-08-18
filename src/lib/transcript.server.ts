@@ -675,21 +675,21 @@ export async function summarizeTranscript(
     return result.text.trim();
   }
 
-  // Chunk and summarize each part
+  // Chunk and summarize each part in parallel
   const chunks: string[] = [];
   for (let i = 0; i < transcript.length; i += CHUNK_SIZE) {
     chunks.push(transcript.slice(i, i + CHUNK_SIZE));
   }
 
-  const chunkSummaries: string[] = [];
-  for (const [i, chunk] of chunks.entries()) {
-    const result = await generateText({
-      model,
-      system: `You are a study assistant. Summarize part ${i + 1} of ${chunks.length} of a video transcript into key points. Be concise — 4-6 bullet points maximum. Ground everything in what was actually said.`,
-      prompt: `Video title: ${title}\n\nTranscript part ${i + 1}/${chunks.length}:\n${chunk}`,
-    });
-    chunkSummaries.push(result.text.trim());
-  }
+  const chunkSummaries = await Promise.all(
+    chunks.map((chunk, i) =>
+      generateText({
+        model,
+        system: `You are a study assistant. Summarize part ${i + 1} of ${chunks.length} of a video transcript into key points. Be concise — 4-6 bullet points maximum. Ground everything in what was actually said.`,
+        prompt: `Video title: ${title}\n\nTranscript part ${i + 1}/${chunks.length}:\n${chunk}`,
+      }).then((r) => r.text.trim()),
+    ),
+  );
 
   // Combine chunk summaries into final brief
   const combined = chunkSummaries.join("\n\n---\n\n");
@@ -719,15 +719,15 @@ export async function generateNotebook(
     for (let i = 0; i < transcript.length; i += CHUNK_SIZE) {
       chunks.push(transcript.slice(i, i + CHUNK_SIZE));
     }
-    const summaries: string[] = [];
-    for (const [i, chunk] of chunks.entries()) {
-      const result = await generateText({
-        model,
-        system: `Summarize part ${i + 1} of ${chunks.length} of this video transcript into detailed notes covering all major points, examples, and key terms.`,
-        prompt: chunk,
-      });
-      summaries.push(result.text.trim());
-    }
+    const summaries = await Promise.all(
+      chunks.map((chunk, i) =>
+        generateText({
+          model,
+          system: `Summarize part ${i + 1} of ${chunks.length} of this video transcript into detailed notes covering all major points, examples, and key terms.`,
+          prompt: chunk,
+        }).then((r) => r.text.trim()),
+      ),
+    );
     sourceText = summaries.join("\n\n---\n\n");
   }
 

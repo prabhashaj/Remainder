@@ -133,7 +133,7 @@ export async function writeLesson(params: {
   const [research, imageSearch, directYtVideos, tavilyVideoSearch] = await Promise.all([
     tavilySearch(researchQuery, {
       maxResults: 6,
-      depth: "advanced",
+      depth: "basic",
     }),
     tavilySearch(imageQuery, {
       maxResults: 6,

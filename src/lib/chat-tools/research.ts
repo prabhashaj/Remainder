@@ -53,9 +53,13 @@ export function getResearchTools(
 
     webSearch: tool({
       description:
-        "Search the web for accurate, trusted information. Use ALWAYS for current events, news, live scores, facts, versions, prices, or technical queries. Always ground your answer in the returned sources and append a '### Sources' section at the end of your response with clickable markdown links.",
+        "Search the web for verified, up-to-date information, news, current facts, API docs, libraries, and emerging technical topics. Use ALWAYS whenever answering queries anchored in time (2024-2026), live events, specific named tools/frameworks/protocols, or whenever you need to verify facts. Do NOT use for personal workspace questions (tasks, goals, roadmaps, notes) which are already in context. Always ground answers in returned sources and append a '### Sources' section at the end of your response with clickable markdown links.",
       inputSchema: z.object({
-        query: z.string().describe("The search query"),
+        query: z
+          .string()
+          .describe(
+            "The targeted search query, including domain context keywords if needed for disambiguation",
+          ),
       }),
       execute: async ({ query }: { query: string }) =>
         wrapTool(
