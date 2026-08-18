@@ -100,8 +100,14 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 export function getProxyList(): string[] {
   const raw =
     process.env["YOUTUBE_PROXY"] ||
+    process.env["youtubeproxy"] ||
+    process.env["YOUTUBEPROXY"] ||
+    process.env["youtube_proxy"] ||
     process.env["HTTPS_PROXY"] ||
+    process.env["https_proxy"] ||
     process.env["HTTP_PROXY"] ||
+    process.env["http_proxy"] ||
+    Object.entries(process.env).find(([k]) => k.toUpperCase().includes("YOUTUBE") && k.toUpperCase().includes("PROXY"))?.[1] ||
     "";
   if (!raw.trim()) return [];
   return raw
