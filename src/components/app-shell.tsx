@@ -4,7 +4,6 @@ import {
   BookOpen,
   ChevronRight,
   Compass,
-  FileOutput,
   FileText,
   Folder,
   FolderOpen,
@@ -93,7 +92,6 @@ const navItems = [
   { title: "Goals", to: "/goals", icon: Target },
   { title: "Roadmaps", to: "/roadmaps", icon: Compass },
   { title: "Library", to: "/library", icon: Library },
-  { title: "PDF Converter", to: "/pdf-converter", icon: FileOutput },
 ] as const;
 
 const SIDEBAR_WIDTH_KEY = "remispace.sidebar.width";
