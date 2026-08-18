@@ -1,7 +1,7 @@
 import https from "node:https";
 import http from "node:http";
 import { generateText } from "ai";
-import { getSubtitles } from "youtube-caption-extractor";
+import { YoutubeTranscript } from "youtube-transcript";
 
 import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
 import { extractYouTubeId } from "@/lib/youtube";
@@ -171,7 +171,47 @@ export async function fetchYoutubeTranscript(
     debugLog.push(`Watch page fetch notice: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // --- Strategy 1: Native Node.js HTTPS InnerTube Multi-Client Engine with VisitorData ---
+  // --- Strategy 1: YoutubeTranscript Engine ---
+  try {
+    const rawSegments = await (async () => {
+      try {
+        return await YoutubeTranscript.fetchTranscript(videoId, { lang: "en" });
+      } catch {
+        return await YoutubeTranscript.fetchTranscript(videoId);
+      }
+    })();
+
+    if (Array.isArray(rawSegments) && rawSegments.length > 0) {
+      const isMs =
+        rawSegments.length > 0 &&
+        rawSegments[rawSegments.length - 1]!.offset > 1000 &&
+        rawSegments[0]!.duration > 50;
+
+      const segs: TranscriptSegment[] = rawSegments
+        .map((s) => ({
+          text: decodeXmlEntities(s.text ?? "").replace(/\n+/g, " ").trim(),
+          offset: isMs ? s.offset / 1000 : s.offset,
+          duration: isMs ? s.duration / 1000 : s.duration,
+        }))
+        .filter((s) => s.text && s.text !== "[Music]" && s.text !== "[Applause]");
+
+      const normalized = normalizeSegments(segs);
+      if (normalized.length > 0) {
+        debugLog.push(`Strategy 1 (youtube-transcript) OK: ${normalized.length} segments`);
+        return {
+          segments: normalized,
+          fullText: normalized.map((s) => s.text).join(" "),
+          debugLog,
+        };
+      }
+    }
+  } catch (err) {
+    debugLog.push(
+      `Strategy 1 (youtube-transcript) error: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  // --- Strategy 2: Native Node.js HTTPS InnerTube Multi-Client Engine with VisitorData ---
   for (const client of INNERTUBE_CLIENTS) {
     try {
       const body = JSON.stringify({
@@ -240,7 +280,9 @@ export async function fetchYoutubeTranscript(
               timeoutMs: 6000,
             });
 
-            debugLog.push(`Client ${client.name}: caption track HTTP ${capRes.status} (${capRes.text.length}b)`);
+            debugLog.push(
+              `Client ${client.name}: caption track HTTP ${capRes.status} (${capRes.text.length}b)`,
+            );
 
             if (capRes.status === 200 && capRes.text) {
               const segs = normalizeSegments(parseTranscriptXml(capRes.text));
@@ -262,31 +304,6 @@ export async function fetchYoutubeTranscript(
     } catch (err) {
       debugLog.push(`Client ${client.name} error: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }
-
-  // --- Strategy 2: youtube-caption-extractor (English) ---
-  try {
-    const subtitles = await getSubtitles({ videoID: videoId, lang: "en" });
-    if (Array.isArray(subtitles) && subtitles.length > 0) {
-      const segments = normalizeSegments(
-        subtitles.map((s) => ({
-          text: decodeXmlEntities(s.text ?? ""),
-          offset: parseFloat(s.start ?? "0") || 0,
-          duration: parseFloat(s.dur ?? "0") || 0,
-        })),
-      );
-
-      if (segments.length > 0) {
-        debugLog.push(`Strategy 2 (caption-extractor) OK: ${segments.length} segments`);
-        return {
-          segments,
-          fullText: segments.map((s) => s.text).join(" "),
-          debugLog,
-        };
-      }
-    }
-  } catch (err) {
-    debugLog.push(`Strategy 2 error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // --- Strategy 3: Direct TimedText API ---
@@ -425,20 +442,37 @@ function decodeXmlEntities(text: string): string {
 }
 
 /**
- * Returns transcript segments within a window around the given timestamp.
+ * Returns transcript segments within a window around the given timestamp (e.g. ±10s -> 20s window).
+ * If target timestamp is 2:13 (133s), default window covers 2:03 to 2:23.
  */
 export function getTranscriptAtTimestamp(
   segments: TranscriptSegment[],
   seconds: number,
-  windowSeconds = 30,
-): { text: string; segments: TranscriptSegment[] } {
-  const start = Math.max(0, seconds - windowSeconds / 2);
-  const end = seconds + windowSeconds / 2;
+  windowSeconds = 20,
+): { text: string; start: number; end: number; segments: TranscriptSegment[] } {
+  const half = windowSeconds / 2; // e.g. 10s
+  let start = Math.max(0, seconds - half);
+  let end = seconds + half;
 
-  const matched = segments.filter((s) => s.offset + s.duration >= start && s.offset <= end);
+  let matched = segments.filter((s) => s.offset + s.duration >= start && s.offset <= end);
+
+  // If matched text is sparse or very brief (e.g., pause in speech), expand window to ±20s
+  if (matched.map((s) => s.text).join(" ").trim().length < 35) {
+    start = Math.max(0, seconds - 20);
+    end = seconds + 20;
+    matched = segments.filter((s) => s.offset + s.duration >= start && s.offset <= end);
+  }
+
+  const text = matched
+    .map((s) => s.text)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 
   return {
-    text: matched.map((s) => s.text).join(" "),
+    text,
+    start,
+    end,
     segments: matched,
   };
 }

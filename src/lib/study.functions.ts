@@ -269,7 +269,8 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
       return { success: false, error: "Too many requests. Please try again later." };
     }
     const cleanVid = extractYouTubeId(data.videoId) ?? data.videoId.trim();
-    // Check cached transcript first
+    
+    // 1. Check cached transcript or fetch fresh
     const { data: resource } = await context.supabase
       .from("study_resources")
       .select("title, extracted_text")
@@ -281,46 +282,81 @@ export const autoNoteFromTranscript = createServerFn({ method: "POST" })
     if (result.segments && result.segments.length > 0) {
       segments = result.segments;
       if (!resource?.extracted_text && result.fullText) {
-        await saveDocumentTextAndEmbed(context.supabase, data.resourceId, result.fullText);
+        void saveDocumentTextAndEmbed(context.supabase, data.resourceId, result.fullText);
       }
     }
 
-    if (segments.length > 0) {
-      const { text } = getTranscriptAtTimestamp(segments, data.seconds, 30);
-      if (text.trim()) {
-        return { success: true, note: text };
-      }
+    if (!segments || segments.length === 0) {
+      return {
+        success: false,
+        error: "No transcript available for this video to extract timestamped notes.",
+      };
     }
 
-    // Resilient fallback: Generate a smart note for this timestamp using AI
+    // 2. Extract the exact speech window (e.g. at 2:13 -> considers 2:03 to 2:23)
+    const { text: spokenText, start, end } = getTranscriptAtTimestamp(segments, data.seconds, 20);
+
+    if (!spokenText || spokenText.trim().length === 0) {
+      return {
+        success: false,
+        error: `No spoken audio found around this moment (${Math.floor(data.seconds / 60)}:${String(Math.floor(data.seconds % 60)).padStart(2, "0")}).`,
+      };
+    }
+
+    // 3. Synthesize what is ACTUALLY spoken into a concise, meaningful study note
     const key = getAiApiKey();
-    if (key) {
+    if (!key) {
+      return { success: true, note: spokenText };
+    }
+
+    try {
       const { createAiGatewayProvider, getAiModelName } = await import("@/lib/ai-gateway.server");
       const { fetchYouTubeMetadata } = await import("@/lib/youtube.server");
       const { generateText } = await import("ai");
 
       const meta = await fetchYouTubeMetadata(cleanVid);
       const videoTitle = meta?.title ?? resource?.title ?? "Educational Video";
-      const author = meta?.author ? ` by ${meta.author}` : "";
-      const mins = Math.floor(data.seconds / 60);
-      const secs = String(Math.floor(data.seconds % 60)).padStart(2, "0");
-      const timeStr = `${mins}:${secs}`;
+      const startMins = Math.floor(start / 60);
+      const startSecs = String(Math.floor(start % 60)).padStart(2, "0");
+      const endMins = Math.floor(end / 60);
+      const endSecs = String(Math.floor(end % 60)).padStart(2, "0");
+      const currMins = Math.floor(data.seconds / 60);
+      const currSecs = String(Math.floor(data.seconds % 60)).padStart(2, "0");
+
+      const timeRangeStr = `${startMins}:${startSecs} - ${endMins}:${endSecs}`;
+      const targetTimeStr = `${currMins}:${currSecs}`;
 
       const gateway = createAiGatewayProvider(key);
       const aiRes = await generateText({
         model: gateway(getAiModelName()),
-        prompt: `You are Remi, an AI study assistant. A learner is watching the video "${videoTitle}"${author} and paused at timestamp ${timeStr}.
+        system: `You are Remi, an expert study notes assistant.
+A learner is watching the video "${videoTitle}" and paused at ${targetTimeStr}.
 
-Generate a 1-2 sentence key takeaway note for this moment in the video. Ground it in the technical concepts covered by this topic. Be concise, direct, and factual. No preamble.`,
+Your task:
+Convert what the speaker explains in the provided spoken transcript excerpt (${timeRangeStr}) into a crisp, meaningful 1-2 sentence study note.
+
+Strict Rules:
+- Ground the note strictly in what was spoken in this excerpt. Do NOT invent external concepts.
+- Do NOT write general video or channel overviews (e.g. "Software engineering is evolving...").
+- Capture the specific technical takeaway, definition, logic, or principle being stated right here.
+- Keep it concise, high-yield, and actionable (1-2 sentences).
+- Output ONLY the final note text directly. No quotes, no prefix like "Note:".`,
+        prompt: `Spoken transcript excerpt between ${timeRangeStr}:
+"${spokenText}"
+
+Write the 1-2 sentence study note for this moment:`,
       });
 
-      const note = aiRes.text.trim().replace(/^["']|["']$/g, "");
+      const note = aiRes.text.trim().replace(/^["']|["']$/g, "").replace(/^Note:\s*/i, "");
       if (note) {
         return { success: true, note };
       }
+    } catch {
+      // Fallback to verbatim cleaned spoken text on generation error
+      return { success: true, note: spokenText };
     }
 
-    return { success: false, error: "Unable to generate note at this timestamp." };
+    return { success: true, note: spokenText };
   });
 
 /** Generate a notebook from video transcript and create a page. */
