@@ -3,15 +3,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
-  BookOpen,
-  CalendarHeart,
-  CheckCircle2,
   Compass,
   Layers,
   ListChecks,
   Plus,
-  RefreshCw,
-  Sparkles,
   Target,
 } from "lucide-react";
 import { useState } from "react";
@@ -32,9 +27,7 @@ import {
   updateTask,
 } from "@/lib/db";
 import { fetchDueFlashcardCount } from "@/lib/srs.functions";
-import { generateWeeklyReflection } from "@/lib/weekly.functions";
 import { FlashcardReview } from "@/components/flashcard-review";
-import { MessageResponse } from "@/components/ai-elements/message";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -52,7 +45,6 @@ function Dashboard() {
   const qc = useQueryClient();
   const day = today();
   const runFetchCardCount = useServerFn(fetchDueFlashcardCount);
-  const runGenerateWeekly = useServerFn(generateWeeklyReflection);
 
   const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: fetchTasks });
   const { data: goals = [] } = useQuery({ queryKey: ["goals"], queryFn: fetchGoals });
@@ -70,23 +62,6 @@ function Dashboard() {
         return { count: 0 };
       }
     },
-  });
-
-  const {
-    data: reflection,
-    isLoading: reflectionLoading,
-    isFetching: reflectionFetching,
-    refetch: refetchReflection,
-  } = useQuery({
-    queryKey: ["weekly-reflection"],
-    queryFn: async () => {
-      try {
-        return await runGenerateWeekly();
-      } catch {
-        return { text: "" };
-      }
-    },
-    staleTime: 6 * 60 * 60 * 1000,
   });
 
 
@@ -113,17 +88,6 @@ function Dashboard() {
   const todaysTasks = tasks.filter((t) => !t.due_date || t.due_date <= day);
   const openTasks = todaysTasks.filter((t) => !t.done);
   const doneToday = todaysTasks.length - openTasks.length;
-
-  const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-  const doneInLast7Days = tasks.filter(
-    (t) => t.done && (t.updated_at ? t.updated_at >= sevenDaysAgo : true),
-  ).length;
-
-  const lessonsDoneInLast7Days = roadmapItems.filter(
-    (item) => item.done && (item.updated_at ? item.updated_at >= sevenDaysAgo : true),
-  ).length;
 
   const dueCardCount = dueCardData?.count ?? 0;
 
@@ -322,101 +286,6 @@ function Dashboard() {
         </section>
 
       </div>
-
-      {/* Weekly Summary & Remi's Reflection */}
-      <section className="card-soft border-border/70 p-5 sm:p-7 space-y-5 bg-gradient-to-br from-card via-card to-muted/20 shadow-xs">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
-              <CalendarHeart className="size-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-display text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                  Weekly Summary
-                </h2>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-                  Last 7 Days
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Your momentum, learning streak, and Remi's personal reflection.
-              </p>
-            </div>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => void refetchReflection()}
-            disabled={reflectionLoading || reflectionFetching}
-            className="h-8 gap-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground self-start sm:self-auto"
-          >
-            <RefreshCw className={`size-3.5 ${reflectionFetching ? "animate-spin" : ""}`} />
-            <span>{reflectionFetching ? "Refreshing…" : "Refresh"}</span>
-          </Button>
-        </div>
-
-        {/* Weekly Stats Ribbon */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-          <div className="rounded-2xl border border-border/60 bg-muted/20 p-3 flex flex-col">
-            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
-              <CheckCircle2 className="size-3.5 text-emerald-500" /> Tasks Done
-            </span>
-            <span className="text-xl font-bold font-display text-foreground mt-1">
-              {doneInLast7Days}
-            </span>
-          </div>
-
-          <div className="rounded-2xl border border-border/60 bg-muted/20 p-3 flex flex-col">
-            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
-              <BookOpen className="size-3.5 text-primary" /> Lessons Done
-            </span>
-            <span className="text-xl font-bold font-display text-foreground mt-1">
-              {lessonsDoneInLast7Days}
-            </span>
-          </div>
-
-          <div className="rounded-2xl border border-border/60 bg-muted/20 p-3 flex flex-col">
-            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
-              <Target className="size-3.5 text-amber-500" /> Active Goals
-            </span>
-            <span className="text-xl font-bold font-display text-foreground mt-1">
-              {goals.length}
-            </span>
-          </div>
-
-          <div className="rounded-2xl border border-border/60 bg-muted/20 p-3 flex flex-col">
-            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
-              <Sparkles className="size-3.5 text-primary" /> Roadmaps
-            </span>
-            <span className="text-xl font-bold font-display text-foreground mt-1">
-              {roadmaps.length}
-            </span>
-          </div>
-        </div>
-
-        {/* AI Reflection Output */}
-        <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 sm:p-5 text-sm leading-relaxed">
-          {reflectionLoading ? (
-            <div className="flex items-center gap-3 py-4 text-muted-foreground text-sm">
-              <Sparkles className="size-5 animate-spin text-primary shrink-0" />
-              <span>Remi is analyzing your last 7 days and composing your weekly reflection…</span>
-            </div>
-          ) : reflection?.text ? (
-            <div className="space-y-2 prose-sm dark:prose-invert max-w-none">
-              <MessageResponse>{reflection.text}</MessageResponse>
-            </div>
-          ) : (
-            <div className="py-3 text-muted-foreground text-sm flex items-center gap-3">
-              <Sparkles className="size-4 text-primary shrink-0" />
-              <span>
-                As you check off tasks, study roadmap lessons, and log focus sessions, Remi will uncover your patterns and learning streaks here.
-              </span>
-            </div>
-          )}
-        </div>
-      </section>
 
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
         <DialogContent className="rounded-3xl sm:max-w-md">
