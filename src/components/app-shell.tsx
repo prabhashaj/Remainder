@@ -38,6 +38,7 @@ import {
 } from "@/components/focus-timer";
 import { RemiDock } from "@/components/remi-dock";
 import { TopicProvider } from "@/lib/topic-context";
+import { isSubscriptionPremium } from "@/lib/limits";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -234,10 +235,7 @@ function WorkspaceSidebar() {
       return sub;
     },
   });
-  const isPremium =
-    subscription &&
-    subscription.status === "active" &&
-    (subscription.tier === "weekly" || subscription.tier === "monthly");
+  const isPremium = isSubscriptionPremium(subscription);
 
   return (
     <Sidebar collapsible="icon" className="border-border/70">

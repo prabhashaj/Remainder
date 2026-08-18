@@ -20,13 +20,15 @@ export function isSubscriptionPremium(sub: Subscription | null | undefined): boo
   if (!sub) return false;
   const isPaidTier =
     sub.tier === "weekly" || sub.tier === "monthly" || sub.tier === "pro" || sub.tier === "premium";
+  if (!isPaidTier) return false;
+
   const isActive = sub.status === "active";
   const isValidTrial =
     sub.status === "trialing" &&
     sub.trial_ends_at != null &&
     new Date(sub.trial_ends_at) > new Date();
 
-  return (isPaidTier && isActive) || isValidTrial;
+  return isActive || isValidTrial;
 }
 
 export function getCurrentWeekStart() {
