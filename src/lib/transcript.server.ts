@@ -467,6 +467,20 @@ export function getTranscriptAtTimestamp(
     matched = segments.filter((s) => s.offset + s.duration >= start && s.offset <= end);
   }
 
+  // If still no speech in that window, find the closest neighboring segment
+  if (matched.length === 0 && segments.length > 0) {
+    let closest = segments[0]!;
+    let minDiff = Math.abs(closest.offset - seconds);
+    for (const seg of segments) {
+      const diff = Math.abs(seg.offset - seconds);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = seg;
+      }
+    }
+    matched = [closest];
+  }
+
   const text = matched
     .map((s) => s.text)
     .join(" ")
