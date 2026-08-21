@@ -801,10 +801,35 @@ export async function runPlannerAgent(params: PlannerAgentBrief): Promise<{
     { userId: params.userId, traceId: params.traceId },
   );
 
-  const gateway = createAiGatewayProvider(params.apiKey);
-  const model = gateway(getAiModelName());
+  try {
+    const { getCachedCurriculum, saveCachedCurriculum } = await import("@/lib/universal-cache.server");
 
-  const prompt = `You are a master curriculum architect and learning specialist. Design a production-grade, highly structured, progressive learning roadmap tailored specifically for this learner.
+    // 1. Check CAG (Cache-Augmented Generation) Template
+    const cached = await getCachedCurriculum(
+      params.supabase,
+      params.topic,
+      params.experience_level || "beginner",
+    );
+
+    let parsed: RoadmapGeneratedOutput | null = null;
+
+  if (cached && Array.isArray(cached.structure) && cached.structure.length > 0) {
+    parsed = {
+      topic: params.topic,
+      summary: cached.summary,
+      phases: cached.structure as any,
+    };
+    log(
+      "info",
+      "cag_roadmap_cache_hit",
+      { topic: params.topic, level: params.experience_level },
+      { userId: params.userId, traceId: params.traceId },
+    );
+  } else {
+    const gateway = createAiGatewayProvider(params.apiKey);
+    const model = gateway(getAiModelName());
+
+    const prompt = `You are a master curriculum architect and learning specialist. Design a production-grade, highly structured, progressive learning roadmap tailored specifically for this learner.
 
 === LEARNER PROFILE & REQUIREMENTS ===
 - Topic / Domain: ${params.topic}
@@ -852,7 +877,6 @@ Return ONLY a valid JSON object matching this schema:
   ]
 }`;
 
-  try {
     const result = await generateText({
       model,
       system:
@@ -863,7 +887,19 @@ Return ONLY a valid JSON object matching this schema:
 
     const jsonMatch = result.text.match(/\{[\s\S]*\}/);
     const jsonStr = jsonMatch ? jsonMatch[0] : result.text.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed: RoadmapGeneratedOutput = JSON.parse(jsonStr);
+    parsed = JSON.parse(jsonStr);
+
+    // Asynchronously save to universal cache for all future learners
+    if (parsed && Array.isArray(parsed.phases) && parsed.phases.length > 0) {
+      void saveCachedCurriculum(
+        params.supabase,
+        params.topic,
+        params.experience_level || "beginner",
+        parsed.summary || `Comprehensive curriculum for ${params.topic}`,
+        parsed.phases,
+      ).catch(() => {});
+    }
+  }
 
     if (parsed && Array.isArray(parsed.phases) && parsed.phases.length > 0) {
       const topicName = parsed.topic || params.topic;

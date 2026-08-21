@@ -85,6 +85,25 @@ export async function writeLesson(params: {
 
   const subject = roadmap?.topic ?? "";
 
+  // 1. Check Global Subtopic Lesson Cache (CAG)
+  if (!params.force) {
+    const { getCachedLesson } = await import("@/lib/universal-cache.server");
+    const cachedLesson = await getCachedLesson(supabase, subject, item.title);
+    if (cachedLesson && cachedLesson.content) {
+      await supabase
+        .from("roadmap_items")
+        .update({
+          content: cachedLesson.content,
+          images: (cachedLesson.images || []) as never,
+          video_links: (cachedLesson.videos || []) as never,
+          content_status: "ready",
+        })
+        .eq("id", itemId);
+
+      return { success: true, cached: true, title: item.title };
+    }
+  }
+
   await supabase.from("roadmap_items").update({ content_status: "generating" }).eq("id", itemId);
 
   // Build targeted search queries: keep them short and specific.
@@ -234,6 +253,18 @@ Write the lesson now.`,
     })
     .eq("id", itemId);
   if (updateErr) return { success: false, error: updateErr.message };
+
+  // Asynchronously save to universal lesson cache for all future learners
+  const { saveCachedLesson } = await import("@/lib/universal-cache.server");
+  void saveCachedLesson(
+    supabase,
+    subject,
+    item.title,
+    item.title,
+    content,
+    images,
+    videos,
+  ).catch(() => {});
 
   // Mirror the videos into the resource library so they show on the roadmap too.
   if (videos.length > 0) {

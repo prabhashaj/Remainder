@@ -1,4 +1,5 @@
 import { extractYouTubeId, getYouTubeThumbnailUrl, getYouTubeWatchUrl } from "@/lib/youtube";
+import { createLRUCache } from "@/lib/cache.server";
 
 export type YouTubeVideoDetails = {
   id: string;
@@ -18,10 +19,10 @@ export type YouTubeSearchResult = {
   durationText?: string | undefined;
 };
 
-// In-memory cache for search & oembed (1 hour TTL)
+// In-memory bounded LRU cache for search & oembed (1 hour TTL)
 const YOUTUBE_CACHE_TTL = 60 * 60 * 1000;
-const ytSearchCache = new Map<string, { data: YouTubeSearchResult[]; expiresAt: number }>();
-const ytMetadataCache = new Map<string, { data: YouTubeVideoDetails; expiresAt: number }>();
+const ytSearchCache = createLRUCache<YouTubeSearchResult[]>({ maxItems: 1000, ttlMs: YOUTUBE_CACHE_TTL });
+const ytMetadataCache = createLRUCache<YouTubeVideoDetails>({ maxItems: 2000, ttlMs: YOUTUBE_CACHE_TTL });
 
 /**
  * Checks if a YouTube video exists, is public, and is playable.
@@ -31,9 +32,8 @@ export async function isYouTubeVideoValid(urlOrId: string): Promise<boolean> {
   const id = extractYouTubeId(urlOrId);
   if (!id) return false;
 
-  const now = Date.now();
   const cached = ytMetadataCache.get(id);
-  if (cached && cached.expiresAt > now) {
+  if (cached) {
     return true;
   }
 
@@ -62,10 +62,9 @@ export async function fetchYouTubeMetadata(
   const id = extractYouTubeId(urlOrId);
   if (!id) return null;
 
-  const now = Date.now();
   const cached = ytMetadataCache.get(id);
-  if (cached && cached.expiresAt > now) {
-    return cached.data;
+  if (cached) {
+    return cached;
   }
 
   try {
@@ -93,15 +92,12 @@ export async function fetchYouTubeMetadata(
         thumbnail: data.thumbnail_url || getYouTubeThumbnailUrl(id, "hq"),
       };
 
-      ytMetadataCache.set(id, {
-        data: result,
-        expiresAt: now + YOUTUBE_CACHE_TTL,
-      });
+      ytMetadataCache.set(id, result);
 
       return result;
     }
   } catch {
-    // Continue
+    // Graceful fallback
   }
 
   return null;
@@ -119,10 +115,9 @@ export async function searchYouTubeDirect(
   if (!cleanQuery) return [];
 
   const cacheKey = `${cleanQuery.toLowerCase()}:${limit}`;
-  const now = Date.now();
   const cached = ytSearchCache.get(cacheKey);
-  if (cached && cached.expiresAt > now) {
-    return cached.data;
+  if (cached) {
+    return cached;
   }
 
   try {
@@ -217,10 +212,7 @@ export async function searchYouTubeDirect(
           });
 
           if (validItems.length > 0) {
-            ytSearchCache.set(cacheKey, {
-              data: validItems,
-              expiresAt: now + YOUTUBE_CACHE_TTL,
-            });
+            ytSearchCache.set(cacheKey, validItems);
             return validItems;
           }
         }
@@ -253,10 +245,7 @@ export async function searchYouTubeDirect(
     }
 
     if (validatedFallbacks.length > 0) {
-      ytSearchCache.set(cacheKey, {
-        data: validatedFallbacks,
-        expiresAt: now + YOUTUBE_CACHE_TTL,
-      });
+      ytSearchCache.set(cacheKey, validatedFallbacks);
       return validatedFallbacks;
     }
   } catch {

@@ -116,10 +116,19 @@ export async function generateQuiz(params: {
       : Promise.resolve({ data: null as { title: string } | null }),
   ]);
 
+  const subject = roadmap?.topic ?? "";
+
+  // 1. Check Global Quiz Cache (CAG)
+  const { getCachedQuiz, saveCachedQuiz } = await import("@/lib/universal-cache.server");
+  const cached = await getCachedQuiz(supabase, subject, item.title);
+  if (cached && Array.isArray(cached.questions) && cached.questions.length > 0) {
+    return { success: true, quiz: { questions: cached.questions } };
+  }
+
   const gateway = createAiGatewayProvider(apiKey);
   const model = gateway(getAiModelName());
 
-  const prompt = `Subject: ${roadmap?.topic ?? ""}
+  const prompt = `Subject: ${subject}
 Topic: ${parent?.title ?? ""}
 Sub-topic: ${item.title}
 
@@ -187,6 +196,9 @@ Generate the 5-question quiz now in JSON {"questions": [...]}.`;
   if (questions.length === 0) {
     return { success: false, error: "No valid quiz questions generated." };
   }
+
+  // Asynchronously save to universal quiz cache
+  void saveCachedQuiz(supabase, subject, item.title, questions).catch(() => {});
 
   return { success: true, quiz: { questions } };
 }

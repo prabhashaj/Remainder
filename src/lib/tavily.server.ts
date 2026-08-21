@@ -86,20 +86,12 @@ async function searchDuckDuckGoFallback(query: string, limit = 5): Promise<WebRe
   }
 }
 
-// Cost-optimized in-memory search and photo cache (1-hour TTL)
-const SEARCH_CACHE_TTL_MS = 60 * 60 * 1000;
-const searchCache = new Map<string, { data: TavilySearch; expiresAt: number }>();
-const photoCache = new Map<string, { data: ImageResult[]; expiresAt: number }>();
+import { createLRUCache } from "@/lib/cache.server";
 
-function cleanExpiredCache() {
-  const now = Date.now();
-  for (const [k, v] of searchCache.entries()) {
-    if (v.expiresAt <= now) searchCache.delete(k);
-  }
-  for (const [k, v] of photoCache.entries()) {
-    if (v.expiresAt <= now) photoCache.delete(k);
-  }
-}
+// Cost-optimized in-memory search and photo cache (1-hour TTL, bounded LRU)
+const SEARCH_CACHE_TTL_MS = 60 * 60 * 1000;
+const searchCache = createLRUCache<TavilySearch>({ maxItems: 1000, ttlMs: SEARCH_CACHE_TTL_MS });
+const photoCache = createLRUCache<ImageResult[]>({ maxItems: 1000, ttlMs: SEARCH_CACHE_TTL_MS });
 
 /**
  * Robust web search API combining Tavily Search with DuckDuckGo fallback.
@@ -119,11 +111,10 @@ export async function tavilySearch(
   const depth = opts.depth ?? "basic"; // Cost optimization: default to 'basic' (1 credit vs 2 credits)
 
   // Check cache first for $0 cost on repeated queries
-  cleanExpiredCache();
   const cacheKey = `${query.toLowerCase().trim()}:${depth}:${opts.includeImages ? 1 : 0}:${opts.includeDomains?.slice().sort().join(",") ?? ""}:${maxResults}`;
   const cached = searchCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data;
+  if (cached) {
+    return cached;
   }
 
   if (key) {
@@ -174,10 +165,7 @@ export async function tavilySearch(
             answer: data.answer ?? null,
           };
 
-          searchCache.set(cacheKey, {
-            data: searchResult,
-            expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
-          });
+          searchCache.set(cacheKey, searchResult);
 
           return searchResult;
         }
@@ -196,10 +184,7 @@ export async function tavilySearch(
     ...(fallbackResults.length === 0 ? { error: "No search results found." } : {}),
   };
 
-  searchCache.set(cacheKey, {
-    data: fallbackSearch,
-    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
-  });
+  searchCache.set(cacheKey, fallbackSearch);
 
   return fallbackSearch;
 }
@@ -220,10 +205,9 @@ export async function searchTopicPhotos(query: string): Promise<ImageResult[]> {
   const cacheKey = cleanQuery.toLowerCase();
 
   // Check photo cache first
-  cleanExpiredCache();
   const cached = photoCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data;
+  if (cached) {
+    return cached;
   }
 
   // 1. Tavily Web Image Search (primary - returns actual web images from relevant articles)
@@ -264,10 +248,7 @@ export async function searchTopicPhotos(query: string): Promise<ImageResult[]> {
   }
 
   const result = photos.slice(0, 1);
-  photoCache.set(cacheKey, {
-    data: result,
-    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
-  });
+  photoCache.set(cacheKey, result);
 
   return result;
 }

@@ -1,20 +1,18 @@
-// In-memory short-TTL cache for user workspace context (20s TTL)
-const contextCache = new Map<string, { text: string; expiresAt: number }>();
+import { createLRUCache } from "@/lib/cache.server";
+
+// Bounded LRU cache for user workspace context (500 max users, 20s TTL)
+const contextCache = createLRUCache<string>({ maxItems: 500, ttlMs: 20_000 });
 
 export function getCachedUserContext(userId: string): string | null {
-  const now = Date.now();
-  const cached = contextCache.get(userId);
-  if (cached && cached.expiresAt > now) {
-    return cached.text;
-  }
-  return null;
+  return contextCache.get(userId);
 }
 
 export function setCachedUserContext(userId: string, text: string, ttlMs = 20_000): void {
-  contextCache.set(userId, { text, expiresAt: Date.now() + ttlMs });
+  contextCache.set(userId, text, ttlMs);
 }
 
 export function invalidateUserContextCache(userId?: string): void {
   if (userId) contextCache.delete(userId);
   else contextCache.clear();
 }
+

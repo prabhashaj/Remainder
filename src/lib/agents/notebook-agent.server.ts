@@ -36,12 +36,12 @@ export async function runNotebookAgent(params: {
   includeImages?: boolean;
   traceId?: string;
 }): Promise<{ success: boolean; blockCount: number; error?: string }> {
-  const { pageId, sourceMaterial, topicTitle, apiKey, supabase, userId, includeImages } = params;
+  const { pageId, sourceMaterial, topicTitle, apiKey, supabase, userId, includeImages, traceId } = params;
   log(
     "info",
     "agent_start",
     { agent: "notebook", pageId, topicTitle },
-    { userId, traceId: params.traceId },
+    { userId, traceId },
   );
 
   const clippedMaterial =
@@ -96,19 +96,47 @@ Formatting Rules:
 - NO EMOJIS: Do NOT include emojis inside block contents, headings, or text. Keep text completely emoji-free.
 - Return ONLY valid JSON. No markdown code blocks, no trailing commas.`;
 
+  const { getCachedNotebook, saveCachedNotebook } = await import("@/lib/universal-cache.server");
+
+  // 1. Check Global Study Notebook Cache (CAG)
+  let parsed: NotebookOutput | null = null;
+  const cached = await getCachedNotebook(supabase, topicTitle);
+  if (cached && Array.isArray(cached.blocks) && cached.blocks.length > 0) {
+    parsed = {
+      title: cached.title,
+      icon: cached.icon,
+      blocks: cached.blocks,
+    };
+    log("info", "cag_notebook_cache_hit", { topic: topicTitle }, { userId, traceId });
+  } else {
+    try {
+      const result = await generateText({
+        model,
+        system:
+          "You are a JSON notebook agent. Return strictly a valid JSON object matching the requested schema.",
+        prompt,
+        maxRetries: 5,
+      });
+
+      const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : result.text.replace(/```json\n?|\n?```/g, "").trim();
+      parsed = JSON.parse(jsonStr);
+
+      if (parsed && Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
+        void saveCachedNotebook(
+          supabase,
+          topicTitle,
+          parsed.title || `${topicTitle} — Study Notebook`,
+          parsed.icon || "📒",
+          parsed.blocks,
+        ).catch(() => {});
+      }
+    } catch (genErr) {
+      log("error", "notebook_generation_failed", { error: String(genErr) }, { userId, traceId });
+    }
+  }
+
   try {
-    const result = await generateText({
-      model,
-      system:
-        "You are a JSON notebook agent. Return strictly a valid JSON object matching the requested schema.",
-      prompt,
-      maxRetries: 5,
-    });
-
-    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : result.text.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed: NotebookOutput = JSON.parse(jsonStr);
-
     if (parsed && Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
       // 1. Update Page Title and Icon
       await supabase
