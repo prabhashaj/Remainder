@@ -7,12 +7,50 @@ type Supabase = SupabaseClient<Database>;
 
 // Normalize any topic or title into a canonical cache key
 export function normalizeSlug(text: string): string {
-  return text
+  let cleaned = (text || "")
     .toLowerCase()
     .trim()
+    .replace(/^learn(ing)?\s+/i, "")
+    .replace(/^how to learn\s+/i, "")
+    .replace(/^master(ing)?\s+/i, "")
+    .replace(/^intro(duction)? to\s+/i, "")
+    .replace(/^basics of\s+/i, "")
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+  const aliases: Record<string, string> = {
+    "go-lang": "go",
+    "golang": "go",
+    "go-golang": "go",
+    "go-programming": "go",
+    "reactjs": "react",
+    "react-js": "react",
+    "vuejs": "vue",
+    "vue-js": "vue",
+    "nextjs": "nextjs",
+    "next-js": "nextjs",
+    "nodejs": "nodejs",
+    "node-js": "nodejs",
+    "node": "nodejs",
+    "python3": "python",
+    "python-programming": "python",
+    "py": "python",
+    "typescript": "typescript",
+    "ts": "typescript",
+    "javascript": "javascript",
+    "js": "javascript",
+    "rustlang": "rust",
+    "rust-lang": "rust",
+    "kubernetes": "kubernetes",
+    "k8s": "kubernetes",
+    "ai-agents": "agentic-ai",
+    "agents": "agentic-ai",
+    "agentic": "agentic-ai",
+    "agentic-ai": "agentic-ai",
+  };
+
+  return aliases[cleaned] || cleaned;
 }
 
 // In-Memory Fast Tier (L1 Cache) for sub-millisecond retrieval
@@ -38,7 +76,7 @@ export async function getCachedCurriculum(
   const l1Hit = curriculumL1.get(cacheKey);
   if (l1Hit) return l1Hit;
 
-  // 2. Check Database Cache (L2)
+  // 2. Check Database Cache Table (L2 curriculum_templates)
   try {
     const { data, error } = await supabase
       .from("curriculum_templates" as any)
@@ -54,8 +92,73 @@ export async function getCachedCurriculum(
       void (supabase.rpc as any)("increment_template_usage", { template_id: (data as any).id }).catch(() => {});
       return template;
     }
-  } catch (err) {
+  } catch {
     // Database table might not be migrated yet; fallback gracefully
+  }
+
+  // 3. Fallback to existing roadmaps & roadmap_items in Supabase
+  try {
+    const { data: roadmaps } = await supabase
+      .from("roadmaps")
+      .select("id, topic, summary, created_at")
+      .order("created_at", { ascending: false })
+      .limit(60);
+
+    let matchedRoadmap: { id: string; topic: string; summary: string | null } | null = null;
+    for (const r of roadmaps || []) {
+      const normR = normalizeSlug(r.topic);
+      if (normR === normTopic || normR.includes(normTopic) || normTopic.includes(normR)) {
+        matchedRoadmap = r;
+        break;
+      }
+    }
+
+    if (matchedRoadmap) {
+      const { data: items } = await supabase
+        .from("roadmap_items")
+        .select("*")
+        .eq("roadmap_id", matchedRoadmap.id)
+        .order("position", { ascending: true });
+
+      const parentItems = (items || []).filter((i) => !i.parent_id);
+      if (parentItems.length > 0) {
+        const phasesMap = new Map<string, Array<{ title: string; detail: string | null; estimated_minutes: number; subtopics: Array<{ title: string; detail: string | null; estimated_minutes: number }> }>>();
+
+        for (const p of parentItems) {
+          const phaseName = p.phase || "Phase 1: Core Concepts";
+          if (!phasesMap.has(phaseName)) {
+            phasesMap.set(phaseName, []);
+          }
+          const subs = (items || []).filter((i) => i.parent_id === p.id);
+          phasesMap.get(phaseName)!.push({
+            title: p.title,
+            detail: p.detail || null,
+            estimated_minutes: p.estimated_minutes || 60,
+            subtopics: subs.map((s) => ({
+              title: s.title,
+              detail: s.detail || null,
+              estimated_minutes: s.estimated_minutes || 30,
+            })),
+          });
+        }
+
+        const phases = Array.from(phasesMap.entries()).map(([name, topics]) => ({
+          name,
+          topics,
+        }));
+
+        const result = {
+          summary: matchedRoadmap.summary || `Comprehensive personalized learning roadmap for ${matchedRoadmap.topic}`,
+          structure: phases,
+        };
+
+        curriculumL1.set(cacheKey, result);
+        log("info", "cag_roadmap_cache_hit_fallback", { topic, matchedTopic: matchedRoadmap.topic });
+        return result;
+      }
+    }
+  } catch (fbErr) {
+    log("warn", "cache_fallback_lookup_error", { error: String(fbErr) });
   }
 
   return null;

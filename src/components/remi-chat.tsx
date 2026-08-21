@@ -9,6 +9,7 @@ import {
   Bot,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   Compass,
   FileText,
   Loader2,
@@ -204,6 +205,116 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
         })}
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function isRoadmapTool(part: any): boolean {
+  const typeStr = typeof part.type === "string" ? part.type : "";
+  const toolName = typeof part.toolName === "string" ? part.toolName : typeStr.replace(/^tool-/, "");
+  return (
+    toolName === "createRoadmap" ||
+    (toolName === "delegateToPlanner" &&
+      Boolean(part.output?.roadmap_id || part.result?.roadmap_id))
+  );
+}
+
+function RoadmapChatCard({ part }: { part: any }) {
+  const navigate = useNavigate();
+  const output = (part.output || part.result || {}) as {
+    success?: boolean;
+    roadmap_id?: string;
+    topic?: string;
+    phases?: number;
+    topics?: number;
+    subtopics?: number;
+    summary?: string;
+  };
+  const input = (part.input || part.args || {}) as { topic?: string };
+  const isDone = part.state === "output-available" && output.success;
+  const isError = part.state === "output-error" || (output && output.success === false);
+  const isRunning = !isDone && !isError;
+
+  const topicName = output.topic || input.topic || "Learning Roadmap";
+  const summary = output.summary || "Structured personalized learning curriculum";
+  const roadmapId = output.roadmap_id;
+  const phasesCount = output.phases || 4;
+  const topicsCount = output.topics || 20;
+  const subtopicsCount = output.subtopics || 80;
+
+  if (isRunning) {
+    return (
+      <div className="my-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Compass className="size-5 animate-spin" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-display text-sm font-semibold text-foreground">
+              Designing Roadmap: {topicName}
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              <Shimmer>Assembling phases, topics, subtopics, and personalized milestones…</Shimmer>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isDone || !roadmapId) return null;
+
+  return (
+    <div className="my-3 overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-sm transition-all hover:border-primary/50">
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 sm:size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Compass className="size-5 sm:size-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  ROADMAP READY
+                </span>
+              </div>
+              <h3 className="font-display text-base sm:text-lg font-bold text-foreground mt-0.5">
+                {topicName}
+              </h3>
+            </div>
+          </div>
+        </div>
+
+        {summary && (
+          <p className="mt-2.5 text-xs sm:text-sm leading-relaxed text-muted-foreground line-clamp-3">
+            {summary}
+          </p>
+        )}
+
+        <div className="mt-3.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded-lg bg-muted/80 px-2.5 py-1 font-medium text-foreground">
+            {phasesCount} phases
+          </span>
+          <span className="rounded-lg bg-muted/80 px-2.5 py-1 font-medium text-foreground">
+            {topicsCount} topics
+          </span>
+          <span className="rounded-lg bg-muted/80 px-2.5 py-1 font-medium text-foreground">
+            {subtopicsCount} sub-topics
+          </span>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground">0% completed</span>
+          <button
+            type="button"
+            onClick={() => navigate({ to: `/roadmap/${roadmapId}` })}
+            className="press inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs sm:text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 cursor-pointer"
+          >
+            <span>Open Roadmap & Start Learning</span>
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -924,7 +1035,15 @@ export function RemiChat({
                               </div>
                             );
                           }
-                          return <ToolGroup key={gIdx} parts={group.parts} />;
+                          const roadmapParts = group.parts.filter((p) => isRoadmapTool(p));
+                          return (
+                            <div key={gIdx} className="space-y-2">
+                              <ToolGroup parts={group.parts} />
+                              {roadmapParts.map((rp, rpIdx) => (
+                                <RoadmapChatCard key={rpIdx} part={rp} />
+                              ))}
+                            </div>
+                          );
                         })}
                       </>
                     );
