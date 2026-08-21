@@ -22,11 +22,16 @@ export function isSubscriptionPremium(sub: Subscription | null | undefined): boo
     sub.tier === "weekly" || sub.tier === "monthly" || sub.tier === "pro" || sub.tier === "premium";
   if (!isPaidTier) return false;
 
-  const isActive = sub.status === "active";
+  const now = new Date();
+
+  // If subscription has an expiration date, verify that current_period_end is still valid
+  const hasNotExpired = !sub.current_period_end || new Date(sub.current_period_end) > now;
+  const isActive = sub.status === "active" && hasNotExpired;
+
   const isValidTrial =
     sub.status === "trialing" &&
     sub.trial_ends_at != null &&
-    new Date(sub.trial_ends_at) > new Date();
+    new Date(sub.trial_ends_at) > now;
 
   return isActive || isValidTrial;
 }

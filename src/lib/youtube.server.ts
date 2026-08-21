@@ -24,6 +24,35 @@ const ytSearchCache = new Map<string, { data: YouTubeSearchResult[]; expiresAt: 
 const ytMetadataCache = new Map<string, { data: YouTubeVideoDetails; expiresAt: number }>();
 
 /**
+ * Checks if a YouTube video exists, is public, and is playable.
+ * Returns true if available, false if deleted, private, or invalid.
+ */
+export async function isYouTubeVideoValid(urlOrId: string): Promise<boolean> {
+  const id = extractYouTubeId(urlOrId);
+  if (!id) return false;
+
+  const now = Date.now();
+  const cached = ytMetadataCache.get(id);
+  if (cached && cached.expiresAt > now) {
+    return true;
+  }
+
+  try {
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`;
+    const res = await fetch(oembedUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+      },
+      signal: AbortSignal.timeout(3500),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Robustly fetches YouTube video metadata (title, author, thumbnail) via public oEmbed API.
  * 0 API key required.
  */
@@ -46,6 +75,7 @@ export async function fetchYouTubeMetadata(
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
       },
+      signal: AbortSignal.timeout(4000),
     });
 
     if (res.ok) {
@@ -71,18 +101,10 @@ export async function fetchYouTubeMetadata(
       return result;
     }
   } catch {
-    // Continue to fallback
+    // Continue
   }
 
-  // Fallback with basic defaults
-  const fallback: YouTubeVideoDetails = {
-    id,
-    title: "YouTube Video",
-    url: getYouTubeWatchUrl(id),
-    thumbnail: getYouTubeThumbnailUrl(id, "hq"),
-  };
-
-  return fallback;
+  return null;
 }
 
 /**
@@ -185,34 +207,57 @@ export async function searchYouTubeDirect(
         findVideos(data);
 
         if (items.length > 0) {
-          ytSearchCache.set(cacheKey, {
-            data: items,
-            expiresAt: now + YOUTUBE_CACHE_TTL,
+          // Validate availability of top candidate videos in parallel
+          const validationChecks = await Promise.allSettled(
+            items.map((item) => isYouTubeVideoValid(item.id)),
+          );
+          const validItems = items.filter((_, idx) => {
+            const check = validationChecks[idx];
+            return check?.status === "fulfilled" && check.value === true;
           });
-          return items;
+
+          if (validItems.length > 0) {
+            ytSearchCache.set(cacheKey, {
+              data: validItems,
+              expiresAt: now + YOUTUBE_CACHE_TTL,
+            });
+            return validItems;
+          }
         }
       } catch {
         // Fallback below
       }
     }
 
-    // Secondary fallback: regex match video IDs in HTML
+    // Secondary fallback: regex match video IDs in HTML with strict oEmbed metadata verification
     const vidMatches = [...html.matchAll(/\/watch\?v=([\w-]{11})/g)];
     const ids = [...new Set(vidMatches.map((m) => m[1]))].filter(Boolean) as string[];
-    const fallbackResults: YouTubeSearchResult[] = ids.slice(0, limit).map((id) => ({
-      id,
-      title: `${cleanQuery} Video`,
-      url: getYouTubeWatchUrl(id),
-      thumbnail: getYouTubeThumbnailUrl(id, "hq"),
-      channel: "YouTube",
-    }));
+    const validatedFallbacks: YouTubeSearchResult[] = [];
 
-    if (fallbackResults.length > 0) {
+    const metaResults = await Promise.allSettled(
+      ids.slice(0, limit * 2).map((id) => fetchYouTubeMetadata(id)),
+    );
+
+    for (const metaRes of metaResults) {
+      if (metaRes.status === "fulfilled" && metaRes.value) {
+        const meta = metaRes.value;
+        validatedFallbacks.push({
+          id: meta.id,
+          title: meta.title,
+          url: meta.url,
+          thumbnail: meta.thumbnail || getYouTubeThumbnailUrl(meta.id, "hq"),
+          channel: meta.author || "YouTube",
+        });
+        if (validatedFallbacks.length >= limit) break;
+      }
+    }
+
+    if (validatedFallbacks.length > 0) {
       ytSearchCache.set(cacheKey, {
-        data: fallbackResults,
+        data: validatedFallbacks,
         expiresAt: now + YOUTUBE_CACHE_TTL,
       });
-      return fallbackResults;
+      return validatedFallbacks;
     }
   } catch {
     // Continue
