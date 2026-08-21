@@ -848,7 +848,7 @@ ${params.additional_context ? `- Special Requests / Context: ${params.additional
    - Tailor the final phase directly to their target end goal (e.g. job preparation, building a production app, or research).
    - Give realistic estimated_minutes for each topic and subtopic.
 3. CONCRETE CONCEPT NAMING:
-   - Never use vague placeholders (e.g. do not write "Basics" or "Part 1"). Always name the actual underlying concept, mechanism, library, or pattern (e.g. "Gradient Descent & Backpropagation Mechanics", "React Server Components & Streaming SSR").
+   - Never use vague placeholders (e.g. do not write "Basics" or "Part 1"). Always name the actual underlying concepts, mechanisms, principles, or patterns specific to the requested subject.
 4. NO EMOJIS:
    - Never include emojis in the topic, summary, phase names, topic titles, or subtopic details. All text must be completely emoji-free.
 

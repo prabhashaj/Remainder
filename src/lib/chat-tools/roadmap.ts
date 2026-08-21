@@ -27,28 +27,28 @@ export function getRoadmapTools(
           .nullable()
           .optional()
           .describe(
-            "The user's current background, familiarity, or starting experience level (e.g. beginner, intermediate, advanced, or specific prior stacks)",
+            "The user's starting background, familiarity, or experience level (e.g. beginner, intermediate, advanced)",
           ),
         end_goal: z
           .string()
           .nullable()
           .optional()
           .describe(
-            "The user's target outcome, project, career ambition, or milestone they want to achieve (e.g. land a job, build a production SaaS, exam prep)",
+            "The user's target outcome, project, career ambition, or milestone they want to achieve",
           ),
         time_commitment: z
           .string()
           .nullable()
           .optional()
           .describe(
-            "The user's weekly availability, time commitment, or learning pace (e.g. 15 hours/week, 1 hour daily)",
+            "The user's weekly availability, time commitment, or learning pace",
           ),
         additional_context: z
           .string()
           .nullable()
           .optional()
           .describe(
-            "Any additional preferences, specific frameworks, tools, or project domains requested",
+            "Any additional preferences, specific tools, or sub-disciplines requested",
           ),
       }),
       execute: async (input) =>

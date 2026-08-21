@@ -7,50 +7,13 @@ type Supabase = SupabaseClient<Database>;
 
 // Normalize any topic or title into a canonical cache key
 export function normalizeSlug(text: string): string {
-  let cleaned = (text || "")
+  return (text || "")
     .toLowerCase()
     .trim()
-    .replace(/^learn(ing)?\s+/i, "")
-    .replace(/^how to learn\s+/i, "")
-    .replace(/^master(ing)?\s+/i, "")
-    .replace(/^intro(duction)? to\s+/i, "")
-    .replace(/^basics of\s+/i, "")
+    .replace(/^(how to\s+)?(learn(ing)?|study(ing)?|master(ing)?|course on|intro(duction)? to|basics of|fundamentals of)\s+/i, "")
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-
-  const aliases: Record<string, string> = {
-    "go-lang": "go",
-    "golang": "go",
-    "go-golang": "go",
-    "go-programming": "go",
-    "reactjs": "react",
-    "react-js": "react",
-    "vuejs": "vue",
-    "vue-js": "vue",
-    "nextjs": "nextjs",
-    "next-js": "nextjs",
-    "nodejs": "nodejs",
-    "node-js": "nodejs",
-    "node": "nodejs",
-    "python3": "python",
-    "python-programming": "python",
-    "py": "python",
-    "typescript": "typescript",
-    "ts": "typescript",
-    "javascript": "javascript",
-    "js": "javascript",
-    "rustlang": "rust",
-    "rust-lang": "rust",
-    "kubernetes": "kubernetes",
-    "k8s": "kubernetes",
-    "ai-agents": "agentic-ai",
-    "agents": "agentic-ai",
-    "agentic": "agentic-ai",
-    "agentic-ai": "agentic-ai",
-  };
-
-  return aliases[cleaned] || cleaned;
 }
 
 // In-Memory Fast Tier (L1 Cache) for sub-millisecond retrieval
