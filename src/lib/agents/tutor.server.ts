@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import { createAiGatewayProvider, getAiModelName, withAiRateLimitRetry } from "@/lib/ai-gateway.server";
 import { saveDocumentTextAndEmbed } from "../document-processor.server";
 import { fetchYoutubeTranscript, summarizeTranscript } from "@/lib/transcript.server";
 import { extractYouTubeId } from "@/lib/youtube";
@@ -222,17 +222,22 @@ export async function summarizeResource(params: {
   const gateway = createAiGatewayProvider(params.apiKey);
   let summary: string;
   try {
-    const result = await generateText({
-      model: gateway(getAiModelName()),
-      system: SUMMARY_PROMPT,
-      prompt: `Resource title: ${resource.title}
+    const result = await withAiRateLimitRetry(
+      () =>
+        generateText({
+          model: gateway(getAiModelName()),
+          system: SUMMARY_PROMPT,
+          prompt: `Resource title: ${resource.title}
 Kind: ${resource.kind}${resource.url ? `\nSource: ${resource.url}` : ""}
 
 Text:
 ${body}
 
 Write the brief now.`,
-    });
+          maxRetries: 3,
+        }),
+      { label: `Document brief for "${resource.title}"` },
+    );
     summary = result.text.trim();
   } catch (err) {
     await supabase.from("study_resources").update({ status: "error" }).eq("id", resourceId);
@@ -335,16 +340,21 @@ export async function askMaterial(params: {
 
   const gateway = createAiGatewayProvider(params.apiKey);
   try {
-    const result = await generateText({
-      model: gateway(getAiModelName()),
-      system: TUTOR_PROMPT,
-      prompt: `${blocks.join("\n\n")}
+    const result = await withAiRateLimitRetry(
+      () =>
+        generateText({
+          model: gateway(getAiModelName()),
+          system: TUTOR_PROMPT,
+          prompt: `${blocks.join("\n\n")}
 
 ---
 Their question: ${params.question}
 
 Answer it now, grounded in the material above. Quote the most relevant passages directly using > blockquote format.`,
-    });
+          maxRetries: 3,
+        }),
+      { label: `Material Q&A for "${resource.title}"` },
+    );
     return { success: true, answer: result.text.trim() };
   } catch (err) {
     return {

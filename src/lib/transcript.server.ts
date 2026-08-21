@@ -799,8 +799,11 @@ export function getTranscriptAtTimestamp(
   };
 }
 
+import { withAiRateLimitRetry } from "@/lib/ai-gateway.server";
+
 /**
- * Chunks a long transcript into pieces, summarizes each, then combines.
+ * Summarizes a video transcript into a concise pre-watching brief.
+ * Handles transcripts of any size safely without hitting provider concurrency limits.
  */
 export async function summarizeTranscript(
   transcript: string,
@@ -809,41 +812,79 @@ export async function summarizeTranscript(
 ): Promise<string> {
   const gateway = createAiGatewayProvider(apiKey);
   const model = gateway(getAiModelName());
-  const CHUNK_SIZE = 25000;
+  const SINGLE_PASS_LIMIT = 120000; // ~30k tokens fits easily in modern LLM context
 
-  if (transcript.length <= CHUNK_SIZE) {
-    const result = await generateText({
-      model,
-      system: TRANSCRIPT_SUMMARY_PROMPT,
-      prompt: `Video title: ${title}\n\nTranscript:\n${transcript}\n\nWrite the brief now.`,
-    });
-    return result.text.trim();
+  // Clean transcript whitespace
+  const cleanTranscript = transcript.replace(/\s+/g, " ").trim();
+
+  // 1. Single-pass for up to 120,000 characters
+  if (cleanTranscript.length <= SINGLE_PASS_LIMIT) {
+    return withAiRateLimitRetry(
+      async () => {
+        const result = await generateText({
+          model,
+          system: TRANSCRIPT_SUMMARY_PROMPT,
+          prompt: `Video title: ${title}\n\nTranscript:\n${cleanTranscript}\n\nWrite the brief now.`,
+          maxRetries: 3,
+        });
+        return result.text.trim();
+      },
+      { label: `Transcript brief for "${title}"` },
+    );
   }
 
-  // Chunk and summarize each part in parallel
-  const chunks: string[] = [];
-  for (let i = 0; i < transcript.length; i += CHUNK_SIZE) {
-    chunks.push(transcript.slice(i, i + CHUNK_SIZE));
-  }
-
-  const chunkSummaries = await Promise.all(
-    chunks.map((chunk, i) =>
-      generateText({
-        model,
-        system: `You are a study assistant. Summarize part ${i + 1} of ${chunks.length} of a video transcript into key points. Be concise — 4-6 bullet points maximum. Ground everything in what was actually said.`,
-        prompt: `Video title: ${title}\n\nTranscript part ${i + 1}/${chunks.length}:\n${chunk}`,
-      }).then((r) => r.text.trim()),
-    ),
+  // 2. Multi-part sequential processing for mammoth transcripts (>120k chars)
+  // Divide into at most 3 evenly spaced comprehensive sections across the video timeline
+  const sectionLength = 35000;
+  const totalLength = cleanTranscript.length;
+  const part1 = cleanTranscript.slice(0, sectionLength);
+  const part2 = cleanTranscript.slice(
+    Math.floor(totalLength / 2) - Math.floor(sectionLength / 2),
+    Math.floor(totalLength / 2) + Math.floor(sectionLength / 2),
   );
+  const part3 = cleanTranscript.slice(Math.max(0, totalLength - sectionLength));
 
-  // Combine chunk summaries into final brief
-  const combined = chunkSummaries.join("\n\n---\n\n");
-  const result = await generateText({
-    model,
-    system: TRANSCRIPT_SUMMARY_PROMPT,
-    prompt: `Video title: ${title}\n\nCombined section summaries:\n${combined}\n\nWrite the final unified brief now.`,
-  });
-  return result.text.trim();
+  const sections = [
+    { label: "Introduction & Early Concepts", text: part1 },
+    { label: "Core Methods & In-Depth Discussion", text: part2 },
+    { label: "Advanced Topics & Conclusion", text: part3 },
+  ];
+
+  const sectionSummaries: string[] = [];
+  for (let i = 0; i < sections.length; i++) {
+    const s = sections[i]!;
+    const summary = await withAiRateLimitRetry(
+      async () => {
+        const res = await generateText({
+          model,
+          system:
+            "You are an expert study assistant. Summarize this section of a long educational video transcript into 4-6 high-impact, concrete key points. Ground everything strictly in the text.",
+          prompt: `Video title: ${title}\nSection: ${s.label} (${i + 1}/${sections.length})\n\nTranscript excerpt:\n${s.text}`,
+          maxRetries: 3,
+        });
+        return `### ${s.label}\n${res.text.trim()}`;
+      },
+      { label: `Transcript section ${i + 1}/${sections.length}` },
+    );
+    sectionSummaries.push(summary);
+    // Short breather to prevent rate-limit bursts
+    await new Promise((resolve) => setTimeout(resolve, 600));
+  }
+
+  // Combine into final unified brief
+  const combined = sectionSummaries.join("\n\n---\n\n");
+  return withAiRateLimitRetry(
+    async () => {
+      const result = await generateText({
+        model,
+        system: TRANSCRIPT_SUMMARY_PROMPT,
+        prompt: `Video title: ${title}\n\nSection summaries from across this comprehensive video:\n${combined}\n\nWrite the final unified brief now.`,
+        maxRetries: 3,
+      });
+      return result.text.trim();
+    },
+    { label: `Final combined brief for "${title}"` },
+  );
 }
 
 /**
@@ -856,32 +897,59 @@ export async function generateNotebook(
 ): Promise<string> {
   const gateway = createAiGatewayProvider(apiKey);
   const model = gateway(getAiModelName());
-  const CHUNK_SIZE = 25000;
+  const SINGLE_PASS_LIMIT = 120000;
 
-  let sourceText = transcript;
-  if (transcript.length > CHUNK_SIZE) {
-    const chunks: string[] = [];
-    for (let i = 0; i < transcript.length; i += CHUNK_SIZE) {
-      chunks.push(transcript.slice(i, i + CHUNK_SIZE));
-    }
-    const summaries = await Promise.all(
-      chunks.map((chunk, i) =>
-        generateText({
-          model,
-          system: `Summarize part ${i + 1} of ${chunks.length} of this video transcript into detailed notes covering all major points, examples, and key terms.`,
-          prompt: chunk,
-        }).then((r) => r.text.trim()),
-      ),
+  const cleanTranscript = transcript.replace(/\s+/g, " ").trim();
+
+  let sourceText = cleanTranscript;
+  if (cleanTranscript.length > SINGLE_PASS_LIMIT) {
+    const sectionLength = 40000;
+    const totalLength = cleanTranscript.length;
+    const part1 = cleanTranscript.slice(0, sectionLength);
+    const part2 = cleanTranscript.slice(
+      Math.floor(totalLength / 2) - Math.floor(sectionLength / 2),
+      Math.floor(totalLength / 2) + Math.floor(sectionLength / 2),
     );
+    const part3 = cleanTranscript.slice(Math.max(0, totalLength - sectionLength));
+
+    const sections = [
+      { label: "Foundations", text: part1 },
+      { label: "Core Implementation", text: part2 },
+      { label: "Advanced Topics & Wrap-Up", text: part3 },
+    ];
+
+    const summaries: string[] = [];
+    for (const s of sections) {
+      const sum = await withAiRateLimitRetry(
+        async () => {
+          const res = await generateText({
+            model,
+            system: `Summarize this section of the video transcript into comprehensive study notes covering major concepts, formulas, code snippets, and definitions.`,
+            prompt: `Video title: ${title}\nSection: ${s.label}\n\n${s.text}`,
+            maxRetries: 3,
+          });
+          return `### ${s.label}\n${res.text.trim()}`;
+        },
+        { label: `Notebook section summary` },
+      );
+      summaries.push(sum);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
     sourceText = summaries.join("\n\n---\n\n");
   }
 
-  const result = await generateText({
-    model,
-    system: NOTEBOOK_PROMPT,
-    prompt: `Video title: ${title}\n\nSource material:\n${sourceText}\n\nGenerate the notebook now.`,
-  });
-  return result.text.trim();
+  return withAiRateLimitRetry(
+    async () => {
+      const result = await generateText({
+        model,
+        system: NOTEBOOK_PROMPT,
+        prompt: `Video title: ${title}\n\nSource material:\n${sourceText}\n\nGenerate the notebook now.`,
+        maxRetries: 3,
+      });
+      return result.text.trim();
+    },
+    { label: `Generate notebook for "${title}"` },
+  );
 }
 
 const TRANSCRIPT_SUMMARY_PROMPT = `You are a study assistant that reads a video transcript and produces a pre-watching brief.

@@ -104,6 +104,7 @@ export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
+    // 1. Try querying public.flashcards table
     try {
       const { data: cards, error } = await context.supabase
         .from("flashcards")
@@ -111,7 +112,54 @@ export const fetchFlashcardsForItem = createServerFn({ method: "GET" })
         .eq("roadmap_item_id", data.itemId)
         .order("created_at")
         .limit(5);
-      if (!error && cards) return (cards as FlashcardRecord[]).slice(0, 5);
+      if (!error && cards && cards.length > 0) return (cards as FlashcardRecord[]).slice(0, 5);
+    } catch {
+      /* ignore table error, fallback to cache */
+    }
+
+    // 2. Fallback: check universal cache for this roadmap item
+    try {
+      const { data: item } = await context.supabase
+        .from("roadmap_items")
+        .select("title, roadmap_id")
+        .eq("id", data.itemId)
+        .maybeSingle();
+
+      if (item) {
+        const { data: roadmap } = await context.supabase
+          .from("roadmaps")
+          .select("topic")
+          .eq("id", item.roadmap_id)
+          .maybeSingle();
+
+        const { getCachedQuiz } = await import("@/lib/universal-cache.server");
+        const cached = await getCachedQuiz(
+          context.supabase,
+          roadmap?.topic ?? "General",
+          item.title,
+        );
+
+        if (cached && Array.isArray(cached.flashcards) && cached.flashcards.length > 0) {
+          const today = todayStr();
+          const fallbackCards: FlashcardRecord[] = cached.flashcards.slice(0, 5).map((c, i) => {
+            const cardObj = c && typeof c === "object" ? (c as Record<string, unknown>) : {};
+            return {
+              id: `cached-${data.itemId}-${i}`,
+              roadmap_item_id: data.itemId,
+              front: String(cardObj["front"] || cardObj["question"] || ""),
+              back: String(cardObj["back"] || cardObj["answer"] || ""),
+              ease: 2.5,
+              interval_days: 1,
+              repetitions: 0,
+              due_date: today,
+              user_id: context.userId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+          });
+          return fallbackCards;
+        }
+      }
     } catch {
       /* ignore */
     }
@@ -143,12 +191,43 @@ export const fetchFlashcardCountForItem = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ itemId: z.string().max(100) }).parse(data))
   .handler(async ({ data, context }) => {
+    // 1. Try querying public.flashcards count
     try {
       const { count, error } = await context.supabase
         .from("flashcards")
         .select("id", { count: "exact", head: true })
         .eq("roadmap_item_id", data.itemId);
-      if (!error && typeof count === "number") return { count: Math.min(count, 5) };
+      if (!error && typeof count === "number" && count > 0) return { count: Math.min(count, 5) };
+    } catch {
+      /* ignore */
+    }
+
+    // 2. Fallback: check universal cache
+    try {
+      const { data: item } = await context.supabase
+        .from("roadmap_items")
+        .select("title, roadmap_id")
+        .eq("id", data.itemId)
+        .maybeSingle();
+
+      if (item) {
+        const { data: roadmap } = await context.supabase
+          .from("roadmaps")
+          .select("topic")
+          .eq("id", item.roadmap_id)
+          .maybeSingle();
+
+        const { getCachedQuiz } = await import("@/lib/universal-cache.server");
+        const cached = await getCachedQuiz(
+          context.supabase,
+          roadmap?.topic ?? "General",
+          item.title,
+        );
+
+        if (cached && Array.isArray(cached.flashcards) && cached.flashcards.length > 0) {
+          return { count: Math.min(cached.flashcards.length, 5) };
+        }
+      }
     } catch {
       /* ignore */
     }

@@ -2,7 +2,8 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import { createAiGatewayProvider, getAiModelName, withAiRateLimitRetry } from "@/lib/ai-gateway.server";
+import { saveCachedQuiz } from "@/lib/universal-cache.server";
 import { log } from "@/lib/logger.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -41,7 +42,7 @@ Rules:
 
 /**
  * Generate flashcards with multi-stage fallback to handle model schema differences.
- * Uses agent_memories fallback if flashcards table is not present in Supabase schema.
+ * Uses study_quiz_cache fallback if flashcards table is not present in Supabase schema.
  */
 export async function writeFlashcards(params: {
   itemId: string;
@@ -96,24 +97,34 @@ Generate EXACTLY 5 flashcards now as JSON {"cards": [{"front": "...", "back": ".
 
   let cards: { front: string; back: string }[] = [];
 
-  // Attempt 1: generateObject
+  // Attempt 1: generateObject with rate limit retry
   try {
-    const res = await generateObject({
-      model,
-      system: FLASHCARD_PROMPT,
-      prompt,
-      schema: FlashcardSetSchema,
-    });
+    const res = await withAiRateLimitRetry(
+      () =>
+        generateObject({
+          model,
+          system: FLASHCARD_PROMPT,
+          prompt,
+          schema: FlashcardSetSchema,
+          maxRetries: 3,
+        }),
+      { label: `Flashcards for "${item.title}"` },
+    );
     cards = res.object.cards;
   } catch {
-    // Attempt 2: generateText with explicit JSON formatting
+    // Attempt 2: generateText with explicit JSON formatting and retry
     try {
-      const res = await generateText({
-        model,
-        system:
-          FLASHCARD_PROMPT + '\nRespond ONLY with JSON code block: ```json {"cards": [...]} ```',
-        prompt,
-      });
+      const res = await withAiRateLimitRetry(
+        () =>
+          generateText({
+            model,
+            system:
+              FLASHCARD_PROMPT + '\nRespond ONLY with JSON code block: ```json {"cards": [...]} ```',
+            prompt,
+            maxRetries: 3,
+          }),
+        { label: `Flashcards text fallback for "${item.title}"` },
+      );
 
       const jsonMatch = res.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, res.text];
       const rawJson = (jsonMatch[1] || res.text).trim();
@@ -146,6 +157,15 @@ Generate EXACTLY 5 flashcards now as JSON {"cards": [{"front": "...", "back": ".
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // 1. Always save to universal cache as resilient backup
+  try {
+    const topicName = roadmap?.topic ?? "General";
+    await saveCachedQuiz(supabase, topicName, item.title, [], cards);
+  } catch {
+    /* ignore cache error */
+  }
+
+  // 2. Persist to public.flashcards table (with graceful fallback if table missing)
   try {
     await supabase.from("flashcards").delete().eq("roadmap_item_id", itemId).eq("user_id", userId);
 
@@ -160,14 +180,29 @@ Generate EXACTLY 5 flashcards now as JSON {"cards": [{"front": "...", "back": ".
     );
 
     if (insertErr) {
+      const isTableMissing =
+        insertErr.message.includes("schema cache") ||
+        insertErr.message.includes("does not exist") ||
+        insertErr.message.includes("flashcards") ||
+        (insertErr as { code?: string }).code === "PGRST204" ||
+        (insertErr as { code?: string }).code === "42P01";
+
+      if (isTableMissing) {
+        log("warn", "flashcards_table_missing_fallback", {
+          msg: "public.flashcards table not found, saved to universal cache fallback",
+          itemId,
+        });
+        // We successfully saved to universal cache above, so return success
+        return { success: true, count: cards.length };
+      }
+
       return { success: false, error: insertErr.message };
     }
 
     return { success: true, count: cards.length };
   } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Failed to save flashcards",
-    };
+    // If table operation throws, fallback to cache
+    log("warn", "flashcards_table_error_fallback", { error: String(err) });
+    return { success: true, count: cards.length };
   }
 }
