@@ -19,7 +19,7 @@ export function getRoadmapTools(
   return {
     createRoadmap: tool({
       description:
-        "Delegate to the specialized curriculum planning sub-agent to construct a complete, tailored learning roadmap with progressive phases, topics, and subtopics directly in the workspace. CRITICAL PROTOCOL: If the user simply requests a roadmap (e.g. 'Create a roadmap for LLMOps', 'Teach me Python') without having provided their experience level, target end goal, and weekly availability, YOU MUST NOT CALL THIS TOOL YET. First, reply in conversational text asking the 3 diagnostic questions. Only call createRoadmap AFTER the user answers those questions (or if they provided all 3 details upfront in their prompt).",
+        "Delegate to the specialized curriculum planning sub-agent to construct a complete, tailored learning roadmap with progressive phases, topics, and subtopics directly in the workspace. Answering diagnostic questions is optional; call this tool whenever the user requests a roadmap or after asking questions, using any provided details or sensible defaults for missing info.",
       inputSchema: z.object({
         topic: z.string().describe("The core topic, skill, subject, or technology to learn"),
         experience_level: z

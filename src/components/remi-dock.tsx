@@ -8,29 +8,28 @@ import { RemiChat } from "@/components/remi-chat";
 import { Button } from "@/components/ui/button";
 import { createThread, fetchThreadMessages } from "@/lib/db";
 import { useTopicContext } from "@/lib/topic-context";
-
+import {
+  ACTIVE_THREAD_CHANGE_EVENT,
+  getStoredActiveThreadId,
+  setStoredActiveThreadId,
+} from "@/lib/thread-storage";
 import { supabase } from "@/integrations/supabase/client";
 
-const STORAGE_KEY = "remispace.dock.thread";
-
-/** Shared thread bootstrap so the dock and the dashboard panel share one chat. */
+/** Shared thread bootstrap so the dock, dashboard panel, and full conversations share active chat. */
 function useDockThread() {
   const qc = useQueryClient();
   const [threadId, setThreadId] = useState<string | null>(null);
-  const booted = useRef(false);
 
   useEffect(() => {
-    if (booted.current || typeof window === "undefined") return;
-    booted.current = true;
+    let unmounted = false;
 
-    void (async () => {
+    async function initThread() {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData.session?.user?.id;
         if (!userId) return;
 
-        const userKey = `${STORAGE_KEY}.${userId}`;
-        const stored = window.localStorage.getItem(userKey);
+        const stored = getStoredActiveThreadId(userId);
 
         if (stored) {
           const { data: existing } = await supabase
@@ -40,7 +39,7 @@ function useDockThread() {
             .eq("user_id", userId)
             .maybeSingle();
 
-          if (existing) {
+          if (existing && !unmounted) {
             setThreadId(existing.id);
             return;
           }
@@ -54,22 +53,39 @@ function useDockThread() {
           .order("updated_at", { ascending: false })
           .limit(1);
 
-        if (latest && latest.length > 0 && latest[0]) {
+        if (latest && latest.length > 0 && latest[0] && !unmounted) {
           const validId = latest[0].id;
-          window.localStorage.setItem(userKey, validId);
+          setStoredActiveThreadId(userId, validId);
           setThreadId(validId);
           return;
         }
 
         // Otherwise create fresh thread
         const thread = await createThread();
-        window.localStorage.setItem(userKey, thread.id);
-        setThreadId(thread.id);
-        void qc.invalidateQueries({ queryKey: ["threads"] });
+        if (!unmounted) {
+          setStoredActiveThreadId(userId, thread.id);
+          setThreadId(thread.id);
+          void qc.invalidateQueries({ queryKey: ["threads"] });
+        }
       } catch (e) {
         console.error("Failed to initialize dock thread:", e);
       }
-    })();
+    }
+
+    void initThread();
+
+    function handleActiveChange(e: Event) {
+      const detail = (e as CustomEvent<{ threadId?: string | null }>).detail;
+      if (detail && typeof detail.threadId === "string") {
+        setThreadId(detail.threadId);
+      }
+    }
+
+    window.addEventListener(ACTIVE_THREAD_CHANGE_EVENT, handleActiveChange);
+    return () => {
+      unmounted = true;
+      window.removeEventListener(ACTIVE_THREAD_CHANGE_EVENT, handleActiveChange);
+    };
   }, [qc]);
 
   async function startFresh() {
@@ -77,9 +93,7 @@ function useDockThread() {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user?.id;
       const thread = await createThread();
-      if (userId) {
-        window.localStorage.setItem(`${STORAGE_KEY}.${userId}`, thread.id);
-      }
+      setStoredActiveThreadId(userId, thread.id);
       setThreadId(thread.id);
       void qc.invalidateQueries({ queryKey: ["threads"] });
       return thread.id;

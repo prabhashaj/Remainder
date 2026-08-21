@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
@@ -9,6 +9,8 @@ import { RemiChat } from "@/components/remi-chat";
 import { ShareConversationDialog } from "@/components/share-conversation-dialog";
 import { Button } from "@/components/ui/button";
 import { createThread, deleteThread, fetchThreadMessages, fetchThreads } from "@/lib/db";
+import { setStoredActiveThreadId } from "@/lib/thread-storage";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/conversation/$threadId")({
   head: () => ({
@@ -37,6 +39,15 @@ function ConversationThread() {
   const queryClient = useQueryClient();
   const [shareOpen, setShareOpen] = useState(false);
 
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => {
+      const userId = data.session?.user?.id;
+      if (userId && threadId) {
+        setStoredActiveThreadId(userId, threadId);
+      }
+    });
+  }, [threadId]);
+
   const { data: threads = [] } = useQuery({
     queryKey: ["threads"],
     queryFn: fetchThreads,
@@ -54,8 +65,16 @@ function ConversationThread() {
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteThread(threadId),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Conversation deleted");
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
+      const remainingThreads = threads.filter((t) => t.id !== threadId);
+      if (remainingThreads.length > 0 && remainingThreads[0]) {
+        setStoredActiveThreadId(userId, remainingThreads[0].id);
+      } else {
+        setStoredActiveThreadId(userId, null);
+      }
       void queryClient.invalidateQueries({ queryKey: ["threads"] });
       navigate({ to: "/conversation", search: {}, replace: true });
     },
@@ -63,6 +82,9 @@ function ConversationThread() {
 
   async function startNew() {
     const thread = await createThread();
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user?.id;
+    setStoredActiveThreadId(userId, thread.id);
     await queryClient.invalidateQueries({ queryKey: ["threads"] });
     navigate({
       to: "/conversation/$threadId",

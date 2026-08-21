@@ -93,6 +93,7 @@ Block Type Rules:
 Formatting Rules:
 - Ground everything strictly in the supplied source material.
 - Write mathematical and chemical concepts with strict standard LaTeX formatting. Use single dollar signs ($H_2O$ or $x^2$) for inline variables and chemical/math terms inside text paragraphs. Use double dollar signs ($$ ... $$) ONLY on dedicated block lines for standalone equations. Never use double dollar signs inline inside sentences.
+- NO EMOJIS: Do NOT include emojis inside block contents, headings, or text. Keep text completely emoji-free.
 - Return ONLY valid JSON. No markdown code blocks, no trailing commas.`;
 
   try {

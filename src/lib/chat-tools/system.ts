@@ -13,7 +13,7 @@ export function getSystemTools(
   return {
     saveMemory: tool({
       description:
-        "Quietly store long-term profile facts about the user in the background whenever they mention personal preferences, career ambitions, learning interests, skills they possess, personal/career goals, or life accomplishments. NEVER call this tool for quizzes, self-checks, flashcards, or temporary conversation snippets.",
+        "Store a permanent user preference, communication style, response format, background fact, goal, or ambition in their workspace profile. You MUST call this whenever the user expresses how they want you to answer, teach, or format responses (e.g. passage/storytelling style, concise, etc.), or mentions their personal background or goals.",
       inputSchema: z.object({
         content: z.string().describe("The preference, ambition, interest, skill, goal, or accomplishment to remember"),
         category: z
@@ -31,6 +31,8 @@ export function getSystemTools(
               .select("id")
               .single();
             if (error) return { success: false, error: error.message };
+            const { invalidateUserContextCache } = await import("@/lib/user-context-cache.server");
+            invalidateUserContextCache(userId);
             return { success: true, id: data.id };
           },
           supabase,

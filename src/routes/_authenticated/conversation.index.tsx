@@ -2,7 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
-import { createThread } from "@/lib/db";
+import { createThread, fetchThreads } from "@/lib/db";
+import { getStoredActiveThreadId, setStoredActiveThreadId } from "@/lib/thread-storage";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/conversation/")({
   validateSearch: (search: Record<string, unknown>): { seed?: string } =>
@@ -20,20 +22,81 @@ function ConversationIndex() {
     if (started.current) return;
     started.current = true;
     void (async () => {
-      const thread = await createThread();
-      await qc.invalidateQueries({ queryKey: ["threads"] });
-      navigate({
-        to: "/conversation/$threadId",
-        params: { threadId: thread.id },
-        search: seed ? { seed } : {},
-        replace: true,
-      });
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData.session?.user?.id;
+
+        // If a seed prompt was provided (e.g. from a button / action), always create a fresh conversation
+        if (seed) {
+          const thread = await createThread();
+          setStoredActiveThreadId(userId, thread.id);
+          await qc.invalidateQueries({ queryKey: ["threads"] });
+          navigate({
+            to: "/conversation/$threadId",
+            params: { threadId: thread.id },
+            search: { seed },
+            replace: true,
+          });
+          return;
+        }
+
+        // Check if there is an active thread stored in localStorage
+        const storedId = getStoredActiveThreadId(userId);
+        const existingThreads = await fetchThreads();
+
+        if (storedId) {
+          const matched = existingThreads.find((t) => t.id === storedId);
+          if (matched) {
+            navigate({
+              to: "/conversation/$threadId",
+              params: { threadId: matched.id },
+              search: {},
+              replace: true,
+            });
+            return;
+          }
+        }
+
+        // If no stored active thread or invalid, check for the most recent thread
+        if (existingThreads.length > 0 && existingThreads[0]) {
+          const latestId = existingThreads[0].id;
+          setStoredActiveThreadId(userId, latestId);
+          navigate({
+            to: "/conversation/$threadId",
+            params: { threadId: latestId },
+            search: {},
+            replace: true,
+          });
+          return;
+        }
+
+        // Fallback: create fresh thread if user has zero threads
+        const newThread = await createThread();
+        setStoredActiveThreadId(userId, newThread.id);
+        await qc.invalidateQueries({ queryKey: ["threads"] });
+        navigate({
+          to: "/conversation/$threadId",
+          params: { threadId: newThread.id },
+          search: {},
+          replace: true,
+        });
+      } catch {
+        // Safe fallback
+        const fallback = await createThread();
+        navigate({
+          to: "/conversation/$threadId",
+          params: { threadId: fallback.id },
+          search: seed ? { seed } : {},
+          replace: true,
+        });
+      }
     })();
   }, [navigate, qc, seed]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] items-center justify-center text-sm text-muted-foreground">
-      Opening a conversation with Remi…
+      Opening conversation…
     </div>
   );
 }
+

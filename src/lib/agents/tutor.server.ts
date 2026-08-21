@@ -26,7 +26,8 @@ Rules:
 - Ground everything strictly in the supplied text; never invent content.
 - **Bold** each key term the first time it appears.
 - Write formulas in LaTeX: inline as $a^2+b^2=c^2$, display on dedicated lines as $$E = mc^2$$. Never use plain-text math or bracket delimiters.
-- Be specific and technically accurate. No filler.`;
+- Be specific and technically accurate. No filler.
+- NO EMOJIS: Do NOT use emojis anywhere in the brief. Keep text clean and emoji-free.`;
 
 const TUTOR_PROMPT = `You are Remi, a patient tutor answering a learner's question about THEIR OWN study material.
 
@@ -35,6 +36,7 @@ Absolute rules:
 - When quoting, use "> " markdown blockquote format so the learner can see exactly where the information comes from.
 - If the material does not contain the answer, say so plainly in one line, then answer from well-established fundamentals and label that part "Beyond your material".
 - Never invent page numbers, quotes, or facts.
+- STRICT RULE: DO NOT USE EMOJIS anywhere in your responses or answers. Keep all text completely emoji-free.
 
 Style:
 - Warm, direct, concrete. Short paragraphs.
@@ -42,7 +44,8 @@ Style:
 - Include markdown photos/illustrations ONLY if the learner explicitly asks for an image, photo, or diagram. Otherwise, do NOT include images.
 - Formulas in LaTeX: inline as $x^2$, display on dedicated lines as $$\\frac{dy}{dx} = 2x$$. Use explicit operators (\\times, \\cdot), never plain-text math or bracket delimiters.
 - Fenced code blocks with a language tag; \`inline code\` for identifiers. For code examples, ALWAYS provide complete, runnable code that produces visible output (e.g., using \`print()\`).
-- End with one short "Try this" line the learner can act on.`;
+- End with one short "Try this" line the learner can act on.
+- No emojis anywhere in the answer.`;
 
 function clip(text: string | null | undefined, max: number): string {
   if (!text) return "";

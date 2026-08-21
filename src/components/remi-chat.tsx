@@ -512,6 +512,7 @@ export function RemiChat({
       void queryClient.invalidateQueries({ queryKey: ["pages"] });
       void queryClient.invalidateQueries({ queryKey: ["blocks"] });
       void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
+      void queryClient.invalidateQueries({ queryKey: ["memories"] });
     },
   });
 

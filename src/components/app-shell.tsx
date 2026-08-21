@@ -522,6 +522,9 @@ function CommandPalette({
             onSelect={() =>
               go(() => {
                 void createThread().then(async (thread) => {
+                  const { data } = await supabase.auth.getSession();
+                  const userId = data.session?.user?.id;
+                  setStoredActiveThreadId(userId, thread.id);
                   await queryClient.invalidateQueries({ queryKey: ["threads"] });
                   navigate({
                     to: "/conversation/$threadId",
@@ -698,6 +701,8 @@ function SidebarResizer({ width, onWidth }: { width: number; onWidth: (width: nu
   );
 }
 
+import { setStoredActiveThreadId } from "@/lib/thread-storage";
+
 function ConversationsGroup() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -720,8 +725,16 @@ function ConversationsGroup() {
 
   const deleteThreadMutation = useMutation({
     mutationFn: (id: string) => deleteThread(id),
-    onSuccess: (_, deletedId) => {
+    onSuccess: async (_, deletedId) => {
       toast.success("Conversation deleted");
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
+      const remaining = threads.filter((t) => t.id !== deletedId);
+      if (remaining.length > 0 && remaining[0]) {
+        setStoredActiveThreadId(userId, remaining[0].id);
+      } else {
+        setStoredActiveThreadId(userId, null);
+      }
       void queryClient.invalidateQueries({ queryKey: ["threads"] });
       if (pathname === `/conversation/${deletedId}`) {
         navigate({ to: "/dashboard" });
@@ -743,6 +756,9 @@ function ConversationsGroup() {
 
   async function startNew() {
     const thread = await createThread();
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user?.id;
+    setStoredActiveThreadId(userId, thread.id);
     await queryClient.invalidateQueries({ queryKey: ["threads"] });
     navigate({
       to: "/conversation/$threadId",

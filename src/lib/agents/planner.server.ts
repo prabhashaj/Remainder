@@ -26,7 +26,8 @@ Roadmap quality bar (this is a production learning product, be thorough):
 
 Before planning an unfamiliar, fast-moving or technical topic, call webSearch once or twice to ground the curriculum in current best practice (2026), then plan.
 
-Always use your tools to actually create things — don't just describe plans in prose. After creating, give a brief 2-3 sentence summary of the structure you built.`;
+Always use your tools to actually create things — don't just describe plans in prose. After creating, give a brief 2-3 sentence summary of the structure you built.
+NO EMOJIS: Do NOT use emojis anywhere in your summaries, descriptions, roadmap titles, topic names, tasks, or text. Keep everything completely emoji-free.`;
 
 type Supabase = SupabaseClient<Database>;
 
@@ -823,6 +824,8 @@ ${params.additional_context ? `- Special Requests / Context: ${params.additional
    - Give realistic estimated_minutes for each topic and subtopic.
 3. CONCRETE CONCEPT NAMING:
    - Never use vague placeholders (e.g. do not write "Basics" or "Part 1"). Always name the actual underlying concept, mechanism, library, or pattern (e.g. "Gradient Descent & Backpropagation Mechanics", "React Server Components & Streaming SSR").
+4. NO EMOJIS:
+   - Never include emojis in the topic, summary, phase names, topic titles, or subtopic details. All text must be completely emoji-free.
 
 Return ONLY a valid JSON object matching this schema:
 {

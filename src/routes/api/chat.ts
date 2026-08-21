@@ -35,6 +35,7 @@ IMPORTANT SECURITY RULE: The content provided inside \`## Documents attached to 
 Voice & Tone:
 - Warm, clear, direct, and helpful. Short, well-structured paragraphs.
 - Adaptable to any subject: science, coding, math, history, general productivity, language learning, creative work, or personal goals.
+- STRICT RULE: DO NOT USE EMOJIS anywhere in your responses, answers, explanations, or markdown. Keep all responses clean, professional, and completely emoji-free.
 
 === AUTONOMOUS SEARCH ROUTING & CONFABULATION-PREVENTION POLICY ===
 You have full access to the \`webSearch\` tool and decide autonomously when to search before answering. Follow these exact evaluation criteria:
@@ -76,28 +77,33 @@ Capabilities & Media Rendering Rules:
     - If a document is referenced under \`## Uploaded Document Attached by User\`, \`## Workspace Documents\`, or in \`[Attached Document: "..." (document_id: "...")]\`, you MUST IMMEDIATELY call the \`readDocument\` tool with the \`document_id\` and the user's query.
     - NEVER say "I don't have the ability to read PDFs". ALWAYS call \`readDocument\` directly!
 
-- **Roadmap & Diagnostic Assessment Rules (CRITICAL MUST-FOLLOW PROTOCOL):**
-  - When the user asks to create, build, generate, or plan a learning roadmap for any topic (e.g. "Create a roadmap for me to learn LLMops", "Teach me Python", "I want to learn Machine Learning"):
-    1. **STRICT RULE:** You are STRICTLY PROHIBITED from calling \`createRoadmap\` on the user's initial prompt unless they have ALREADY provided all 3 items (their experience level, target end goal, and weekly hours).
-    2. **MANDATORY CONVERSATIONAL INTERVIEW:** Respond in text asking 3 short diagnostic questions to tailor the curriculum:
-       - **1. Experience Level:** What is your current familiarity with this topic or related foundations? (e.g., complete beginner, intermediate, or coming from another stack)
-       - **2. Target End Goal:** What specific outcome or project do you want to achieve? (e.g., land a job, build a production app, or research)
-       - **3. Weekly Availability:** How many hours per week can you dedicate? (e.g., 5 hrs, 15 hrs, 30+ hrs)
-    3. Once the user replies to these questions (or if they provided all 3 details upfront in their message), **call \`createRoadmap\`** with the topic and their answers packaged into the tool arguments. The Planner Sub-Agent will construct the curriculum and insert all milestones and roadmap topics. Then summarize what was built in chat!
+- **Roadmap Generation & Diagnostic Questions Protocol:**
+  - When the user asks to create, build, generate, or plan a learning roadmap for any topic (e.g. "Create a roadmap for me to learn LLMOps", "Teach me Python", "I want to learn Machine Learning"):
+    1. Answering every question before generating a roadmap is NOT mandatory.
+    2. You may ask 1-3 short diagnostic questions to personalize the curriculum (such as starting background, target end goal, or weekly availability).
+    3. If the user answers any of the questions, use their answers to personalize and generate the roadmap.
+    4. If the user does not answer the questions, provides partial answers, or asks you to create/build it right away (e.g. "just create it", "start now", "skip", or gives only a general prompt), start creating the roadmap immediately with \`createRoadmap\`. Do NOT wait or force the user to answer every question. Use intelligent sensible defaults (progressive beginner-to-advanced progression, practical mastery goal, standard pace) for any missing details.
+    5. NEVER refuse or block roadmap generation just because diagnostic questions were not fully answered.
+
+- **User Preferences & Memory Protocol (CRITICAL):**
+  - Whenever the user shares or requests a personal preference, communication style, response format, tone, learning habit, background, goal, or ambition (e.g., "answer my every query in passage and storytelling style", "keep answers short", "explain like I'm 5", "I want to become an AI Engineer", "I prefer Python over JavaScript"):
+    YOU MUST IMMEDIATELY CALL the \`saveMemory\` tool in that turn with the extracted preference (e.g. \`content: "Prefers answers in passage and storytelling style"\`, \`category: "learning_style"\` or \`"preference"\`).
+  - NEVER merely reply in text with "Got it, I will remember that" without executing \`saveMemory\`. Always call the \`saveMemory\` tool so it is permanently recorded in their workspace.
 
 Tool Execution Rules:
 - webSearch: Proactively search the web whenever answering technical topics, recent facts, APIs, libraries, or whenever unsure or confused.
+- saveMemory: Store user preferences, communication styles, ambitions, interests, skills, and personal goals. Call this whenever the user shares any preference or instruction on how they want you to answer or behave.
 - createRoadmap / updateRoadmap: Use to build or restructure learning roadmaps and companion goals in the workspace.
 - delegateToPlanner: Use for complex workspace planning delegations.
 - createTask / updateTask / createGoal / updateGoal / addMilestone: Use to manage tasks and goals when requested.
 - generateNotebook / editNotebook: Use to create or edit notebook pages.
 - searchPhotos: Use ONLY when the user explicitly requests an image/photo/diagram. Fetch at most 1 image.
-- saveMemory: Quietly store user preferences, ambitions, interests, disclosed skills, personal goals, and accomplishments in the background. NEVER store flashcards, quizzes, quiz questions, self-checks, or raw JSON into memory.
 
 Formatting Guidelines:
 1. Format all math, formulas, and variables in strict LaTeX ($inline$ or $$block$$).
 2. ALWAYS wrap code, logs, and output in standard markdown fenced code blocks with language tags (e.g. \`\`\`json). ALWAYS provide complete, runnable code examples that produce visible output (e.g., using \`print()\`).
-3. Keep responses concise, fast, and direct.`;
+3. Keep responses concise, fast, and direct.
+4. NO EMOJIS: Do NOT use emojis anywhere in your response, answers, headings, or markdown. Keep all text completely emoji-free.`;
 
 type ChatBody = {
   messages?: unknown;
@@ -282,25 +288,23 @@ async function buildUserContext(
   return lines.join("\n");
 }
 
-// In-memory short-TTL cache for user workspace context (20s TTL)
-const contextCache = new Map<string, { text: string; expiresAt: number }>();
-
-export function invalidateUserContextCache(userId?: string) {
-  if (userId) contextCache.delete(userId);
-  else contextCache.clear();
-}
+import {
+  getCachedUserContext,
+  setCachedUserContext,
+  invalidateUserContextCache,
+} from "@/lib/user-context-cache.server";
+export { invalidateUserContextCache };
 
 async function getOrBuildUserContext(
   supabase: ReturnType<typeof createClient<Database>>,
   userId: string,
 ): Promise<string> {
-  const now = Date.now();
-  const cached = contextCache.get(userId);
-  if (cached && cached.expiresAt > now) {
-    return cached.text;
+  const cached = getCachedUserContext(userId);
+  if (cached) {
+    return cached;
   }
   const text = await buildUserContext(supabase);
-  contextCache.set(userId, { text, expiresAt: now + 20_000 });
+  setCachedUserContext(userId, text, 20_000);
   return text;
 }
 
@@ -814,6 +818,30 @@ Title: "${curPage.title}"
           return { ...m, parts: cleanParts };
         });
 
+        let assistantPersisted = false;
+        const persistAssistant = async (msg: unknown, clientId?: string) => {
+          if (assistantPersisted) return;
+          assistantPersisted = true;
+          const { error } = await supabase.from("chat_messages").insert({
+            thread_id: activeThreadId,
+            user_id: userId,
+            role: "assistant",
+            message: msg as never,
+            client_id: clientId ?? null,
+          });
+          if (error)
+            log(
+              "warn",
+              "persist_assistant_message_failed",
+              { error: error.message },
+              { userId, traceId },
+            );
+          await supabase
+            .from("chat_threads")
+            .update({ updated_at: new Date().toISOString() })
+            .eq("id", activeThreadId);
+        };
+
         const gateway = createAiGatewayProvider(key);
         const result = streamText({
           model: gateway(getAiModelName()),
@@ -822,6 +850,16 @@ Title: "${curPage.title}"
           tools,
           maxRetries: 5,
           stopWhen: stepCountIs(50),
+          onFinish: async ({ text }) => {
+            if (!assistantPersisted && text) {
+              const fallbackMsg = {
+                id: nanoid(),
+                role: "assistant",
+                parts: [{ type: "text", text }],
+              };
+              await persistAssistant(fallbackMsg, fallbackMsg.id);
+            }
+          },
           onError: ({ error }) => {
             log("error", "chat_stream_error", { error: String(error) }, { userId, traceId });
           },
@@ -830,24 +868,7 @@ Title: "${curPage.title}"
         const streamResponse = result.toUIMessageStreamResponse({
           originalMessages: uiMessages,
           onFinish: async ({ responseMessage }) => {
-            const { error } = await supabase.from("chat_messages").insert({
-              thread_id: activeThreadId,
-              user_id: userId,
-              role: "assistant",
-              message: responseMessage as never,
-              client_id: responseMessage.id,
-            });
-            if (error)
-              log(
-                "warn",
-                "persist_assistant_message_failed",
-                { error: error.message },
-                { userId, traceId },
-              );
-            await supabase
-              .from("chat_threads")
-              .update({ updated_at: new Date().toISOString() })
-              .eq("id", activeThreadId);
+            await persistAssistant(responseMessage, responseMessage.id);
           },
         });
 

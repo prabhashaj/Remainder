@@ -15,6 +15,7 @@ Steps:
 2. For each good result, use saveResourceToRoadmap to save it with an appropriate kind (video, article, course, interactive).
 3. Prefer well-regarded resources — YouTube tutorials, official documentation, free university courses, interactive platforms.
 4. Give a brief summary of what you found.
+5. NO EMOJIS: Do NOT use emojis in your summaries, titles, or resource notes. Keep all text completely emoji-free.
 
 If web search is unavailable, say so and suggest the user try again later.`;
 

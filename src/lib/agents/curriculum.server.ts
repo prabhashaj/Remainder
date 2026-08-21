@@ -39,6 +39,7 @@ Rules:
 - Ground facts in the provided web research; prefer current (2026) best practice
 - Be specific and technically accurate — never filler or vague
 - Do not invent links or embed images; the app handles those
+- NO EMOJIS: Do NOT use emojis anywhere in the lesson markdown or headings. Keep text completely emoji-free.
 - Aim for 500-900 words`;
 
 /**
