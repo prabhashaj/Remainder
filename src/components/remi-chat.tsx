@@ -205,11 +205,11 @@ function getToolPartInput(part: any): any {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ToolGroup({ parts }: { parts: any[] }) {
+function ToolGroup({ parts, isActivelyStreaming = true }: { parts: any[]; isActivelyStreaming?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const allDone = parts.every((p) => isToolPartDone(p));
-  const anyError = parts.some((p) => isToolPartError(p));
-  const isRunning = !allDone && !anyError;
+  const anyError = parts.some((p) => isToolPartError(p)) || (!isActivelyStreaming && !allDone);
+  const isRunning = isActivelyStreaming && !allDone && !anyError;
 
   // Single-line active indicator: show ONLY the current running action and remove previous ones
   const activePart =
@@ -284,7 +284,7 @@ function isRoadmapTool(part: any): boolean {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function RoadmapChatCard({ part }: { part: any }) {
+function RoadmapChatCard({ part, isActivelyStreaming = true }: { part: any; isActivelyStreaming?: boolean }) {
   const navigate = useNavigate();
   const output = getToolPartOutput(part) as {
     success?: boolean;
@@ -376,7 +376,7 @@ function isDeepResearchTool(part: any): boolean {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function DeepResearchChatCard({ part }: { part: any }) {
+function DeepResearchChatCard({ part, isActivelyStreaming = true }: { part: any; isActivelyStreaming?: boolean }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const output = getToolPartOutput(part) as {
     success?: boolean;
@@ -1351,6 +1351,8 @@ export function RemiChat({
                           </div>
                         )}
                         {groupedParts.map((group, gIdx) => {
+                          const isActivelyStreaming = isStreaming && message.role === "assistant" && idx === messages.length - 1;
+
                           if (group.type === "text") {
                             // If this text is an exact duplicate of a rendered deep research report in this message, skip rendering duplicate text
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1363,7 +1365,6 @@ export function RemiChat({
                             });
                             if (isDuplicateReport) return null;
 
-                            const isActivelyStreaming = isStreaming && message.role === "assistant" && idx === messages.length - 1;
                             return (
                               <div key={gIdx}>
                                 <MessageResponse>{group.text}</MessageResponse>
@@ -1385,12 +1386,12 @@ export function RemiChat({
                           const notebookParts = group.parts.filter((p) => isNotebookTool(p));
                           return (
                             <div key={gIdx} className="space-y-2">
-                              <ToolGroup parts={group.parts} />
+                              <ToolGroup parts={group.parts} isActivelyStreaming={isActivelyStreaming} />
                               {roadmapParts.map((rp, rpIdx) => (
-                                <RoadmapChatCard key={rpIdx} part={rp} />
+                                <RoadmapChatCard key={rpIdx} part={rp} isActivelyStreaming={isActivelyStreaming} />
                               ))}
                               {researchParts.map((dp, dpIdx) => (
-                                <DeepResearchChatCard key={dpIdx} part={dp} />
+                                <DeepResearchChatCard key={dpIdx} part={dp} isActivelyStreaming={isActivelyStreaming} />
                               ))}
                               {notebookParts.map((np, npIdx) => (
                                 <NotebookChatCard key={npIdx} part={np} />
