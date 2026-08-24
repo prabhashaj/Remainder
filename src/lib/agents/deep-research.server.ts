@@ -26,7 +26,7 @@ export interface ResearchSubtask {
   objective: string;
   arxivQuery: string;
   academicQuery: string;
-  webQuery: string;
+  webQueries: string[];
   category?: string | undefined;
   targetYearMin?: number | undefined;
 }
@@ -88,7 +88,7 @@ Your goal:
 3. Provide targeted search queries for each subtask:
    - arxivQuery: Keywords for academic preprint searches.
    - academicQuery: Targeted search query for academic databases.
-   - webQuery: Targeted search query for the live web index, recent reports, and empirical sources.`;
+   - webQueries: An array of 3 highly diverse search queries for the live web index. For example, one general query, one targeting news/industry reports, and one targeting forums/discussions (e.g., appending 'reddit' or 'forum').`;
 
   const SubtasksSchema = z.object({
     plan: z.object({
@@ -106,7 +106,7 @@ Your goal:
         objective: z.string().describe("Specific technical question to resolve"),
         arxivQuery: z.string().describe("Optimized search query for arXiv API"),
         academicQuery: z.string().describe("Optimized query for Semantic Scholar / OpenAlex"),
-        webQuery: z.string().describe("Optimized Google/Tavily search query"),
+        webQueries: z.array(z.string()).describe("3 diverse Tavily search queries (general, news, forums)"),
         category: z
           .string()
           .optional()
@@ -149,7 +149,11 @@ Your goal:
           objective: "Identify the foundational principles, historical context, and fundamental mechanisms.",
           arxivQuery: `${topic} overview foundations`,
           academicQuery: `${topic} foundational principles review`,
-          webQuery: `${topic} overview core concepts ${currentYear}`,
+          webQueries: [
+            `${topic} overview core concepts ${currentYear}`,
+            `${topic} history principles industry reports`,
+            `${topic} foundations explained site:reddit.com`,
+          ],
           targetYearMin: currentYear - 5,
         },
         {
@@ -158,7 +162,11 @@ Your goal:
           objective: "Investigate practical methodologies, key applications, and notable advancements.",
           arxivQuery: `${topic} methodology applications`,
           academicQuery: `${topic} methodology advancement applications`,
-          webQuery: `${topic} latest applications methodology ${currentYear}`,
+          webQueries: [
+            `${topic} latest applications methodology ${currentYear}`,
+            `${topic} methodology real-world case studies news`,
+            `${topic} methodology applications discussions forum`,
+          ],
           targetYearMin: currentYear - 3,
         },
         {
@@ -167,7 +175,11 @@ Your goal:
           objective: "Collect verified empirical metrics, state-of-the-art comparisons, and real-world validations.",
           arxivQuery: `${topic} benchmark state-of-the-art performance`,
           academicQuery: `${topic} benchmark results comparison`,
-          webQuery: `${topic} latest benchmark comparison ${currentYear}`,
+          webQueries: [
+            `${topic} latest benchmark comparison ${currentYear}`,
+            `${topic} state-of-the-art benchmarks news analysis`,
+            `${topic} benchmark comparison opinions site:reddit.com`,
+          ],
           targetYearMin: currentYear - 2,
         },
       ],
@@ -183,7 +195,7 @@ async function executeSubagentWorker(
   gateway: ReturnType<typeof createAiGatewayProvider>,
   modelName: string,
 ): Promise<SubagentFinding> {
-  const [arxivPapers, academicPapers, webResults] = await Promise.all([
+  const [arxivPapers, academicPapers, ...webResultsArray] = await Promise.all([
     searchArxivServer(subtask.arxivQuery, {
       sortBy: "relevance",
       maxResults: 6,
@@ -194,11 +206,25 @@ async function executeSubagentWorker(
       maxResults: 4,
       yearMin: subtask.targetYearMin,
     }),
-    tavilySearch(subtask.webQuery, { maxResults: 5, depth: "basic" }).catch(() => ({
-      results: [] as WebResult[],
-      answer: "",
-    })),
+    ...subtask.webQueries.map((q) =>
+      tavilySearch(q, { maxResults: 4, depth: "basic" }).catch(() => ({
+        results: [] as WebResult[],
+        answer: "",
+      }))
+    ),
   ]);
+
+  // Deduplicate web results
+  const allWebResults: WebResult[] = [];
+  const seenWebUrls = new Set<string>();
+  for (const wr of webResultsArray) {
+    for (const r of wr.results) {
+      if (r.url && !seenWebUrls.has(r.url)) {
+        seenWebUrls.add(r.url);
+        allWebResults.push(r);
+      }
+    }
+  }
 
   // Deduplicate arXiv papers
   const seenArxivIds = new Set<string>();
@@ -229,8 +255,8 @@ async function executeSubagentWorker(
     evidenceLines.push(`  Abstract: ${ap.abstract.slice(0, 300)}...`);
   }
 
-  evidenceLines.push(`\n## Web Research Results (${webResults.results.length} retrieved):`);
-  for (const wr of webResults.results) {
+  evidenceLines.push(`\n## Web Research Results (${allWebResults.length} retrieved):`);
+  for (const wr of allWebResults) {
     evidenceLines.push(`- [${wr.title}](${wr.url}): ${wr.content.slice(0, 350)}...`);
   }
 
@@ -248,14 +274,14 @@ async function executeSubagentWorker(
     .map((ap) => `• [${ap.title}](${ap.url}) (${ap.year || "Recent"})\n  Abstract: ${ap.abstract.slice(0, 250)}...`)
     .join("\n\n");
 
-  const webBulletPoints = webResults.results
-    .slice(0, 3)
+  const webBulletPoints = allWebResults
+    .slice(0, 5)
     .map((w) => `• [${w.title}](${w.url}): ${w.content.slice(0, 250)}...`)
     .join("\n\n");
 
   const findingsSummary = [
     `Specialized Subagent Analysis for "${subtask.title}" (${subtask.objective}):`,
-    `Discovered ${allArxivPapers.length} arXiv papers, ${academicPapers.length} academic preprints, and ${webResults.results.length} web benchmark sources.`,
+    `Discovered ${allArxivPapers.length} arXiv papers, ${academicPapers.length} academic preprints, and ${allWebResults.length} web benchmark sources.`,
     paperBulletPoints ? `Primary arXiv Preprints:\n${paperBulletPoints}` : "",
     academicBulletPoints ? `Academic Literature:\n${academicBulletPoints}` : "",
     webBulletPoints ? `Web & Technical Metrics:\n${webBulletPoints}` : "",
@@ -277,7 +303,7 @@ async function executeSubagentWorker(
       summary: p.summary,
       authors: p.authors,
     })),
-    webSources: webResults.results.map((r) => ({
+    webSources: allWebResults.map((r) => ({
       title: r.title,
       url: r.url,
       content: r.content,
