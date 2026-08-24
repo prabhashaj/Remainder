@@ -2,7 +2,12 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createAiGatewayProvider, getAiModelName } from "@/lib/ai-gateway.server";
+import {
+  createAiGatewayProvider,
+  getAiModelName,
+  getResearchAiModelName,
+  withAiRateLimitRetry,
+} from "@/lib/ai-gateway.server";
 import { log } from "@/lib/logger.server";
 import {
   searchArxivServer,
@@ -422,7 +427,7 @@ export async function runDeepResearch(params: {
   onStepProgress?: (step: string, details: string) => void;
 }): Promise<DeepResearchResult> {
   const gateway = createAiGatewayProvider(params.apiKey);
-  const modelName = getAiModelName();
+  const modelName = getResearchAiModelName();
 
   const actionTrail: DeepResearchResult["actionTrail"] = [];
 

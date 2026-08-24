@@ -32,6 +32,23 @@ export function getAiModelName(defaultModel = "google/gemini-2.0-flash"): string
 }
 
 /**
+ * Dedicated Mistral model for deep research and complex technical literature analysis.
+ * Uses Mistral Large (128k context, frontier reasoning and zero hallucinations).
+ */
+export function getResearchAiModelName(): string {
+  if (process.env["MISTRAL_RESEARCH_MODEL"]) {
+    return process.env["MISTRAL_RESEARCH_MODEL"];
+  }
+  if (process.env["MISTRAL_API_KEY"]) {
+    return "mistral-large-latest";
+  }
+  if (process.env["OPENROUTER_API_KEY"]) {
+    return "mistralai/mistral-large-2411";
+  }
+  return "mistral-large-latest";
+}
+
+/**
  * Execute an AI function with exponential backoff on 429 Rate Limit errors.
  */
 export async function withAiRateLimitRetry<T>(

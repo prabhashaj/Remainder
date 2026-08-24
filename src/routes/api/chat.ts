@@ -13,7 +13,7 @@ import {
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
+import { createAiGatewayProvider, getAiApiKey, getAiModelName, getResearchAiModelName } from "@/lib/ai-gateway.server";
 import { extractPdfTextServer } from "@/lib/pdf-parser.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit, checkPlanUsage, handleRateLimitError } from "@/lib/rate-limit.server";
@@ -796,9 +796,15 @@ Title: "${curPage.title}"
             .eq("id", activeThreadId);
         };
 
+        const isResearchQuery =
+          /\b(research|arxiv|paper|papers|architecture|upgrade|upgrades|literature|survey|moe|vit|transformer|agentic|state of the art|sota)\b/i.test(
+            lastUserText,
+          );
+        const selectedModel = isResearchQuery ? getResearchAiModelName() : getAiModelName();
+
         const gateway = createAiGatewayProvider(key);
         const result = streamText({
-          model: gateway(getAiModelName()),
+          model: gateway(selectedModel),
           system: systemPrompt,
           messages: await convertToModelMessages(sanitizedUiMessages),
           tools,
