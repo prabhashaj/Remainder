@@ -45,82 +45,111 @@ export async function searchArxivServer(
   query: string,
   options?: ArxivSearchOptions,
 ): Promise<ArxivPaper[]> {
+  const cleanQuery = query
+    .replace(/[()[\]{}"']/g, " ")
+    .replace(/\s+(AND|OR|NOT)\s+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleanQuery) return [];
+
+  const sortBy = options?.sortBy ?? "relevance";
+  const maxResults = Math.min(options?.maxResults ?? 8, 20);
+
+  let searchQuery = `all:${cleanQuery}`;
+  if (options?.category) {
+    searchQuery = `cat:${options.category} AND all:${cleanQuery}`;
+  }
+
   try {
-    const cleanQuery = query.trim();
-    if (!cleanQuery) return [];
-
-    const sortBy = options?.sortBy ?? "relevance";
-    const maxResults = Math.min(options?.maxResults ?? 8, 20);
-
-    let searchQuery = `all:${cleanQuery}`;
-    if (options?.category) {
-      searchQuery = `cat:${options.category} AND all:${cleanQuery}`;
-    }
-
     const url = `https://export.arxiv.org/api/query?search_query=${encodeURIComponent(searchQuery)}&max_results=${maxResults}&sortBy=${sortBy}&sortOrder=descending`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Remispace-Academic-Search/1.0" },
     });
 
-    if (!res.ok) {
-      log("warn", "arxiv_api_error", { status: res.status, query });
-      return [];
-    }
+    if (res.ok) {
+      const xmlText = await res.text();
+      const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+      const entries: ArxivPaper[] = [];
 
-    const xmlText = await res.text();
-    const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
-    const entries: ArxivPaper[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = entryRegex.exec(xmlText)) !== null) {
+        const entryContent = match[1] ?? "";
 
-    let match: RegExpExecArray | null;
-    while ((match = entryRegex.exec(xmlText)) !== null) {
-      const entryContent = match[1] ?? "";
+        const idMatch = /<id>([\s\S]*?)<\/id>/.exec(entryContent);
+        const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(entryContent);
+        const summaryMatch = /<summary>([\s\S]*?)<\/summary>/.exec(entryContent);
+        const publishedMatch = /<published>([\s\S]*?)<\/published>/.exec(entryContent);
 
-      const idMatch = /<id>([\s\S]*?)<\/id>/.exec(entryContent);
-      const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(entryContent);
-      const summaryMatch = /<summary>([\s\S]*?)<\/summary>/.exec(entryContent);
-      const publishedMatch = /<published>([\s\S]*?)<\/published>/.exec(entryContent);
-
-      const authorRegex = /<author>\s*<name>([\s\S]*?)<\/name>\s*<\/author>/g;
-      const authors: string[] = [];
-      let authorMatch: RegExpExecArray | null;
-      while ((authorMatch = authorRegex.exec(entryContent)) !== null) {
-        if (authorMatch[1]) {
-          authors.push(authorMatch[1].trim());
+        const authorRegex = /<author>\s*<name>([\s\S]*?)<\/name>\s*<\/author>/g;
+        const authors: string[] = [];
+        let authorMatch: RegExpExecArray | null;
+        while ((authorMatch = authorRegex.exec(entryContent)) !== null) {
+          if (authorMatch[1]) {
+            authors.push(authorMatch[1].trim());
+          }
         }
+
+        const arxivId = idMatch && idMatch[1] ? idMatch[1].trim() : "";
+        const rawTitle =
+          titleMatch && titleMatch[1] ? titleMatch[1].replace(/\s+/g, " ").trim() : "Untitled";
+        const rawSummary =
+          summaryMatch && summaryMatch[1] ? summaryMatch[1].replace(/\s+/g, " ").trim() : "";
+        const published =
+          publishedMatch && publishedMatch[1] ? (publishedMatch[1].trim().split("T")[0] ?? "") : "";
+
+        // If yearMin is specified, filter out older papers
+        if (options?.yearMin && published) {
+          const pubYear = parseInt(published.slice(0, 4), 10);
+          if (!isNaN(pubYear) && pubYear < options.yearMin) {
+            continue;
+          }
+        }
+
+        const pdfUrl = arxivId ? arxivId.replace("/abs/", "/pdf/") + ".pdf" : "";
+
+        entries.push({
+          id: arxivId,
+          title: rawTitle,
+          summary: rawSummary,
+          authors: authors.slice(0, 5),
+          published,
+          pdfUrl,
+          arxivUrl: arxivId,
+        });
       }
 
-      const arxivId = idMatch && idMatch[1] ? idMatch[1].trim() : "";
-      const rawTitle =
-        titleMatch && titleMatch[1] ? titleMatch[1].replace(/\s+/g, " ").trim() : "Untitled";
-      const rawSummary =
-        summaryMatch && summaryMatch[1] ? summaryMatch[1].replace(/\s+/g, " ").trim() : "";
-      const published =
-        publishedMatch && publishedMatch[1] ? (publishedMatch[1].trim().split("T")[0] ?? "") : "";
-
-      // If yearMin is specified, filter out older papers
-      if (options?.yearMin && published) {
-        const pubYear = parseInt(published.slice(0, 4), 10);
-        if (!isNaN(pubYear) && pubYear < options.yearMin) {
-          continue;
-        }
+      if (entries.length > 0) {
+        return entries;
       }
-
-      const pdfUrl = arxivId ? arxivId.replace("/abs/", "/pdf/") + ".pdf" : "";
-
-      entries.push({
-        id: arxivId,
-        title: rawTitle,
-        summary: rawSummary,
-        authors: authors.slice(0, 5),
-        published,
-        pdfUrl,
-        arxivUrl: arxivId,
-      });
+    } else {
+      log("warn", "arxiv_api_error_fallback", { status: res.status, query: cleanQuery });
     }
-
-    return entries;
   } catch (err) {
-    log("error", "arxiv_search_failed", { error: String(err), query });
+    log("warn", "arxiv_search_exception_fallback", { error: String(err), query: cleanQuery });
+  }
+
+  // Fallback: Search arXiv preprints via Tavily Academic Search
+  try {
+    const yearHint = options?.yearMin ? ` ${options.yearMin}` : "";
+    const tavilyQuery = `site:arxiv.org ${cleanQuery}${yearHint}`;
+    const tavilyRes = await tavilySearch(tavilyQuery, { maxResults, depth: "basic" });
+
+    return (tavilyRes.results || []).map((r) => {
+      const arxivMatch = /arxiv\.org\/(?:abs|pdf)\/([0-9.]+)/i.exec(r.url);
+      const arxivId = arxivMatch ? arxivMatch[1]! : r.url;
+      const cleanTitle = r.title.replace(/^\[.*?\]\s*/, "").replace(/\s*-\s*arXiv.*$/i, "");
+      return {
+        id: arxivId,
+        title: cleanTitle || r.title,
+        summary: r.content,
+        authors: ["arXiv Preprint"],
+        published: options?.yearMin ? `${options.yearMin}` : new Date().getFullYear().toString(),
+        pdfUrl: arxivMatch ? `https://arxiv.org/pdf/${arxivId}.pdf` : r.url,
+        arxivUrl: arxivMatch ? `https://arxiv.org/abs/${arxivId}` : r.url,
+      };
+    });
+  } catch (tavilyErr) {
+    log("error", "arxiv_tavily_fallback_failed", { error: String(tavilyErr), query: cleanQuery });
     return [];
   }
 }

@@ -39,16 +39,16 @@ export function getResearchModelName(): string {
     return process.env["RESEARCH_MODEL"];
   }
   if (process.env["MISTRAL_API_KEY"]) {
-    return process.env["MISTRAL_RESEARCH_MODEL"] || "mistral-large-latest";
+    return process.env["MISTRAL_RESEARCH_MODEL"] || "mistral-small-latest";
   }
   if (process.env["OPENAI_API_KEY"] && !process.env["OPENROUTER_API_KEY"]) {
-    return process.env["OPENAI_RESEARCH_MODEL"] || "gpt-4o";
+    return process.env["OPENAI_RESEARCH_MODEL"] || "gpt-4o-mini";
   }
   if (process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"]) {
-    const raw = process.env["GEMINI_RESEARCH_MODEL"] || "gemini-2.0-pro-exp-02-05";
+    const raw = process.env["GEMINI_RESEARCH_MODEL"] || "gemini-2.0-flash";
     return raw.replace(/^google\//, "");
   }
-  return "mistral-large-latest";
+  return "mistral-small-latest";
 }
 
 /**

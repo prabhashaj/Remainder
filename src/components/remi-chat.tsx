@@ -126,7 +126,10 @@ function getToolLabel(
   }
 
   const mapping: Record<string, { active: string; done: string }> = {
-    deepResearch: { active: "Using subagents", done: "Researched with subagents" },
+    deepResearch: {
+      active: "Researching with subagents, verifier & writer",
+      done: "Synthesized verified research report",
+    },
     searchArxiv: { active: "Searching arXiv", done: "Searched arXiv" },
     searchPapers: { active: "Searching academic papers", done: "Searched academic papers" },
     fetchPaperDetails: { active: "Fetching paper details", done: "Fetched paper details" },
@@ -402,13 +405,14 @@ function DeepResearchChatCard({ part }: { part: any }) {
             {verifiedPapersCount} Verified Papers Retrieved
           </span>
           <span className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-0.5 font-semibold text-primary">
-            {subagentsCount} Parallel Subagents Executed
+            {subagentsCount} Subagent Workers
           </span>
-          {subtasksList.length > 0 && (
-            <span className="rounded-lg bg-muted/80 px-2.5 py-0.5 font-medium text-foreground">
-              {subtasksList.length} Research Subtasks
-            </span>
-          )}
+          <span className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 font-semibold text-blue-600 dark:text-blue-400">
+            Verifier Agent Audited
+          </span>
+          <span className="rounded-lg bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 font-semibold text-purple-600 dark:text-purple-400">
+            Writer Agent Formatted
+          </span>
         </div>
 
         {/* Expandable Execution Trail & Subagents Work */}
@@ -468,6 +472,20 @@ function DeepResearchChatCard({ part }: { part: any }) {
                 )}
               </CollapsibleContent>
             </Collapsible>
+          </div>
+        )}
+
+        {/* Full Synthesized Technical Research Report */}
+        {output.report && (
+          <div className="mt-4 pt-3.5 border-t border-border/60">
+            <div className="text-foreground text-sm sm:text-base leading-relaxed">
+              <MessageResponse>{output.report}</MessageResponse>
+            </div>
+            <SpeechAndCopyToolbar
+              text={output.report}
+              id={`deep-research-report-${part.toolInvocation?.toolCallId || "done"}`}
+              className="mt-3.5"
+            />
           </div>
         )}
       </div>
@@ -567,6 +585,46 @@ function AttachButton() {
     >
       <Paperclip className="size-6" />
     </PromptInputButton>
+  );
+}
+
+function DeepResearchToggleButton({
+  active,
+  onToggle,
+  disabled,
+}: {
+  active: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      title={
+        active
+          ? "Deep Research Mode ON (Multi-Agent: Planner, Subagents, Verifier, Writer)"
+          : "Turn on Deep Research for multi-agent arXiv discovery, academic verification & publication report"
+      }
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition-all duration-200 cursor-pointer select-none",
+        active
+          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-xs ring-1 ring-emerald-500/25 hover:bg-emerald-500/20"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50 hover:border-border",
+      )}
+    >
+      <Microscope
+        className={cn(
+          "size-3.5 transition-transform",
+          active ? "text-emerald-600 dark:text-emerald-400 scale-105" : "text-muted-foreground",
+        )}
+      />
+      <span>Deep Research</span>
+      {active && (
+        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      )}
+    </button>
   );
 }
 
@@ -767,6 +825,7 @@ export function RemiChat({
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [limitType, setLimitType] = useState<"chat" | "features">("features");
   const [lastCheckedMessageId, setLastCheckedMessageId] = useState<string | null>(null);
+  const [deepResearchActive, setDeepResearchActive] = useState(false);
 
   const { data: usageData } = useQuery({
     queryKey: ["planUsage"],
@@ -1106,6 +1165,7 @@ export function RemiChat({
           threadId,
           topicItemId: topicId,
           activePageId,
+          deepResearch: deepResearchActive,
           ...(inlineAttachments.length > 0 ? { attachments: inlineAttachments } : {}),
           ...(uploadedRefs.length > 0 ? { uploadedDocuments: uploadedRefs } : {}),
         },
@@ -1241,6 +1301,17 @@ export function RemiChat({
                         )}
                         {groupedParts.map((group, gIdx) => {
                           if (group.type === "text") {
+                            // If this text is an exact duplicate of a rendered deep research report in this message, skip rendering duplicate text
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const isDuplicateReport = message.parts?.some((p: any) => {
+                              const reportText = p?.output?.report || p?.result?.report;
+                              return (
+                                reportText &&
+                                (group.text === reportText || group.text.trim() === reportText.trim())
+                              );
+                            });
+                            if (isDuplicateReport) return null;
+
                             const isActivelyStreaming = isStreaming && message.role === "assistant" && idx === messages.length - 1;
                             return (
                               <div key={gIdx}>
@@ -1335,15 +1406,24 @@ export function RemiChat({
           <PromptInputTextarea
             ref={textareaRef}
             placeholder={
-              topic ? `Ask a doubt about ${topic.label}…` : "What do you want to create or ask?"
+              deepResearchActive
+                ? "Enter research topic for multi-agent deep research (arXiv, verifier & writer)..."
+                : topic
+                  ? `Ask a doubt about ${topic.label}…`
+                  : "What do you want to create or ask?"
             }
             className="min-h-[44px] text-base"
           />
 
           <PromptInputFooter className="justify-between items-center">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <AttachButton />
               <VoiceInputButton textareaRef={textareaRef} />
+              <DeepResearchToggleButton
+                active={deepResearchActive}
+                onToggle={() => setDeepResearchActive((v) => !v)}
+                disabled={busy}
+              />
             </div>
             <PromptInputSubmit status={status} onStop={stop} disabled={status === "submitted"} />
           </PromptInputFooter>

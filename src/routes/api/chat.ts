@@ -61,6 +61,7 @@ type ChatBody = {
   threadId?: unknown;
   topicItemId?: unknown;
   activePageId?: unknown;
+  deepResearch?: boolean;
   attachments?: { filename: string; mimeType: string; dataUrl: string }[];
   uploadedDocuments?: { resourceId: string; filename: string; title: string; kind: string }[];
 };
@@ -798,6 +799,7 @@ Title: "${curPage.title}"
 
         const lowerUserText = lastUserText.toLowerCase();
         const isComplexResearchQuery =
+          Boolean(body.deepResearch) ||
           lowerUserText.includes("research") ||
           lowerUserText.includes("literature") ||
           lowerUserText.includes("arxiv") ||
@@ -806,10 +808,15 @@ Title: "${curPage.title}"
 
         const chatModelName = isComplexResearchQuery ? getResearchModelName() : getAiModelName();
 
+        let finalSystemPrompt = systemPrompt;
+        if (body.deepResearch) {
+          finalSystemPrompt += `\n\nCRITICAL DIRECTIVE: The user has EXPLICITLY activated Deep Research Mode for this request. You MUST immediately invoke the \`deepResearch\` tool to run the multi-agent investigation (Planner, Parallel Subagents, Verifier, Writer) and deliver a complete publication-grade research report. Do not bypass this tool.`;
+        }
+
         const gateway = createAiGatewayProvider(key);
         const result = streamText({
           model: gateway(chatModelName),
-          system: systemPrompt,
+          system: finalSystemPrompt,
           messages: await convertToModelMessages(sanitizedUiMessages),
           tools,
           maxRetries: 5,

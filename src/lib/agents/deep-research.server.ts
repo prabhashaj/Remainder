@@ -145,7 +145,7 @@ Provide targeted search queries optimized for arXiv API, Semantic Scholar, and W
           id: "subtask_1",
           title: "Core Architectural Upgrades & Mechanisms",
           objective: "Identify structural modifications, attention variants, and layer designs.",
-          arxivQuery: `all:${topic} AND (architecture OR transformer OR attention)`,
+          arxivQuery: `${topic} architecture transformer attention`,
           academicQuery: `${topic} architecture advancements`,
           webQuery: `${topic} latest architecture breakthroughs ${currentYear}`,
           targetYearMin: currentYear - 2,
@@ -154,7 +154,7 @@ Provide targeted search queries optimized for arXiv API, Semantic Scholar, and W
           id: "subtask_2",
           title: "Efficiency, Complexity & Scaling",
           objective: "Investigate linear attention, sparsity, token pruning, and memory scaling.",
-          arxivQuery: `all:${topic} AND (efficiency OR "linear attention" OR scaling)`,
+          arxivQuery: `${topic} efficiency scaling linear attention`,
           academicQuery: `${topic} linear complexity efficiency`,
           webQuery: `${topic} efficient scaling linear attention ${currentYear}`,
           targetYearMin: currentYear - 2,
@@ -163,7 +163,7 @@ Provide targeted search queries optimized for arXiv API, Semantic Scholar, and W
           id: "subtask_3",
           title: "State-of-the-Art Benchmarks & Practical Validations",
           objective: "Collect verified empirical metrics, ImageNet/COCO benchmarks, and comparative gains.",
-          arxivQuery: `all:${topic} AND (benchmark OR SOTA OR performance OR accuracy)`,
+          arxivQuery: `${topic} benchmark SOTA performance`,
           academicQuery: `${topic} benchmark results SOTA`,
           webQuery: `${topic} benchmark comparison SOTA ${currentYear}`,
           targetYearMin: currentYear - 2,
@@ -181,16 +181,10 @@ async function executeSubagentWorker(
   gateway: ReturnType<typeof createAiGatewayProvider>,
   modelName: string,
 ): Promise<SubagentFinding> {
-  const [arxivRelevance, arxivLatest, academicPapers, webResults] = await Promise.all([
+  const [arxivPapers, academicPapers, webResults] = await Promise.all([
     searchArxivServer(subtask.arxivQuery, {
       sortBy: "relevance",
-      maxResults: 5,
-      yearMin: subtask.targetYearMin,
-      category: subtask.category,
-    }),
-    searchArxivServer(subtask.arxivQuery, {
-      sortBy: "submittedDate",
-      maxResults: 5,
+      maxResults: 6,
       yearMin: subtask.targetYearMin,
       category: subtask.category,
     }),
@@ -198,16 +192,16 @@ async function executeSubagentWorker(
       maxResults: 4,
       yearMin: subtask.targetYearMin,
     }),
-    tavilySearch(subtask.webQuery, { maxResults: 5, depth: "advanced" }).catch(() => ({
+    tavilySearch(subtask.webQuery, { maxResults: 5, depth: "basic" }).catch(() => ({
       results: [] as WebResult[],
       answer: "",
     })),
   ]);
 
-  // Deduplicate and combine arXiv papers
+  // Deduplicate arXiv papers
   const seenArxivIds = new Set<string>();
   const allArxivPapers: ArxivPaper[] = [];
-  for (const paper of [...arxivLatest, ...arxivRelevance]) {
+  for (const paper of arxivPapers) {
     if (paper.id && !seenArxivIds.has(paper.id)) {
       seenArxivIds.add(paper.id);
       allArxivPapers.push(paper);
@@ -292,14 +286,20 @@ async function executeSubagentWorker(
 /**
  * Step 4: Research Coordinator Synthesis & Verification
  */
-async function synthesizeCoordinatorReport(
+/**
+ * Step 4: Verifier Agent (Academic & Temporal Fact-Checker)
+ * Audits raw subagent findings, checks publication timelines, cross-validates benchmarks, and filters noise.
+ */
+async function verifyAndAuditEvidence(
   topic: string,
   plan: ResearchPlan,
   subagentResults: SubagentFinding[],
   gateway: ReturnType<typeof createAiGatewayProvider>,
   modelName: string,
-): Promise<{ report: string; sourcesMarkdown: string }> {
-  // Aggregate all verified papers and web links
+): Promise<{
+  verifiedDossier: string;
+  verifiedSources: { title: string; url: string; yearOrId: string; type: string }[];
+}> {
   const allVerifiedSources: { title: string; url: string; yearOrId: string; type: string }[] = [];
   const seenUrls = new Set<string>();
 
@@ -323,7 +323,7 @@ async function synthesizeCoordinatorReport(
           title: w.title,
           url: w.url,
           yearOrId: "Web Source",
-          type: "Documentation / Article",
+          type: "Technical Literature",
         });
       }
     }
@@ -331,55 +331,90 @@ async function synthesizeCoordinatorReport(
 
   const subagentDumps: string[] = [];
   for (const [idx, sub] of subagentResults.entries()) {
-    subagentDumps.push(`### Subagent ${idx + 1}: ${sub.title}`);
+    subagentDumps.push(`### Subtask ${idx + 1}: ${sub.title}`);
     subagentDumps.push(`Objective: ${sub.objective}`);
     subagentDumps.push(`Key Architectures: ${sub.keyArchitectures.join(", ")}`);
     subagentDumps.push(`Findings:\n${sub.findingsSummary}`);
-    subagentDumps.push(
-      `Retrieved Papers: ${sub.papers.map((p) => `"${p.title}" (${p.published || p.id})`).join("; ")}`,
-    );
     subagentDumps.push("");
   }
 
-  const coordinatorPrompt = `You are the Lead Research Coordinator at Remispace.
-Synthesize the parallel subagent findings into a definitive, authoritative technical research report.
+  const verifierPrompt = `You are the Lead Academic Verifier and Fact-Checking Agent at Remispace.
+Audit and cross-verify the following empirical findings gathered by parallel research subagents for the topic: "${topic}".
 
-User Query: "${topic}"
-Research Scope: ${plan.scope}
+Scope: ${plan.scope}
 Temporal Bounds: ${plan.temporalConstraints}
 
-Parallel Subagent Investigation Findings:
+Raw Subagent Findings:
 ${subagentDumps.join("\n")}
 
-Report Requirements:
-1. Executive Summary & Foundational Context:
-   Explain the primary principles, recent breakthroughs, and paradigm shifts in the domain.
-2. Core Technical Deep Dives (Divide into structured sections based on the subagent findings):
-   - Provide concrete algorithmic or mathematical explanations (use standard LaTeX $$inline$$ or $$block$$ math formulas where appropriate).
-   - Explain the underlying mechanisms: how key techniques address core bottlenecks and advance the state of the art.
-   - Include code snippets or structural representations if relevant.
-   - State EXACT publication dates/years accurately. NEVER misattribute older papers as recent.
-3. Summary Comparison Table (CRITICAL: Valid Markdown Table):
-   You MUST generate a clean, properly formatted Markdown table with headers and delimiter rows comparing key methods, innovations, mechanisms, metrics, and verified citations.
-4. Strict Rules:
-   - ZERO EMOJIS: Do NOT include any emojis anywhere in the report.
-   - Professional, deeply technical, precise, and verified.`;
+Your Verification Tasks:
+1. Temporal Audit: Cross-check dates and identify which techniques are recent (${plan.temporalConstraints}) vs foundational baselines.
+2. Empirical & Benchmark Validation: Extract and verify concrete metrics (e.g. accuracy, latency, FLOPs, FID, throughput) and eliminate unsubstantiated claims.
+3. Mathematical & Algorithmic Rigor: Verify core mathematical equations and mechanical formulations (in standard LaTeX $$...$$).
+4. Summarize the verified facts, verified mechanisms, and structured comparison data cleanly.`;
+
+  const { text: verifiedDossier } = await generateText({
+    model: gateway(modelName),
+    system:
+      "You are a rigorous Academic Verifier Agent. You cross-check literature, audit temporal constraints, validate mathematical equations, and filter out hallucinations.",
+    prompt: verifierPrompt,
+  });
+
+  return {
+    verifiedDossier,
+    verifiedSources: allVerifiedSources,
+  };
+}
+
+/**
+ * Step 5: Writer Agent (Scientific Publication Writer)
+ * Takes verified evidence and composes a clean, publication-grade, beautifully structured technical report.
+ */
+async function writePublicationReport(
+  topic: string,
+  plan: ResearchPlan,
+  verifiedDossier: string,
+  verifiedSources: { title: string; url: string; yearOrId: string; type: string }[],
+  gateway: ReturnType<typeof createAiGatewayProvider>,
+  modelName: string,
+): Promise<{ report: string; sourcesMarkdown: string }> {
+  const formattedSources = verifiedSources
+    .slice(0, 15)
+    .map((s, i) => `${i + 1}. [**${s.title}**](${s.url}) (${s.yearOrId}) — *${s.type}*`)
+    .join("\n");
+
+  const sourcesMarkdown = `### Sources & Literature References\n\n${formattedSources}`;
+
+  const writerPrompt = `You are the Principal Science Writer Agent at Remispace.
+Write a definitive, publication-grade, clean technical research report based strictly on the verified research dossier.
+
+User Topic: "${topic}"
+Research Scope: ${plan.scope}
+
+Verified Research Dossier (from Verifier Agent):
+${verifiedDossier}
+
+Report Structure:
+1. Executive Summary & Paradigm Shifts:
+   High-level breakthrough context, core principles, and foundational shifts.
+2. Core Technical Deep Dives:
+   - Concrete architectural and mechanical explanations.
+   - Use standard LaTeX math formulas ($inline$ or $$block$$) for equations.
+   - Accurate attribution of methods with publication years.
+3. Summary Comparison Table (Valid Markdown Table):
+   Clean Markdown table comparing key architectures, mechanisms, empirical benchmarks, and verified trade-offs.
+4. Key Takeaways & Practical Recommendations.
+
+Strict Guidelines:
+- ZERO EMOJIS: Keep the entire report completely emoji-free.
+- Clean, structured, highly readable Markdown formatting.`;
 
   const { text } = await generateText({
     model: gateway(modelName),
     system:
-      "You are a Principal AI Scientist and Lead Research Coordinator. You synthesize complex literature into publication-grade, mathematically rigorous, beautifully structured research reports.",
-    prompt: coordinatorPrompt,
+      "You are a Principal Science Writer Agent. You compose publication-grade, mathematically rigorous, beautifully structured research reports without emojis.",
+    prompt: writerPrompt,
   });
-
-  const formattedSources = allVerifiedSources
-    .slice(0, 15)
-    .map(
-      (s, i) => `${i + 1}. [**${s.title}**](${s.url}) (${s.yearOrId}) — *${s.type}*`,
-    )
-    .join("\n");
-
-  const sourcesMarkdown = `### Sources & Literature References\n\n${formattedSources}`;
 
   return {
     report: `${text}\n\n${sourcesMarkdown}`,
@@ -412,17 +447,17 @@ export async function runDeepResearch(params: {
 
   log("info", "deep_research_started", { topic: params.topic, userId: params.userId });
 
-  // 1. Plan & Split Subtasks
-  recordStep("Research Planning", `Formulating research scope and temporal parameters for: "${params.topic}"`);
+  // 1. Planner Agent: Scope & Subtask Decomposition
+  recordStep("Planner Agent", `Formulating research scope and temporal parameters for: "${params.topic}"`);
   const { plan, subtasks } = await createPlanAndSubtasks(params.topic, gateway, modelName);
   recordStep(
-    "Subtask Decomposition",
+    "Planner Agent",
     `Decomposed into ${subtasks.length} parallel research subtasks: ${subtasks.map((s) => s.title).join(", ")}`,
   );
 
-  // 2. Dispatch Parallel Worker Subagents
+  // 2. Research Subagents: Parallel Worker Execution
   recordStep(
-    "Dispatching Subagents",
+    "Research Subagents",
     `Spawning ${subtasks.length} parallel worker subagents across arXiv, Semantic Scholar, and Web index.`,
   );
 
@@ -445,18 +480,18 @@ export async function runDeepResearch(params: {
 
   for (const res of subagentResults) {
     recordStep(
-      `Subagent Completed: ${res.title}`,
+      `Research Subagent: ${res.title}`,
       `Retrieved ${res.papers.length} academic papers and ${res.webSources.length} web sources.`,
     );
   }
 
-  // 3. Coordinator Synthesis & Temporal Verification
+  // 3. Verifier Agent: Academic Fact-Checking & Temporal Verification
   recordStep(
-    "Research Coordinator Synthesis",
-    "Auditing temporal accuracy, extracting mathematical formulations, and generating comparison matrix.",
+    "Verifier Agent",
+    "Auditing temporal claims, verifying benchmark data, and cross-validating mathematical equations.",
   );
 
-  const { report, sourcesMarkdown } = await synthesizeCoordinatorReport(
+  const { verifiedDossier, verifiedSources } = await verifyAndAuditEvidence(
     params.topic,
     plan,
     subagentResults,
@@ -464,7 +499,22 @@ export async function runDeepResearch(params: {
     modelName,
   );
 
-  recordStep("Final Synthesis Complete", "Delivered verified, multi-perspective technical report.");
+  // 4. Writer Agent: Technical Report Composition
+  recordStep(
+    "Writer Agent",
+    "Composing clean, publication-grade technical report with comparison matrix and LaTeX formulations.",
+  );
+
+  const { report, sourcesMarkdown } = await writePublicationReport(
+    params.topic,
+    plan,
+    verifiedDossier,
+    verifiedSources,
+    gateway,
+    modelName,
+  );
+
+  recordStep("Final Synthesis Complete", "Delivered verified, multi-agent publication report.");
 
   log("info", "deep_research_completed", {
     topic: params.topic,
