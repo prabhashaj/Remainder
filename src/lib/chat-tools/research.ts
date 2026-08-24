@@ -5,6 +5,7 @@ import type { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 import { runResearch } from "@/lib/agents/research.server";
+import { runDeepResearch } from "@/lib/agents/deep-research.server";
 import { searchTopicPhotos, tavilySearch } from "@/lib/tavily.server";
 import {
   searchArxivServer,
@@ -21,6 +22,56 @@ export function getResearchTools(
   key: string,
 ) {
   return {
+    deepResearch: tool({
+      description:
+        "Execute an in-depth multi-agent technical research investigation. Use ALWAYS when the user asks to 'research', perform literature reviews, investigate arXiv papers, explore emerging AI/scientific architectures, or conduct thorough multi-perspective technical studies. Coordinates parallel worker subagents across arXiv, Semantic Scholar, and Web index, and returns a verified, mathematically rigorous synthesis.",
+      inputSchema: z.object({
+        topic: z
+          .string()
+          .describe(
+            "The specific technical, scientific, or architectural topic to research thoroughly",
+          ),
+      }),
+      execute: async ({ topic }: { topic: string }) =>
+        wrapTool(
+          "deepResearch",
+          async () => {
+            const res = await runDeepResearch({
+              topic,
+              apiKey: key,
+              supabase,
+              userId,
+              traceId,
+            });
+
+            return {
+              topic: res.topic,
+              plan: res.plan,
+              subtasks: res.subtasks.map((s) => ({
+                id: s.id,
+                title: s.title,
+                objective: s.objective,
+              })),
+              action_trail: res.actionTrail,
+              subagents_count: res.subagentResults.length,
+              verified_papers_count: res.subagentResults.reduce(
+                (acc, s) => acc + s.papers.length,
+                0,
+              ),
+              report: res.report,
+              sources_markdown: res.sourcesMarkdown,
+              citation_instruction:
+                "Deliver the synthesized comprehensive report with mathematical LaTeX expressions ($$inline$$ / $$$$block$$$$), clear structured comparisons, and verified clickable citations. Keep completely emoji-free.",
+            };
+          },
+          supabase,
+          userId,
+          traceId,
+          threadId,
+          { topic },
+        ),
+    }),
+
     researchResources: tool({
       description:
         "Find tutorials, videos, and courses for a learning topic using web search. Saves results to the user's roadmap.",
@@ -122,15 +173,32 @@ export function getResearchTools(
 
     searchArxiv: tool({
       description:
-        "Search arXiv for research papers in physics, computer science, mathematics, quantitative biology, and statistics.",
+        "Search arXiv for research papers in physics, computer science, mathematics, quantitative biology, and statistics. Supports sorting by newest submitted dates and filtering by minimum publication year.",
       inputSchema: z.object({
         query: z.string().describe("Search query or paper topic"),
+        sortBy: z
+          .enum(["relevance", "submittedDate", "lastUpdatedDate"])
+          .optional()
+          .describe("Sorting criteria (use 'submittedDate' when newest/latest papers are requested)"),
+        yearMin: z
+          .number()
+          .optional()
+          .describe("Optional minimum publication year (e.g. 2024, 2025, 2026)"),
+        category: z
+          .string()
+          .optional()
+          .describe("arXiv category (e.g. 'cs.CV', 'cs.AI', 'cs.LG', 'cs.CL')"),
       }),
-      execute: async ({ query }: { query: string }) =>
+      execute: async ({ query, sortBy, yearMin, category }) =>
         wrapTool(
           "searchArxiv",
           async () => {
-            const papers = await searchArxivServer(query);
+            const papers = await searchArxivServer(query, {
+              sortBy: sortBy ?? "relevance",
+              yearMin,
+              category,
+              maxResults: 8,
+            });
             const formattedSources = papers.map(
               (p, i) =>
                 `${i + 1}. [**${p.title}**](${p.arxivUrl || p.pdfUrl}) (${p.published?.slice(0, 4) || "arXiv"}) — *arXiv:${p.id}*`,
@@ -140,14 +208,14 @@ export function getResearchTools(
               papers,
               sources_markdown: formattedSources.join("\n"),
               citation_instruction:
-                "Include inline citations and append a '### Sources' section at the end of your response with paper links.",
+                "Include inline citations and append a '### Sources' section at the end of your response with paper links. Note the exact publication year for each paper.",
             };
           },
           supabase,
           userId,
           traceId,
           threadId,
-          { query },
+          { query, sortBy, yearMin, category },
         ),
     }),
 
@@ -156,12 +224,13 @@ export function getResearchTools(
         "Search academic databases (Semantic Scholar / OpenAlex) across all scientific disciplines for research papers.",
       inputSchema: z.object({
         query: z.string().describe("Paper title, subject, or research topic"),
+        yearMin: z.number().optional().describe("Minimum publication year to filter"),
       }),
-      execute: async ({ query }: { query: string }) =>
+      execute: async ({ query, yearMin }) =>
         wrapTool(
           "searchPapers",
           async () => {
-            const papers = await searchPapersServer(query);
+            const papers = await searchPapersServer(query, { yearMin, maxResults: 6 });
             const formattedSources = papers.map(
               (p, i) =>
                 `${i + 1}. [**${p.title}**](${p.url}) (${p.year || "Academic Paper"}) — *${p.authors?.slice(0, 2).join(", ") || "Research"}*`,
@@ -178,7 +247,7 @@ export function getResearchTools(
           userId,
           traceId,
           threadId,
-          { query },
+          { query, yearMin },
         ),
     }),
 

@@ -26,15 +26,38 @@ export interface DocResult {
   content: string;
 }
 
+export interface ArxivSearchOptions {
+  sortBy?: "relevance" | "submittedDate" | "lastUpdatedDate" | undefined;
+  maxResults?: number | undefined;
+  yearMin?: number | undefined;
+  category?: string | undefined;
+}
+
+export interface PaperSearchOptions {
+  maxResults?: number | undefined;
+  yearMin?: number | undefined;
+}
+
 /**
  * Searches arXiv for research papers using the free public arXiv REST API.
  */
-export async function searchArxivServer(query: string): Promise<ArxivPaper[]> {
+export async function searchArxivServer(
+  query: string,
+  options?: ArxivSearchOptions,
+): Promise<ArxivPaper[]> {
   try {
     const cleanQuery = query.trim();
     if (!cleanQuery) return [];
 
-    const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(cleanQuery)}&max_results=5&sortBy=relevance&sortOrder=descending`;
+    const sortBy = options?.sortBy ?? "relevance";
+    const maxResults = Math.min(options?.maxResults ?? 8, 20);
+
+    let searchQuery = `all:${cleanQuery}`;
+    if (options?.category) {
+      searchQuery = `cat:${options.category} AND all:${cleanQuery}`;
+    }
+
+    const url = `https://export.arxiv.org/api/query?search_query=${encodeURIComponent(searchQuery)}&max_results=${maxResults}&sortBy=${sortBy}&sortOrder=descending`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Remispace-Academic-Search/1.0" },
     });
@@ -74,6 +97,14 @@ export async function searchArxivServer(query: string): Promise<ArxivPaper[]> {
       const published =
         publishedMatch && publishedMatch[1] ? (publishedMatch[1].trim().split("T")[0] ?? "") : "";
 
+      // If yearMin is specified, filter out older papers
+      if (options?.yearMin && published) {
+        const pubYear = parseInt(published.slice(0, 4), 10);
+        if (!isNaN(pubYear) && pubYear < options.yearMin) {
+          continue;
+        }
+      }
+
       const pdfUrl = arxivId ? arxivId.replace("/abs/", "/pdf/") + ".pdf" : "";
 
       entries.push({
@@ -97,13 +128,19 @@ export async function searchArxivServer(query: string): Promise<ArxivPaper[]> {
 /**
  * Searches multi-platform academic paper databases (Semantic Scholar with OpenAlex fallback).
  */
-export async function searchPapersServer(query: string): Promise<AcademicPaper[]> {
+export async function searchPapersServer(
+  query: string,
+  options?: PaperSearchOptions,
+): Promise<AcademicPaper[]> {
   try {
     const cleanQuery = query.trim();
     if (!cleanQuery) return [];
 
+    const limit = Math.min(options?.maxResults ?? 6, 15);
+    const yearParam = options?.yearMin ? `&year=${options.yearMin}-` : "";
+
     // Try Semantic Scholar REST API first
-    const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(cleanQuery)}&limit=5&fields=title,authors,abstract,url,year,citationCount`;
+    const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(cleanQuery)}&limit=${limit}&fields=title,authors,abstract,url,year,citationCount${yearParam}`;
     const s2Res = await fetch(s2Url, {
       headers: { "User-Agent": "Remispace-Paper-Search/1.0" },
     });
@@ -113,7 +150,7 @@ export async function searchPapersServer(query: string): Promise<AcademicPaper[]
       const data = (await s2Res.json()) as any;
       if (data && Array.isArray(data.data) && data.data.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return data.data.map((p: any) => ({
+        const results = data.data.map((p: any) => ({
           title: p.title || "Untitled",
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           authors: Array.isArray(p.authors) ? p.authors.map((a: any) => a.name) : [],
@@ -122,11 +159,17 @@ export async function searchPapersServer(query: string): Promise<AcademicPaper[]
           url: p.url || `https://www.semanticscholar.org/paper/${p.paperId}`,
           citationCount: p.citationCount ?? 0,
         }));
+
+        if (options?.yearMin) {
+          return results.filter((p: AcademicPaper) => !p.year || p.year >= options.yearMin!);
+        }
+        return results;
       }
     }
 
     // Fallback to OpenAlex API (100% free open academic database)
-    const oaUrl = `https://api.openalex.org/works?search=${encodeURIComponent(cleanQuery)}&per-page=5`;
+    const oaFilter = options?.yearMin ? `&filter=from_publication_date:${options.yearMin}-01-01` : "";
+    const oaUrl = `https://api.openalex.org/works?search=${encodeURIComponent(cleanQuery)}&per-page=${limit}${oaFilter}`;
     const oaRes = await fetch(oaUrl, {
       headers: { "User-Agent": "Remispace-Paper-Search/1.0" },
     });
@@ -138,7 +181,6 @@ export async function searchPapersServer(query: string): Promise<AcademicPaper[]
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return oaData.results.map((w: any) => ({
           title: w.title || "Untitled",
-
           authors: Array.isArray(w.authorships)
             ? w.authorships.map((a: any) => a.author?.display_name).filter(Boolean)
             : [],
@@ -153,7 +195,7 @@ export async function searchPapersServer(query: string): Promise<AcademicPaper[]
     // Secondary Fallback: Web search targeting Google Scholar / ResearchGate / ArXiv via Tavily
     const webResults = await tavilySearch(
       `site:arxiv.org OR site:semanticscholar.org OR site:researchgate.net ${cleanQuery}`,
-      { maxResults: 5 },
+      { maxResults: 6 },
     );
     return (webResults.results || []).map((r: WebResult) => ({
       title: r.title,

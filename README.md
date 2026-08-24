@@ -209,6 +209,7 @@ Queries pass through a 5-stage context engineering pipeline to guarantee factual
 
 | Subagent | File Path | Core Functionality |
 | :--- | :--- | :--- |
+| **Deep Research Coordinator** | `src/lib/agents/deep-research.server.ts` | Multi-stage pipeline: plans research, splits into orthogonal subtasks, dispatches parallel subagents across arXiv/academic indices, and synthesizes verified reports. |
 | **Cognitive Router** | `src/lib/agents/router.server.ts` | Evaluates query requirements to determine whether web search, document RAG, or direct reasoning is necessary. |
 | **Material Tutor** | `src/lib/agents/tutor.server.ts` | Performs vector search over document chunks and provides grounded answers with exact line citations. |
 | **Curriculum Architect** | `src/lib/agents/curriculum.server.ts` | Creates multi-phase, structured learning roadmaps with subtopics, time estimates, and milestones. |

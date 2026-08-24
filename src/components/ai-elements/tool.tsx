@@ -53,6 +53,7 @@ const getToolName = (toolName: string, isRunning: boolean) => {
     editNotebook: { active: "Updating study notebook", done: "Updated study notebook" },
     saveMemory: { active: "Saving memory note", done: "Saved memory note" },
     readDocument: { active: "Reading document", done: "Read document" },
+    deepResearch: { active: "Executing deep multi-agent research...", done: "Completed deep research" },
     getCurrentTime: { active: "Checking time", done: "Checked time" },
     getWeather: { active: "Checking live weather", done: "Checked live weather" },
     delegateToPlanner: { active: "Building learning plan", done: "Built learning plan" },
@@ -139,9 +140,88 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
     return null;
   }
 
+  // Check if output is a Deep Research result with action trail
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isDeepResearch = output && typeof output === "object" && Array.isArray((output as any).action_trail);
+
   let Output = <div>{output as ReactNode}</div>;
 
-  if (typeof output === "object" && !isValidElement(output)) {
+  if (isDeepResearch) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = output as any;
+    Output = (
+      <div className="space-y-3 p-3">
+        {data.plan && (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <div className="font-semibold text-primary text-xs uppercase tracking-wide">
+              Research Plan & Scope
+            </div>
+            <div className="mt-1 font-medium text-foreground text-sm">{data.plan.topic}</div>
+            <div className="mt-0.5 text-muted-foreground text-xs">{data.plan.scope}</div>
+            {data.plan.temporalConstraints && (
+              <div className="mt-1.5 inline-block rounded bg-primary/10 px-2 py-0.5 font-mono text-[11px] text-primary">
+                Time Window: {data.plan.temporalConstraints}
+              </div>
+            )}
+          </div>
+        )}
+
+        {Array.isArray(data.subtasks) && data.subtasks.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+              Decomposed Subtasks ({data.subtasks.length})
+            </div>
+            <div className="grid gap-1.5">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {data.subtasks.map((st: any, i: number) => (
+                <div
+                  key={st.id || i}
+                  className="flex items-start gap-2 rounded-md border border-border/50 bg-background/50 p-2 text-xs"
+                >
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted font-mono font-semibold text-[10px]">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <div className="font-medium text-foreground">{st.title}</div>
+                    <div className="text-muted-foreground text-[11px]">{st.objective}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {Array.isArray(data.action_trail) && data.action_trail.length > 0 && (
+          <div className="space-y-1">
+            <div className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+              Execution Action Trail
+            </div>
+            <div className="space-y-1 font-mono text-[11px]">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {data.action_trail.map((act: any, i: number) => (
+                <div key={i} className="flex items-center gap-2 text-muted-foreground">
+                  <span className="text-emerald-500 font-bold">✓</span>
+                  <span className="font-medium text-foreground">{act.step}:</span>
+                  <span className="truncate">{act.details}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {data.verified_papers_count !== undefined && (
+          <div className="flex items-center gap-2 pt-1 font-medium text-muted-foreground text-xs">
+            <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              {data.verified_papers_count} Verified Papers Retrieved
+            </Badge>
+            <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
+              {data.subagents_count || 4} Parallel Subagents
+            </Badge>
+          </div>
+        )}
+      </div>
+    );
+  } else if (typeof output === "object" && !isValidElement(output)) {
     Output = <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />;
   } else if (typeof output === "string") {
     Output = <CodeBlock code={output} language="json" />;
@@ -150,7 +230,7 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
   return (
     <div className={cn("space-y-2", className)} {...props}>
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-        {errorText ? "Error" : "Result"}
+        {errorText ? "Error" : "Research & Tool Execution"}
       </h4>
       <div
         className={cn(
@@ -158,7 +238,7 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
           errorText ? "bg-destructive/10 text-destructive" : "bg-muted/50 text-foreground",
         )}
       >
-        {errorText && <div>{errorText}</div>}
+        {errorText && <div className="p-3">{errorText}</div>}
         {Output}
       </div>
     </div>
