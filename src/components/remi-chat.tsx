@@ -176,7 +176,9 @@ function isToolPartDone(part: any): boolean {
   if (!part) return false;
   if (part.state === "output-available" || part.state === "result") return true;
   if (part.toolInvocation?.state === "result") return true;
-  if (part.output !== undefined || part.result !== undefined || part.toolInvocation?.result !== undefined) return true;
+  // Only trust part.output / part.result if they are non-null objects with at least one key
+  const out = part.output ?? part.result ?? part.toolInvocation?.result;
+  if (out !== undefined && out !== null && typeof out === "object" && Object.keys(out).length > 0) return true;
   return false;
 }
 
@@ -369,13 +371,8 @@ function isDeepResearchTool(part: any): boolean {
   const toolName =
     typeof part.toolName === "string"
       ? part.toolName
-      : (part.toolInvocation?.toolName || typeStr.replace(/^tool-/, ""));
-  return (
-    toolName === "deepResearch" ||
-    toolName === "searchArxiv" ||
-    toolName === "searchPapers" ||
-    typeStr === "tool-deepResearch"
-  );
+      : typeStr.replace(/^tool-/, "");
+  return toolName === "deepResearch" || typeStr === "tool-deepResearch";
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -411,7 +408,8 @@ function DeepResearchChatCard({ part }: { part: any }) {
   const topicQuery = output.plan?.topic || input.topic || input.query || "Academic & Technical Topic";
   const temporalConstraint = output.plan?.temporalConstraints || "2024–2026 (Recent Verified)";
 
-  if (isRunning || !isDone) return null;
+  // Don't render card until we have actual report content
+  if (isRunning || !isDone || !output.report) return null;
 
   const subtasksList = output.subtasks || [];
   const actionTrail = output.action_trail || [];

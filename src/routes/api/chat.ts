@@ -810,17 +810,20 @@ Title: "${curPage.title}"
 
         let finalSystemPrompt = systemPrompt;
         if (body.deepResearch) {
-          finalSystemPrompt += `\n\nCRITICAL DIRECTIVE: The user has EXPLICITLY activated Deep Research Mode for this request. You MUST immediately invoke the \`deepResearch\` tool to run the multi-agent investigation (Planner, Parallel Subagents, Verifier, Writer) and deliver a complete publication-grade research report. Do not bypass this tool.`;
+          finalSystemPrompt += `\n\nCRITICAL DIRECTIVE: The user has EXPLICITLY activated Deep Research Mode. You MUST immediately call the \`deepResearch\` tool. After the tool returns its result, output ONLY a single short sentence: "Deep research complete — see the report card below." Do NOT repeat or re-summarize the report text.`;
         }
 
         const gateway = createAiGatewayProvider(key);
+        // For deep research, stop after 2 steps (1 tool call + optional 1 short text turn)
+        // to avoid the model timing out while trying to re-generate the full report.
+        const stopCondition = body.deepResearch ? stepCountIs(2) : stepCountIs(50);
         const result = streamText({
           model: gateway(chatModelName),
           system: finalSystemPrompt,
           messages: await convertToModelMessages(sanitizedUiMessages),
           tools,
           maxRetries: 5,
-          stopWhen: stepCountIs(50),
+          stopWhen: stopCondition,
           onFinish: async ({ text, steps }) => {
             if (!assistantPersisted) {
               const parts: Array<{ type: string; text?: string; toolName?: string; input?: unknown; output?: unknown; state?: string }> = [];
