@@ -48,7 +48,7 @@ export function createPlannerTools(supabase: Supabase, userId: string) {
         "Search the web for current, accurate information about a topic before planning.",
       inputSchema: z.object({ query: z.string() }),
       execute: async ({ query }: { query: string }) => {
-        const res = await tavilySearch(query, { maxResults: 5 });
+        const res = await tavilySearch(query, { maxResults: 5, depth: "basic" });
         return {
           answer: res.answer,
           results: res.results.map((r) => ({

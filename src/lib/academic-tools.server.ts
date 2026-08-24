@@ -195,7 +195,7 @@ export async function searchPapersServer(
     // Secondary Fallback: Web search targeting Google Scholar / ResearchGate / ArXiv via Tavily
     const webResults = await tavilySearch(
       `site:arxiv.org OR site:semanticscholar.org OR site:researchgate.net ${cleanQuery}`,
-      { maxResults: 6 },
+      { maxResults: 6, depth: "basic" },
     );
     return (webResults.results || []).map((r: WebResult) => ({
       title: r.title,
@@ -215,7 +215,7 @@ export async function searchPapersServer(
 export async function searchDocsServer(library: string, topic: string): Promise<DocResult[]> {
   try {
     const searchQuery = `${library} ${topic} official documentation guide example`;
-    const webResults = await tavilySearch(searchQuery, { maxResults: 4 });
+    const webResults = await tavilySearch(searchQuery, { maxResults: 4, depth: "basic" });
 
     return (webResults.results || []).map((r: WebResult) => ({
       title: r.title,

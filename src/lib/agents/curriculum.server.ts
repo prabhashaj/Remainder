@@ -158,10 +158,12 @@ export async function writeLesson(params: {
     tavilySearch(imageQuery, {
       maxResults: 6,
       includeImages: true,
+      depth: "basic",
     }),
     searchYouTubeDirect(ytSearchQuery, 6),
     tavilySearch(`${cleanSubtopic} in ${cleanRoadmap} site:youtube.com`, {
       maxResults: 6,
+      depth: "basic",
     }),
   ]);
 

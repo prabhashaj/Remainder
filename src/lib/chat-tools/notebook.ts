@@ -63,6 +63,7 @@ export function getNotebookTools(
           try {
             const webSearch = await tavilySearch(`${raw} comprehensive explanation overview guide`, {
               maxResults: 5,
+              depth: "basic",
             });
 
             const researchContext = [
