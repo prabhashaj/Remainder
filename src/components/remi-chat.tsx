@@ -169,6 +169,9 @@ function getToolLabel(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ToolPartLike = any;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isToolPartDone(part: any): boolean {
   if (!part) return false;
   if (part.state === "output-available" || part.state === "result") return true;
