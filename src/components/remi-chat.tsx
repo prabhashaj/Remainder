@@ -575,143 +575,6 @@ function DeepResearchChatCard({ part }: { part: any }) {
   );
 }
 
-function LiveSubagentsProgress({ query }: { query?: string }) {
-  const [activeStepIndex, setActiveStepIndex] = useState(0);
-
-  const steps = [
-    {
-      title: "Research Coordinator",
-      action: "Formulating scope, temporal constraints (2024–2026), and decomposing orthogonal subtasks...",
-      icon: Network,
-      agent: "Coordinator",
-    },
-    {
-      title: "Subagent Alpha (arXiv Specialist)",
-      action: "Querying cs.AI, cs.CV, cs.LG with date filters and extracting mathematical formulations...",
-      icon: Microscope,
-      agent: "arXiv Specialist",
-    },
-    {
-      title: "Subagent Beta (Citation & Semantic Index)",
-      action: "Traversing citation graphs, peer-reviewed venues & high-impact research papers...",
-      icon: Database,
-      agent: "Citation Agent",
-    },
-    {
-      title: "Subagent Gamma (Empirical & Benchmark Analyst)",
-      action: "Evaluating FLOPs, parameter counts, latency benchmarks & structural upgrades...",
-      icon: Brain,
-      agent: "Benchmark Agent",
-    },
-    {
-      title: "Subagent Delta (Fact-Checker & Verifier)",
-      action: "Validating publication dates, eliminating hallucinations & synthesizing Markdown tables...",
-      icon: ShieldCheck,
-      agent: "Temporal Verifier",
-    },
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveStepIndex((prev) => (prev + 1) % steps.length);
-    }, 2200);
-    return () => clearInterval(timer);
-  }, [steps.length]);
-
-  const activeStep = steps[activeStepIndex] || steps[0]!;
-  const StepIcon = activeStep.icon;
-
-  return (
-    <div className="my-3 overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 via-card to-background p-4 sm:p-5 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-primary/20 pb-3">
-        <div className="flex items-center gap-3">
-          <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
-            <Network className="size-5 animate-pulse text-primary" />
-            <span className="absolute -top-1 -right-1 flex size-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex size-3 rounded-full bg-primary" />
-            </span>
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
-                <span className="size-1.5 rounded-full bg-primary animate-ping" />
-                SUBAGENTS IN ACTION
-              </span>
-              <span className="text-[11px] font-mono text-muted-foreground hidden sm:inline">Mistral Multi-Agent Coordinator</span>
-            </div>
-            <h4 className="font-display text-sm sm:text-base font-bold text-foreground mt-0.5 truncate max-w-[280px] sm:max-w-md">
-              {query ? `Researching: ${query}` : "Conducting In-Depth Multi-Agent Technical Analysis"}
-            </h4>
-          </div>
-        </div>
-      </div>
-
-      {/* Active Rotating Action Ticker */}
-      <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/10 p-3 shadow-inner">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
-          <StepIcon className="size-4 animate-spin" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-semibold text-primary text-xs tracking-wide">
-              {activeStep.title}
-            </span>
-            <span className="font-mono text-[10px] text-primary/80 uppercase">Step {activeStepIndex + 1}/5</span>
-          </div>
-          <p className="mt-0.5 text-xs text-foreground font-medium leading-relaxed">
-            <Shimmer>{activeStep.action}</Shimmer>
-          </p>
-        </div>
-      </div>
-
-      {/* 4 Parallel Subagents Grid */}
-      <div className="mt-3.5 grid gap-2 sm:grid-cols-2">
-        {steps.slice(1).map((s, idx) => {
-          const Icon = s.icon;
-          const isCurrentlyActive = activeStepIndex === idx + 1;
-          return (
-            <div
-              key={idx}
-              className={cn(
-                "flex items-start gap-2.5 rounded-xl border p-2.5 transition-all duration-300",
-                isCurrentlyActive
-                  ? "border-primary bg-primary/15 shadow-sm scale-[1.01]"
-                  : "border-border/60 bg-background/50 opacity-75",
-              )}
-            >
-              <div
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-lg text-xs",
-                  isCurrentlyActive
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                <Icon className={cn("size-3.5", isCurrentlyActive && "animate-bounce")} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="font-semibold text-xs text-foreground truncate">{s.agent}</span>
-                  {isCurrentlyActive ? (
-                    <span className="size-2 rounded-full bg-primary animate-ping shrink-0" />
-                  ) : (
-                    <span className="size-1.5 rounded-full bg-muted-foreground/50 shrink-0" />
-                  )}
-                </div>
-                <p className="mt-0.5 text-[11px] text-muted-foreground leading-tight line-clamp-2">
-                  {s.action}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function AttachmentPreviews() {
   const { files, remove } = usePromptInputAttachments();
   if (files.length === 0) return null;
@@ -1469,24 +1332,11 @@ export function RemiChat({
               </Message>
             ))}
 
-            {(() => {
-              const lastUserMessage = messages.filter((m) => m.role === "user").at(-1);
-              const lastUserQueryText =
-                lastUserMessage?.parts
-                  ?.filter((p): p is { type: "text"; text: string } => p && p.type === "text")
-                  .map((p) => p.text)
-                  .join(" ") || "";
-
-              const isWaitingForAssistant =
-                status === "submitted" ||
-                (status === "streaming" &&
-                  (messages.length === 0 || messages[messages.length - 1]?.role === "user"));
-
-              if (isWaitingForAssistant) {
-                return <LiveSubagentsProgress query={lastUserQueryText} />;
-              }
-              return null;
-            })()}
+            {status === "submitted" && (
+              <div className="px-3 py-2 text-base">
+                <Shimmer>Thinking…</Shimmer>
+              </div>
+            )}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>

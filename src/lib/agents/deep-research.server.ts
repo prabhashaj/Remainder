@@ -2,12 +2,7 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  createAiGatewayProvider,
-  getAiModelName,
-  getResearchAiModelName,
-  withAiRateLimitRetry,
-} from "@/lib/ai-gateway.server";
+import { createAiGatewayProvider, getResearchModelName } from "@/lib/ai-gateway.server";
 import { log } from "@/lib/logger.server";
 import {
   searchArxivServer,
@@ -243,76 +238,55 @@ async function executeSubagentWorker(
     evidenceLines.push(`- [${wr.title}](${wr.url}): ${wr.content.slice(0, 350)}...`);
   }
 
-  const workerPrompt = `You are a Specialized AI Research Worker analyzing the subtask: "${subtask.title}".
-Objective: ${subtask.objective}
+  const extractedArchitectures = allArxivPapers.slice(0, 4).map((p) => p.title);
+  const paperBulletPoints = allArxivPapers
+    .slice(0, 5)
+    .map(
+      (p) =>
+        `• [${p.title}](${p.arxivUrl || p.pdfUrl}) (${p.published ? p.published.slice(0, 10) : "Recent"})\n  Authors: ${p.authors.slice(0, 3).join(", ")}\n  Abstract: ${p.summary.slice(0, 300)}...`,
+    )
+    .join("\n\n");
 
-Review the retrieved literature evidence below:
-${evidenceLines.join("\n")}
+  const academicBulletPoints = academicPapers
+    .slice(0, 3)
+    .map((ap) => `• [${ap.title}](${ap.url}) (${ap.year || "Recent"})\n  Abstract: ${ap.abstract.slice(0, 250)}...`)
+    .join("\n\n");
 
-Synthesize a comprehensive, factual sub-report:
-1. Identify 2-3 genuine, breakthrough architectural innovations or papers.
-2. STRICT TEMPORAL ACCURACY: Record the EXACT published year for each paper (e.g. 2024, 2025, 2026). Do NOT mislabel older papers (like 2022) as recent.
-3. Detail the exact mathematical formulation, mechanism, or algorithmic logic.
-4. Note concrete empirical benchmarks, parameter reductions, or speedups.
-5. NO EMOJIS anywhere.`;
+  const webBulletPoints = webResults.results
+    .slice(0, 3)
+    .map((w) => `• [${w.title}](${w.url}): ${w.content.slice(0, 250)}...`)
+    .join("\n\n");
 
-  const SubagentOutputSchema = z.object({
-    findingsSummary: z.string().describe("Detailed 2-3 paragraph technical synthesis"),
-    keyArchitectures: z.array(z.string()).describe("Named architectures or techniques analyzed"),
-  });
+  const findingsSummary = [
+    `Specialized Subagent Analysis for "${subtask.title}" (${subtask.objective}):`,
+    `Discovered ${allArxivPapers.length} arXiv papers, ${academicPapers.length} academic preprints, and ${webResults.results.length} web benchmark sources.`,
+    paperBulletPoints ? `Primary arXiv Preprints:\n${paperBulletPoints}` : "",
+    academicBulletPoints ? `Academic Literature:\n${academicBulletPoints}` : "",
+    webBulletPoints ? `Web & Technical Metrics:\n${webBulletPoints}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
-  try {
-    const { object } = await generateObject({
-      model: gateway(modelName),
-      system:
-        "You are an expert technical research worker. You synthesize academic papers with strict factuality, exact dates, and mathematical rigor.",
-      prompt: workerPrompt,
-      schema: SubagentOutputSchema,
-    });
-
-    return {
-      subtaskId: subtask.id,
-      title: subtask.title,
-      objective: subtask.objective,
-      findingsSummary: object.findingsSummary,
-      keyArchitectures: object.keyArchitectures,
-      papers: allArxivPapers.map((p) => ({
-        title: p.title,
-        id: p.id,
-        url: p.arxivUrl || p.pdfUrl,
-        published: p.published,
-        summary: p.summary,
-        authors: p.authors,
-      })),
-      webSources: webResults.results.map((r) => ({
-        title: r.title,
-        url: r.url,
-        content: r.content,
-      })),
-    };
-  } catch (err) {
-    log("warn", "worker_synthesis_fallback", { subtaskId: subtask.id, error: String(err) });
-    return {
-      subtaskId: subtask.id,
-      title: subtask.title,
-      objective: subtask.objective,
-      findingsSummary: `Analyzed ${allArxivPapers.length} arXiv papers and ${webResults.results.length} web sources for ${subtask.title}.`,
-      keyArchitectures: allArxivPapers.slice(0, 3).map((p) => p.title),
-      papers: allArxivPapers.map((p) => ({
-        title: p.title,
-        id: p.id,
-        url: p.arxivUrl || p.pdfUrl,
-        published: p.published,
-        summary: p.summary,
-        authors: p.authors,
-      })),
-      webSources: webResults.results.map((r) => ({
-        title: r.title,
-        url: r.url,
-        content: r.content,
-      })),
-    };
-  }
+  return {
+    subtaskId: subtask.id,
+    title: subtask.title,
+    objective: subtask.objective,
+    findingsSummary,
+    keyArchitectures: extractedArchitectures,
+    papers: allArxivPapers.map((p) => ({
+      title: p.title,
+      id: p.id,
+      url: p.arxivUrl || p.pdfUrl,
+      published: p.published,
+      summary: p.summary,
+      authors: p.authors,
+    })),
+    webSources: webResults.results.map((r) => ({
+      title: r.title,
+      url: r.url,
+      content: r.content,
+    })),
+  };
 }
 
 /**
@@ -421,13 +395,13 @@ Report Requirements:
 export async function runDeepResearch(params: {
   topic: string;
   apiKey: string;
-  supabase: Supabase;
+  supabase: SupabaseClient<Database>;
   userId: string;
   traceId?: string;
   onStepProgress?: (step: string, details: string) => void;
 }): Promise<DeepResearchResult> {
   const gateway = createAiGatewayProvider(params.apiKey);
-  const modelName = getResearchAiModelName();
+  const modelName = getResearchModelName();
 
   const actionTrail: DeepResearchResult["actionTrail"] = [];
 

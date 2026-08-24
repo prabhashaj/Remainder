@@ -1,4 +1,4 @@
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
@@ -13,7 +13,7 @@ import {
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-import { createAiGatewayProvider, getAiApiKey, getAiModelName, getResearchAiModelName } from "@/lib/ai-gateway.server";
+import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
 import { extractPdfTextServer } from "@/lib/pdf-parser.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit, checkPlanUsage, handleRateLimitError } from "@/lib/rate-limit.server";
@@ -796,15 +796,9 @@ Title: "${curPage.title}"
             .eq("id", activeThreadId);
         };
 
-        const isResearchQuery =
-          /\b(research|arxiv|paper|papers|architecture|upgrade|upgrades|literature|survey|moe|vit|transformer|agentic|state of the art|sota)\b/i.test(
-            lastUserText,
-          );
-        const selectedModel = isResearchQuery ? getResearchAiModelName() : getAiModelName();
-
         const gateway = createAiGatewayProvider(key);
         const result = streamText({
-          model: gateway(selectedModel),
+          model: gateway(getAiModelName()),
           system: systemPrompt,
           messages: await convertToModelMessages(sanitizedUiMessages),
           tools,
@@ -845,8 +839,21 @@ Title: "${curPage.title}"
               await persistAssistant(fallbackMsg, fallbackMsg.id);
             }
           },
-          onError: ({ error }) => {
+          onError: async ({ error }) => {
             log("error", "chat_stream_error", { error: String(error) }, { userId, traceId });
+            if (!assistantPersisted) {
+              const fallbackMsg = {
+                id: nanoid(),
+                role: "assistant",
+                parts: [
+                  {
+                    type: "text",
+                    text: "Research execution was interrupted. Please retry your query.",
+                  },
+                ],
+              };
+              await persistAssistant(fallbackMsg, fallbackMsg.id);
+            }
           },
         });
 
