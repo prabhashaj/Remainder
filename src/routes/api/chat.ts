@@ -19,6 +19,7 @@ import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit, checkPlanUsage, handleRateLimitError } from "@/lib/rate-limit.server";
 import { log } from "@/lib/logger.server";
 import { getRemainingLimitsServer } from "@/lib/limits";
+import { normalizeUIMessage } from "@/lib/db";
 import type { Database } from "@/integrations/supabase/types";
 
 import { getTasksAndGoalsTools } from "@/lib/chat-tools/tasks-and-goals";
@@ -768,18 +769,25 @@ Title: "${curPage.title}"
         const persistAssistant = async (msg: unknown, clientId?: string) => {
           if (assistantPersisted) return;
           assistantPersisted = true;
+
+          const normalized = normalizeUIMessage(msg) ?? {
+            id: clientId ?? nanoid(),
+            role: "assistant",
+            parts: [{ type: "text", text: typeof msg === "string" ? msg : "" }],
+          };
+
           const { error } = await supabase.from("chat_messages").insert({
             thread_id: activeThreadId,
             user_id: userId,
             role: "assistant",
-            message: msg as never,
-            client_id: clientId ?? null,
+            message: normalized as never,
+            client_id: normalized.id ?? clientId ?? null,
           });
           if (error)
             log(
               "warn",
               "persist_assistant_message_failed",
-              { error: error.message },
+              { error: error.message, threadId: activeThreadId },
               { userId, traceId },
             );
           await supabase
@@ -796,12 +804,37 @@ Title: "${curPage.title}"
           tools,
           maxRetries: 5,
           stopWhen: stepCountIs(50),
-          onFinish: async ({ text }) => {
-            if (!assistantPersisted && text) {
+          onFinish: async ({ text, steps }) => {
+            if (!assistantPersisted) {
+              const parts: Array<{ type: string; text?: string; toolName?: string; input?: unknown; output?: unknown; state?: string }> = [];
+              if (Array.isArray(steps)) {
+                for (const step of steps) {
+                  if (Array.isArray(step.toolCalls)) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    for (const tc of step.toolCalls as any[]) {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const res = (step.toolResults as any[])?.find((tr: any) => tr.toolCallId === tc.toolCallId);
+                      parts.push({
+                        type: `tool-${tc.toolName}`,
+                        toolName: tc.toolName,
+                        input: tc.args ?? tc.input,
+                        output: res?.result ?? res?.output,
+                        state: res ? "output-available" : "output-error",
+                      });
+                    }
+                  }
+                }
+              }
+              if (text) {
+                parts.push({ type: "text", text });
+              }
+              if (parts.length === 0) {
+                parts.push({ type: "text", text: text || "" });
+              }
               const fallbackMsg = {
                 id: nanoid(),
                 role: "assistant",
-                parts: [{ type: "text", text }],
+                parts,
               };
               await persistAssistant(fallbackMsg, fallbackMsg.id);
             }
@@ -814,7 +847,9 @@ Title: "${curPage.title}"
         const streamResponse = result.toUIMessageStreamResponse({
           originalMessages: uiMessages,
           onFinish: async ({ responseMessage }) => {
-            await persistAssistant(responseMessage, responseMessage.id);
+            if (responseMessage) {
+              await persistAssistant(responseMessage, responseMessage.id);
+            }
           },
         });
 

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { RemiChat } from "@/components/remi-chat";
 import { Button } from "@/components/ui/button";
-import { createThread, fetchThreadMessages } from "@/lib/db";
+import { createThread, fetchNormalizedThreadMessages } from "@/lib/db";
 import { useTopicContext } from "@/lib/topic-context";
 import {
   ACTIVE_THREAD_CHANGE_EVENT,
@@ -226,18 +226,16 @@ function DockChat({
   threadId: string;
   topic: { itemId: string; label: string } | null;
 }) {
-  const { data: rows, isLoading } = useQuery({
+  const { data: messages = [], isLoading } = useQuery({
     queryKey: ["thread-messages", threadId],
-    queryFn: () => fetchThreadMessages(threadId),
+    queryFn: () => fetchNormalizedThreadMessages(threadId),
   });
 
   if (isLoading) {
     return <div className="px-5 py-6 text-sm text-muted-foreground">Loading…</div>;
   }
 
-  const initial = (rows ?? [])
-    .map((row) => row.message as unknown as UIMessage)
-    .filter((m) => m && typeof m === "object" && Array.isArray(m.parts));
+  const initial = messages;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

@@ -86,7 +86,7 @@ import {
   fetchRoadmaps,
   fetchTasks,
   fetchThreads,
-  fetchThreadMessages,
+  fetchNormalizedThreadMessages,
   type Page,
 } from "@/lib/db";
 
@@ -744,12 +744,9 @@ function ConversationsGroup() {
 
   async function handleOpenShare(threadId: string, title: string) {
     try {
-      const rows = await fetchThreadMessages(threadId);
-      const messages = (rows ?? [])
-        .map((row) => row.message)
-        .filter((m) => m && typeof m === "object");
+      const messages = await fetchNormalizedThreadMessages(threadId);
       setShareThread({ id: threadId, title, messages });
-    } catch (e) {
+    } catch {
       toast.error("Failed to load conversation details");
     }
   }

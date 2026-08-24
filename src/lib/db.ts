@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import type { UIMessage } from "ai";
 
 type Tables = Database["public"]["Tables"];
 export type Page = Tables["pages"]["Row"];
@@ -492,6 +493,104 @@ export async function fetchThreadMessages(threadId: string) {
   return unwrap(
     await supabase.from("chat_messages").select("*").eq("thread_id", threadId).order("created_at"),
   );
+}
+
+/**
+ * Normalizes any database message row, JSON string, or legacy format into a valid UIMessage.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function normalizeUIMessage(raw: any): UIMessage | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  let msg = raw.message ?? raw;
+
+  if (typeof msg === "string") {
+    try {
+      msg = JSON.parse(msg);
+    } catch {
+      msg = { role: raw.role || "assistant", content: msg };
+    }
+  }
+
+  if (!msg || typeof msg !== "object") {
+    const textContent = typeof raw.content === "string" ? raw.content : "";
+    return {
+      id: raw.client_id || raw.id || `msg-${Date.now()}`,
+      role: raw.role === "user" ? "user" : "assistant",
+      parts: [{ type: "text", text: textContent }],
+    } as UIMessage;
+  }
+
+  const id = msg.id || raw.client_id || raw.id || `msg-${Date.now()}`;
+  const role = msg.role === "user" || raw.role === "user" ? "user" : "assistant";
+
+  // If msg.parts exists and is an array
+  if (Array.isArray(msg.parts)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sanitizedParts = msg.parts.map((p: any) => {
+      if (typeof p === "string") return { type: "text", text: p };
+      if (!p || typeof p !== "object") return { type: "text", text: "" };
+      return p;
+    });
+
+    return {
+      ...msg,
+      id,
+      role,
+      parts: sanitizedParts.length > 0 ? sanitizedParts : [{ type: "text", text: "" }],
+    } as UIMessage;
+  }
+
+  // If msg.content is a string
+  if (typeof msg.content === "string") {
+    return {
+      id,
+      role,
+      parts: [{ type: "text", text: msg.content }],
+    } as UIMessage;
+  }
+
+  // If msg.text is a string
+  if (typeof msg.text === "string") {
+    return {
+      id,
+      role,
+      parts: [{ type: "text", text: msg.text }],
+    } as UIMessage;
+  }
+
+  // If msg.toolInvocations exists (older AI SDK structure)
+  if (Array.isArray(msg.toolInvocations)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const toolParts = msg.toolInvocations.map((ti: any) => ({
+      type: `tool-${ti.toolName || "tool"}`,
+      toolName: ti.toolName,
+      input: ti.args,
+      output: ti.result,
+      state: ti.state === "result" ? "output-available" : "output-error",
+    }));
+
+    const textPart = typeof msg.content === "string" ? [{ type: "text", text: msg.content }] : [];
+
+    return {
+      id,
+      role,
+      parts: [...toolParts, ...textPart],
+    } as UIMessage;
+  }
+
+  return {
+    id,
+    role,
+    parts: [{ type: "text", text: "" }],
+  } as UIMessage;
+}
+
+export async function fetchNormalizedThreadMessages(threadId: string): Promise<UIMessage[]> {
+  const rows = await fetchThreadMessages(threadId);
+  return (rows ?? [])
+    .map(normalizeUIMessage)
+    .filter((m): m is UIMessage => m !== null);
 }
 
 /* ---------- shared conversations (ChatGPT-style) ---------- */

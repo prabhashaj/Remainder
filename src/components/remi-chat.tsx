@@ -65,6 +65,7 @@ function getToolLabel(
     | {
         type?: string;
         toolName?: string;
+        toolInvocation?: { toolName?: string; args?: Record<string, unknown> };
         args?: Record<string, unknown>;
         input?: Record<string, unknown>;
       }
@@ -79,8 +80,14 @@ function getToolLabel(
   if (typeof part.toolName === "string") {
     name = part.toolName;
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((part as any).toolInvocation?.toolName) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    name = (part as any).toolInvocation.toolName;
+  }
 
-  const args = ((part.args || part.input || {}) as Record<string, unknown>) ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const args = ((part.args || part.input || (part as any).toolInvocation?.args || {}) as Record<string, unknown>) ?? {};
 
   if (name === "delegateToPlanner") {
     const inst = (typeof args["instruction"] === "string" ? args["instruction"] : "").toLowerCase();
@@ -114,6 +121,11 @@ function getToolLabel(
   }
 
   const mapping: Record<string, { active: string; done: string }> = {
+    deepResearch: { active: "Conducting deep multi-agent research...", done: "Completed deep research" },
+    searchArxiv: { active: "Searching arXiv research papers...", done: "Searched arXiv papers" },
+    searchPapers: { active: "Searching academic papers...", done: "Searched academic papers" },
+    fetchPaperDetails: { active: "Fetching paper details & abstract...", done: "Fetched paper details" },
+    fetchLatestPapers: { active: "Fetching latest arXiv papers...", done: "Fetched latest arXiv papers" },
     createTask: { active: "Creating task...", done: "Created task" },
     updateTask: { active: "Updating task...", done: "Updated task" },
     createGoal: { active: "Creating goal...", done: "Created goal" },
@@ -616,6 +628,8 @@ export function RemiChat({
       toast.error(error.message || "Remi couldn't reply just now.");
     },
     onFinish: () => {
+      void queryClient.invalidateQueries({ queryKey: ["thread-messages", threadId] });
+      void queryClient.invalidateQueries({ queryKey: ["threads"] });
       void queryClient.invalidateQueries({ queryKey: ["planUsage"] });
       void queryClient.invalidateQueries({ queryKey: ["roadmaps"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -630,23 +644,24 @@ export function RemiChat({
   // Keep useChat messages in sync whenever initialMessages or threadId changes
   const isStreaming = status === "streaming" || status === "submitted";
   const lastSyncedThreadId = useRef<string>(threadId);
-  const lastSyncedInitialCount = useRef<number>(initialMessages.length);
 
   useEffect(() => {
     // If threadId changed, immediately set that thread's messages
     if (lastSyncedThreadId.current !== threadId) {
       lastSyncedThreadId.current = threadId;
-      lastSyncedInitialCount.current = initialMessages.length;
       setMessages(initialMessages);
       return;
     }
 
-    // If query fetched messages while idle, update internal state
-    if (!isStreaming && initialMessages.length !== lastSyncedInitialCount.current) {
-      lastSyncedInitialCount.current = initialMessages.length;
-      setMessages(initialMessages);
+    // If query fetched or updated messages while idle, sync internal state
+    if (!isStreaming) {
+      const currentIds = messages.map((m) => m.id).join(",");
+      const initialIds = initialMessages.map((m) => m.id).join(",");
+      if (currentIds !== initialIds && initialMessages.length > 0) {
+        setMessages(initialMessages);
+      }
     }
-  }, [threadId, initialMessages, isStreaming, setMessages]);
+  }, [threadId, initialMessages, isStreaming, setMessages, messages]);
 
   const seenLimitMessages = useRef<Set<string>>(new Set());
 
@@ -965,27 +980,43 @@ export function RemiChat({
               <Message from={message.role} key={message.id}>
                 <MessageContent>
                   {(() => {
-                    const fileParts = message.parts.filter(
-                      (p): p is FileUIPart => p.type === "file",
+                    const fileParts = (message.parts || []).filter(
+                      (p): p is FileUIPart => p && p.type === "file",
                     );
                     const groupedParts: Array<
                       { type: "text"; text: string } | { type: "tools"; parts: ToolPartLike[] }
                     > = [];
                     let currentTools: ToolPartLike[] = [];
 
-                    for (const part of message.parts) {
-                      if (part.type === "text") {
+                    for (const part of message.parts || []) {
+                      if (!part) continue;
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const pAny = part as any;
+                      if (part.type === "text" || (typeof pAny.text === "string" && !part.type?.startsWith("tool-") && !pAny.toolInvocation)) {
                         if (currentTools.length > 0) {
                           groupedParts.push({ type: "tools", parts: currentTools });
                           currentTools = [];
                         }
-                        groupedParts.push({ type: "text", text: part.text });
-                      } else if (part.type === "dynamic-tool" || part.type.startsWith("tool-")) {
+                        const textVal = part.type === "text" ? part.text : pAny.text;
+                        if (textVal) {
+                          groupedParts.push({ type: "text", text: textVal });
+                        }
+                      } else if (part.type === "dynamic-tool" || part.type?.startsWith("tool-") || pAny.toolInvocation) {
                         currentTools.push(part as ToolPartLike);
                       }
                     }
                     if (currentTools.length > 0) {
                       groupedParts.push({ type: "tools", parts: currentTools });
+                    }
+
+                    // Fallback if parts array was empty or had no rendered parts
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const msgAny = message as any;
+                    if (groupedParts.length === 0) {
+                      const fallbackText = msgAny.content || msgAny.text || "";
+                      if (fallbackText) {
+                        groupedParts.push({ type: "text", text: fallbackText });
+                      }
                     }
 
                     return (

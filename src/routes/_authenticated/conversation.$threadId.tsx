@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { RemiChat } from "@/components/remi-chat";
 import { ShareConversationDialog } from "@/components/share-conversation-dialog";
 import { Button } from "@/components/ui/button";
-import { createThread, deleteThread, fetchThreadMessages, fetchThreads } from "@/lib/db";
+import { createThread, deleteThread, fetchNormalizedThreadMessages, fetchThreads, normalizeUIMessage } from "@/lib/db";
 import { setStoredActiveThreadId } from "@/lib/thread-storage";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -57,10 +57,10 @@ function ConversationThread() {
   const currentThread = threads.find((t) => t.id === threadId);
   const threadTitle = currentThread?.title || "Conversation";
 
-  const { data: rows, isLoading } = useQuery({
+  const { data: messages = [], isLoading } = useQuery({
     queryKey: ["thread-messages", threadId],
-    queryFn: () => fetchThreadMessages(threadId),
-    staleTime: 10000,
+    queryFn: () => fetchNormalizedThreadMessages(threadId),
+    staleTime: 5000,
   });
 
   const deleteMutation = useMutation({
@@ -101,9 +101,7 @@ function ConversationThread() {
     );
   }
 
-  const initial = (rows ?? [])
-    .map((row) => row.message as unknown as UIMessage)
-    .filter((m) => m && typeof m === "object" && Array.isArray(m.parts));
+  const initial = messages;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
