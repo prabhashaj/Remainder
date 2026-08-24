@@ -126,30 +126,30 @@ function getToolLabel(
   }
 
   const mapping: Record<string, { active: string; done: string }> = {
-    deepResearch: { active: "Conducting deep multi-agent research...", done: "Completed deep research" },
-    searchArxiv: { active: "Searching arXiv research papers...", done: "Searched arXiv papers" },
-    searchPapers: { active: "Searching academic papers...", done: "Searched academic papers" },
-    fetchPaperDetails: { active: "Fetching paper details & abstract...", done: "Fetched paper details" },
-    fetchLatestPapers: { active: "Fetching latest arXiv papers...", done: "Fetched latest arXiv papers" },
-    createTask: { active: "Creating task...", done: "Created task" },
-    updateTask: { active: "Updating task...", done: "Updated task" },
-    createGoal: { active: "Creating goal...", done: "Created goal" },
-    updateGoal: { active: "Updating goal...", done: "Updated goal" },
-    addMilestone: { active: "Adding milestone...", done: "Added milestone" },
-    createMilestone: { active: "Adding milestone...", done: "Added milestone" },
-    createRoadmap: { active: "Creating roadmap", done: "Created roadmap" },
-    updateRoadmap: { active: "Updating and modifying...", done: "Updated roadmap" },
+    deepResearch: { active: "Using subagents", done: "Researched with subagents" },
+    searchArxiv: { active: "Searching arXiv", done: "Searched arXiv" },
+    searchPapers: { active: "Searching academic papers", done: "Searched academic papers" },
+    fetchPaperDetails: { active: "Fetching paper details", done: "Fetched paper details" },
+    fetchLatestPapers: { active: "Fetching latest papers", done: "Fetched latest papers" },
+    createTask: { active: "Creating task", done: "Created task" },
+    updateTask: { active: "Updating task", done: "Updated task" },
+    createGoal: { active: "Creating goal", done: "Created goal" },
+    updateGoal: { active: "Updating goal", done: "Updated goal" },
+    addMilestone: { active: "Adding milestone", done: "Added milestone" },
+    createMilestone: { active: "Adding milestone", done: "Added milestone" },
+    createRoadmap: { active: "Designing roadmap", done: "Created roadmap" },
+    updateRoadmap: { active: "Updating roadmap", done: "Updated roadmap" },
     readRoadmap: { active: "Reading roadmap", done: "Read roadmap" },
-    researchResources: { active: "Finding video tutorials", done: "Found video tutorials" },
+    researchResources: { active: "Finding resources", done: "Found resources" },
     webSearch: { active: "Searching the web", done: "Searched the web" },
-    searchPhotos: { active: "Searching photos & diagrams", done: "Searched photos & diagrams" },
-    writeLessonForSubtopic: { active: "Writing subtopic lesson", done: "Wrote subtopic lesson" },
-    generateNotebook: { active: "Generating study notebook", done: "Generated study notebook" },
-    editNotebook: { active: "Updating study notebook", done: "Updated study notebook" },
-    saveMemory: { active: "Saving memory note", done: "Saved memory note" },
+    searchPhotos: { active: "Finding images", done: "Found images" },
+    writeLessonForSubtopic: { active: "Writing lesson", done: "Wrote lesson" },
+    generateNotebook: { active: "Creating notebook", done: "Created notebook" },
+    editNotebook: { active: "Updating notebook", done: "Updated notebook" },
+    saveMemory: { active: "Saving memory", done: "Saved memory" },
     readDocument: { active: "Reading document", done: "Read document" },
     getCurrentTime: { active: "Checking time", done: "Checked time" },
-    getWeather: { active: "Checking live weather", done: "Checked live weather" },
+    getWeather: { active: "Checking weather", done: "Checked weather" },
   };
 
   const found = mapping[name];
@@ -263,27 +263,7 @@ function RoadmapChatCard({ part }: { part: any }) {
   const topicsCount = output.topics || 20;
   const subtopicsCount = output.subtopics || 80;
 
-  if (isRunning) {
-    return (
-      <div className="my-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Compass className="size-5 animate-spin" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h4 className="font-display text-sm font-semibold text-foreground">
-              Designing Roadmap: {topicName}
-            </h4>
-            <p className="text-xs text-muted-foreground">
-              <Shimmer>Assembling phases, topics, subtopics, and personalized milestones…</Shimmer>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isDone || !roadmapId) return null;
+  if (isRunning || !isDone || !roadmapId) return null;
 
   return (
     <div className="my-3 overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-sm transition-all hover:border-primary/50">
@@ -377,29 +357,6 @@ function DeepResearchChatCard({ part }: { part: any }) {
 
   const topicQuery = output.plan?.topic || input.topic || input.query || "Academic & Technical Topic";
   const temporalConstraint = output.plan?.temporalConstraints || "2024–2026 (Recent Verified)";
-
-  const defaultSubagents = [
-    {
-      name: "Subagent 1: arXiv Academic Specialist",
-      desc: "Querying arXiv (cs.CV, cs.AI, cs.LG) with submission date sorting",
-      icon: Microscope,
-    },
-    {
-      name: "Subagent 2: Citation & Semantic Scholar Agent",
-      desc: "Cross-referencing high-impact papers, citation graphs & authors",
-      icon: Database,
-    },
-    {
-      name: "Subagent 3: Benchmark & Architecture Analyst",
-      desc: "Extracting FLOPs, parameter counts, latency & structural updates",
-      icon: Brain,
-    },
-    {
-      name: "Subagent 4: Temporal & Fact-Check Coordinator",
-      desc: "Validating publication dates, eliminating hallucinations & synthesizing report",
-      icon: ShieldCheck,
-    },
-  ];
 
   if (isRunning || !isDone) return null;
 
