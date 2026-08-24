@@ -302,15 +302,16 @@ async function verifyAndAuditEvidence(
   verifiedDossier: string;
   verifiedSources: { title: string; url: string; yearOrId: string; type: string }[];
 }> {
-  const allVerifiedSources: { title: string; url: string; yearOrId: string; type: string }[] = [];
+  const allRawSources: { title: string; url: string; yearOrId: string; type: string }[] = [];
   const seenUrls = new Set<string>();
 
+  // Collect all sources from subagents
   for (const sub of subagentResults) {
     for (const p of sub.papers) {
       const url = p.url || `https://arxiv.org/abs/${p.id}`;
       if (url && !seenUrls.has(url)) {
         seenUrls.add(url);
-        allVerifiedSources.push({
+        allRawSources.push({
           title: p.title,
           url,
           yearOrId: p.published ? p.published.slice(0, 4) : p.id ? `arXiv:${p.id}` : "arXiv",
@@ -321,7 +322,7 @@ async function verifyAndAuditEvidence(
     for (const w of sub.webSources) {
       if (w.url && !seenUrls.has(w.url)) {
         seenUrls.add(w.url);
-        allVerifiedSources.push({
+        allRawSources.push({
           title: w.title,
           url: w.url,
           yearOrId: "Web Source",
@@ -330,6 +331,23 @@ async function verifyAndAuditEvidence(
       }
     }
   }
+
+  // Citation relevance filter: remove sources whose titles are clearly off-topic
+  // (e.g., crypto/blockchain papers in a gold price research query)
+  const OFF_TOPIC_KEYWORDS = [
+    "bitcoin", "cryptocurrency", "crypto", "blockchain", "ethereum", "nft", "defi",
+    "digital currency", "cbdc", "stablecoin", "token", "web3", "metaverse",
+  ];
+  const topicLower = topic.toLowerCase();
+  // Only apply the filter when the research topic itself isn't about crypto
+  const isTopicCrypto = OFF_TOPIC_KEYWORDS.some((kw) => topicLower.includes(kw));
+
+  const allVerifiedSources = isTopicCrypto
+    ? allRawSources
+    : allRawSources.filter((src) => {
+        const titleLower = src.title.toLowerCase();
+        return !OFF_TOPIC_KEYWORDS.some((kw) => titleLower.includes(kw));
+      });
 
   const subagentDumps: string[] = [];
   for (const [idx, sub] of subagentResults.entries()) {
@@ -350,15 +368,27 @@ Raw Subagent Findings:
 ${subagentDumps.join("\n")}
 
 Your Verification Tasks:
-1. Temporal Audit: Cross-check dates and identify which techniques are recent (${plan.temporalConstraints}) vs foundational baselines.
-2. Empirical & Benchmark Validation: Extract and verify concrete metrics (e.g. accuracy, latency, FLOPs, FID, throughput) and eliminate unsubstantiated claims.
-3. Mathematical & Algorithmic Rigor: Verify core mathematical equations and mechanical formulations (in standard LaTeX $$...$$).
-4. Summarize the verified facts, verified mechanisms, and structured comparison data cleanly.`;
+1. TEMPORAL AUDIT: Cross-check dates. Clearly label which findings are from recent publications (${plan.temporalConstraints}) vs. older foundational baselines.
+
+2. HALLUCINATION FIREWALL — This is your most critical task:
+   - REJECT any numeric statistic (R², RMSE, correlation coefficients, price targets, percentage changes) that was NOT explicitly sourced from a real, named publication in the raw findings above.
+   - Do NOT invent or synthesize any figures. If a statistic has no traceable citation, write "[Unverified — omit from report]" next to it.
+   - Treat all claimed ML benchmark metrics (e.g. 'CNN-LSTM R²=0.94') as UNVERIFIED unless they appear word-for-word in the raw source material.
+   - Do NOT treat future projections as historical facts. Any price move or market event after ${new Date().getFullYear()} that is not in a published source must be labeled as "[Speculative — label as hypothetical in report]".
+
+3. CITATION RELEVANCE AUDIT:
+   - Exclude any citation whose subject matter is irrelevant to the research topic (e.g., papers about cryptocurrency, blockchain, or unrelated financial instruments should NOT be cited in a gold price analysis unless they directly compare gold and crypto as assets).
+
+4. EMPIRICAL INTEGRITY:
+   - Only include benchmark comparisons or model performance metrics if they come from a named, traceable source.
+   - For metrics without traceable sources, replace with a qualitative description (e.g., "Hybrid models generally outperform ARIMA baselines based on recent literature").
+
+5. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims clearly.`;
 
   const { text: verifiedDossier } = await generateText({
     model: gateway(modelName),
     system:
-      "You are a rigorous Academic Verifier Agent. You cross-check literature, audit temporal constraints, validate mathematical equations, and filter out hallucinations.",
+      "You are a rigorous Academic Verifier Agent. You cross-check literature, reject fabricated statistics, audit temporal constraints, validate mathematical equations, and filter out hallucinations. Your primary job is to prevent the writer from citing synthetic data.",
     prompt: verifierPrompt,
   });
 
@@ -408,12 +438,36 @@ Report Structure:
 4. Key Takeaways & Practical Recommendations.
 5. Conclusion with short-term outlook (if requested).
 
-Strict Guidelines:
-- ZERO EMOJIS: Keep the entire report completely emoji-free.
-- NO DUPLICATE EQUATIONS: Each LaTeX formula must appear exactly once — choose either $$block$$ or $inline$, never both for the same formula.
-- RELEVANT CITATIONS ONLY: Only cite sources directly relevant to the topic. Do not include papers about cryptocurrency, blockchain, or unrelated domains unless they directly address the research question.
-- Clean, structured, highly readable Markdown formatting.
-- For dollar amounts, write e.g. "$3,200" without LaTeX math mode to prevent rendering issues.`;
+Strict Writing Rules — All Must Be Followed:
+
+1. ZERO EMOJIS: Keep the entire report completely emoji-free.
+
+2. NO HALLUCINATED STATISTICS:
+   - Do NOT invent R², RMSE, correlation coefficients, price levels, or percentage changes.
+   - Only quote numeric figures that are explicitly present in the verified dossier above.
+   - If the dossier marks something as "[Unverified — omit]", do NOT include it.
+   - If a model comparison exists but has no specific metrics, write qualitatively: e.g. "Recent literature suggests hybrid CNN-LSTM models outperform traditional ARIMA baselines in short-horizon financial forecasting."
+
+3. TEMPORAL HONESTY:
+   - Any event or price move tagged "[Speculative — label as hypothetical in report]" in the dossier MUST be written in future/conditional tense: "If X occurs..." or "In an upside scenario..."
+   - Do NOT present speculative projections as historical facts (e.g., do NOT write 'Gold fell 15% in May 2026' unless that event is in a real sourced document).
+
+4. NO DUPLICATE EQUATIONS:
+   - Each LaTeX formula must appear exactly once — choose $$block$$ or $inline$, never both for the same formula.
+
+5. CITATION QUALITY:
+   - Do NOT cite papers that the verifier flagged as off-topic or irrelevant.
+   - Commercial blog posts (e.g., broker commentaries, news aggregators) may be referenced as 'market reports' but must NOT be cited as establishing econometric formulas or peer-reviewed benchmarks.
+
+6. DOLLAR AMOUNTS:
+   - Write dollar amounts as plain text (e.g., "$3,200") — do NOT wrap them in LaTeX math mode.
+   - Use ranges like "$3,200–$3,500" with a proper en-dash.
+
+7. TABLE FORMATTING:
+   - All markdown tables must be properly formatted with | separators.
+   - Do not leave raw table fragments without headers.
+
+8. Clean, structured, highly readable Markdown formatting.`;
 
   const { text } = await generateText({
     model: gateway(modelName),
