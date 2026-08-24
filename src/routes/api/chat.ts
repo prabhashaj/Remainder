@@ -13,7 +13,7 @@ import {
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-import { createAiGatewayProvider, getAiApiKey, getAiModelName } from "@/lib/ai-gateway.server";
+import { createAiGatewayProvider, getAiApiKey, getAiModelName, getResearchModelName } from "@/lib/ai-gateway.server";
 import { extractPdfTextServer } from "@/lib/pdf-parser.server";
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit, checkPlanUsage, handleRateLimitError } from "@/lib/rate-limit.server";
@@ -796,9 +796,19 @@ Title: "${curPage.title}"
             .eq("id", activeThreadId);
         };
 
+        const lowerUserText = lastUserText.toLowerCase();
+        const isComplexResearchQuery =
+          lowerUserText.includes("research") ||
+          lowerUserText.includes("literature") ||
+          lowerUserText.includes("arxiv") ||
+          lowerUserText.includes("paper") ||
+          lowerUserText.includes("advancements");
+
+        const chatModelName = isComplexResearchQuery ? getResearchModelName() : getAiModelName();
+
         const gateway = createAiGatewayProvider(key);
         const result = streamText({
-          model: gateway(getAiModelName()),
+          model: gateway(chatModelName),
           system: systemPrompt,
           messages: await convertToModelMessages(sanitizedUiMessages),
           tools,

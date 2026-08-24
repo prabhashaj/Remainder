@@ -173,15 +173,20 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
   const anyError = parts.some((p) => p.state === "output-error");
   const isRunning = !allDone && !anyError;
 
-  const names = Array.from(new Set(parts.map((p) => getToolLabel(p, isRunning))));
+  // Single-line active indicator: show ONLY the current running action and remove previous ones
+  const activePart =
+    parts.slice().reverse().find((p) => p.state !== "output-available" && p.state !== "output-error") ||
+    parts[parts.length - 1];
+
+  const currentLabel = activePart ? getToolLabel(activePart, isRunning) : "Working";
 
   const summaryText = isRunning
-    ? `${names.join(", ")}…`
+    ? `${currentLabel}…`
     : anyError
       ? `Completed with warnings (${parts.length})`
-      : parts.length === 1
-        ? names[0]
-        : `Completed ${parts.length} steps (${names.slice(0, 2).join(", ")})`;
+      : parts.length === 1 && parts[0]
+        ? getToolLabel(parts[0], false)
+        : `Completed ${parts.length} steps`;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="my-1 flex flex-col items-start">
@@ -396,69 +401,7 @@ function DeepResearchChatCard({ part }: { part: any }) {
     },
   ];
 
-  if (isRunning) {
-    return (
-      <div className="my-3 overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 via-background to-secondary/20 p-4 sm:p-5 shadow-md">
-        <div className="flex items-center justify-between gap-3 border-b border-primary/20 pb-3">
-          <div className="flex items-center gap-3">
-            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
-              <Network className="size-5 animate-pulse text-primary" />
-              <span className="absolute -top-1 -right-1 flex size-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex size-3 rounded-full bg-primary" />
-              </span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
-                  <span className="size-1.5 rounded-full bg-primary animate-ping" />
-                  MULTI-AGENT COORDINATOR ACTIVE
-                </span>
-                <span className="text-[11px] text-muted-foreground font-mono">4 Subagents Running</span>
-              </div>
-              <h4 className="font-display text-sm sm:text-base font-bold text-foreground mt-0.5">
-                Researching: {topicQuery}
-              </h4>
-            </div>
-          </div>
-        </div>
-
-        <p className="mt-2.5 text-xs text-muted-foreground">
-          <Shimmer>
-            Coordinator formulated research plan. Decomposing into parallel subtasks and querying arXiv & academic databases...
-          </Shimmer>
-        </p>
-
-        {/* Live Subagents Action Grid */}
-        <div className="mt-3.5 grid gap-2 sm:grid-cols-2">
-          {defaultSubagents.map((agent, i) => {
-            const Icon = agent.icon;
-            return (
-              <div
-                key={i}
-                className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-background/60 p-2.5 shadow-xs backdrop-blur-xs"
-              >
-                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="size-3.5 animate-spin" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-medium text-foreground text-xs truncate">{agent.name}</span>
-                    <span className="size-1.5 rounded-full bg-primary animate-ping shrink-0" />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                    {agent.desc}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  if (!isDone) return null;
+  if (isRunning || !isDone) return null;
 
   const subtasksList = output.subtasks || [];
   const actionTrail = output.action_trail || [];
@@ -466,12 +409,12 @@ function DeepResearchChatCard({ part }: { part: any }) {
   const subagentsCount = output.subagents_count || 4;
 
   return (
-    <div className="my-3 overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-sm transition-all hover:border-primary/40">
+    <div className="my-2.5 overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-sm transition-all hover:border-primary/40">
       <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 sm:size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="size-5 sm:size-6" />
+            <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <ShieldCheck className="size-5" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -483,7 +426,7 @@ function DeepResearchChatCard({ part }: { part: any }) {
                   Window: {temporalConstraint}
                 </span>
               </div>
-              <h3 className="font-display text-base sm:text-lg font-bold text-foreground mt-0.5">
+              <h3 className="font-display text-sm sm:text-base font-bold text-foreground mt-0.5">
                 {output.plan?.topic || topicQuery}
               </h3>
             </div>
@@ -491,21 +434,21 @@ function DeepResearchChatCard({ part }: { part: any }) {
         </div>
 
         {output.plan?.scope && (
-          <p className="mt-2.5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-2 text-xs sm:text-sm leading-relaxed text-muted-foreground">
             {output.plan.scope}
           </p>
         )}
 
         {/* Stats Badges */}
-        <div className="mt-3.5 flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 font-semibold text-emerald-600 dark:text-emerald-400">
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 font-semibold text-emerald-600 dark:text-emerald-400">
             {verifiedPapersCount} Verified Papers Retrieved
           </span>
-          <span className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1 font-semibold text-primary">
+          <span className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-0.5 font-semibold text-primary">
             {subagentsCount} Parallel Subagents Executed
           </span>
           {subtasksList.length > 0 && (
-            <span className="rounded-lg bg-muted/80 px-2.5 py-1 font-medium text-foreground">
+            <span className="rounded-lg bg-muted/80 px-2.5 py-0.5 font-medium text-foreground">
               {subtasksList.length} Research Subtasks
             </span>
           )}
@@ -513,7 +456,7 @@ function DeepResearchChatCard({ part }: { part: any }) {
 
         {/* Expandable Execution Trail & Subagents Work */}
         {(subtasksList.length > 0 || actionTrail.length > 0) && (
-          <div className="mt-4 pt-3 border-t border-border/50">
+          <div className="mt-3 pt-2.5 border-t border-border/50">
             <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
               <CollapsibleTrigger className="group flex w-full items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground">
                 <span className="flex items-center gap-1.5">
@@ -523,13 +466,13 @@ function DeepResearchChatCard({ part }: { part: any }) {
                 <ChevronDown className={cn("size-3.5 transition-transform duration-200", detailsOpen && "rotate-180")} />
               </CollapsibleTrigger>
 
-              <CollapsibleContent className="mt-3 space-y-3 pt-1 text-xs">
+              <CollapsibleContent className="mt-2.5 space-y-2.5 pt-1 text-xs">
                 {subtasksList.length > 0 && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
                       Parallel Subtasks Executed
                     </div>
-                    <div className="grid gap-1.5">
+                    <div className="grid gap-1">
                       {subtasksList.map((st, i) => (
                         <div
                           key={st.id || i}
@@ -549,7 +492,7 @@ function DeepResearchChatCard({ part }: { part: any }) {
                 )}
 
                 {actionTrail.length > 0 && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
                       Coordinator Action Trail
                     </div>
@@ -571,6 +514,51 @@ function DeepResearchChatCard({ part }: { part: any }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isNotebookTool(part: any): boolean {
+  const typeStr = typeof part.type === "string" ? part.type : "";
+  const toolName =
+    typeof part.toolName === "string"
+      ? part.toolName
+      : (part.toolInvocation?.toolName || typeStr.replace(/^tool-/, ""));
+  return toolName === "generateNotebook";
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function NotebookChatCard({ part }: { part: any }) {
+  const navigate = useNavigate();
+  const output = (part.output || part.result || {}) as {
+    success?: boolean;
+    pageId?: string;
+    blockCount?: number;
+    message?: string;
+  };
+  const isDone = part.state === "output-available" && output.success;
+  if (!isDone || !output.pageId) return null;
+
+  return (
+    <div className="my-2.5 flex items-center justify-between rounded-xl border border-border/80 bg-card/90 p-3 shadow-xs">
+      <div className="flex items-center gap-2.5">
+        <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+          <BookOpen className="size-4" />
+        </div>
+        <div>
+          <div className="text-xs font-semibold text-foreground">Study Notebook Ready</div>
+          <div className="text-[11px] text-muted-foreground">{output.blockCount || "Multiple"} blocks created</div>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => navigate({ to: `/notebook/${output.pageId}` })}
+        className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/20 cursor-pointer transition-colors"
+      >
+        <span>Open Notebook</span>
+        <ChevronRight className="size-3.5" />
+      </button>
     </div>
   );
 }
@@ -900,10 +888,12 @@ export function RemiChat({
 
     // If query fetched or updated messages while idle, sync internal state
     if (!isStreaming) {
-      const currentIds = messages.map((m) => m.id).join(",");
-      const initialIds = initialMessages.map((m) => m.id).join(",");
-      if (currentIds !== initialIds && initialMessages.length > 0) {
-        setMessages(initialMessages);
+      if (initialMessages.length >= messages.length && initialMessages.length > 0) {
+        const currentIds = messages.map((m) => m.id).join(",");
+        const initialIds = initialMessages.map((m) => m.id).join(",");
+        if (currentIds !== initialIds) {
+          setMessages(initialMessages);
+        }
       }
     }
   }, [threadId, initialMessages, isStreaming, setMessages, messages]);
@@ -1313,6 +1303,7 @@ export function RemiChat({
                           }
                           const roadmapParts = group.parts.filter((p) => isRoadmapTool(p));
                           const researchParts = group.parts.filter((p) => isDeepResearchTool(p));
+                          const notebookParts = group.parts.filter((p) => isNotebookTool(p));
                           return (
                             <div key={gIdx} className="space-y-2">
                               <ToolGroup parts={group.parts} />
@@ -1321,6 +1312,9 @@ export function RemiChat({
                               ))}
                               {researchParts.map((dp, dpIdx) => (
                                 <DeepResearchChatCard key={dpIdx} part={dp} />
+                              ))}
+                              {notebookParts.map((np, npIdx) => (
+                                <NotebookChatCard key={npIdx} part={np} />
                               ))}
                             </div>
                           );
