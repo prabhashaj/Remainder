@@ -78,15 +78,17 @@ async function createPlanAndSubtasks(
 ): Promise<{ plan: ResearchPlan; subtasks: ResearchSubtask[] }> {
   const currentYear = new Date().getFullYear();
 
-  const planningPrompt = `You are a Principal Research Scientist and Lead Coordinator.
-Analyze the user's research topic: "${topic}".
+  const planningPrompt = `You are a Principal Research Coordinator at Remispace.
+Analyze the user's research topic or question: "${topic}".
 Current Year: ${currentYear}.
 
 Your goal:
-1. Create a structured Research Plan outlining the core scope, temporal bounds (e.g. recent ${currentYear - 2}–${currentYear} publications vs foundational literature), and key technical dimensions.
-2. Decompose the research topic into 3 to 4 distinct, orthogonal, non-overlapping investigation subtasks for parallel research workers.
-Each subtask must target a distinct analytical angle, sub-problem, or evaluation dimension of the requested topic.
-Provide targeted search queries optimized for arXiv API, Semantic Scholar, and Web search.`;
+1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g. recent ${currentYear - 2}–${currentYear} developments), and key analytical pillars.
+2. Decompose the topic into 3 to 4 distinct, orthogonal investigation subtasks for parallel research subagents.
+3. Provide targeted search queries for each subtask:
+   - arxivQuery: Pure search keywords (e.g. 'gold price drivers macroeconomics inflation' or 'vision transformer self attention'). NEVER include boolean operators (AND/OR), quotes, or submittedDate filters.
+   - academicQuery: Targeted search query for academic databases and preprint repositories.
+   - webQuery: Targeted search query for the live web index, recent market reports, and empirical sources.`;
 
   const SubtasksSchema = z.object({
     plan: z.object({

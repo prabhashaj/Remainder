@@ -168,17 +168,47 @@ function getToolLabel(
   return isRunning ? `Creating ${formattedName}` : `Created ${formattedName}`;
 }
 
-type ToolPartLike = { type: string; state: string };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isToolPartDone(part: any): boolean {
+  if (!part) return false;
+  if (part.state === "output-available" || part.state === "result") return true;
+  if (part.toolInvocation?.state === "result") return true;
+  if (part.output !== undefined || part.result !== undefined || part.toolInvocation?.result !== undefined) return true;
+  return false;
+}
 
-function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isToolPartError(part: any): boolean {
+  if (!part) return false;
+  if (part.state === "output-error" || part.state === "error") return true;
+  if (part.toolInvocation?.state === "error") return true;
+  const out = part.output ?? part.result ?? part.toolInvocation?.result;
+  if (out && out.success === false) return true;
+  return false;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getToolPartOutput(part: any): any {
+  if (!part) return {};
+  return part.output ?? part.result ?? part.toolInvocation?.result ?? {};
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getToolPartInput(part: any): any {
+  if (!part) return {};
+  return part.input ?? part.args ?? part.toolInvocation?.args ?? part.toolInvocation?.input ?? {};
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ToolGroup({ parts }: { parts: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const allDone = parts.every((p) => p.state === "output-available");
-  const anyError = parts.some((p) => p.state === "output-error");
+  const allDone = parts.every((p) => isToolPartDone(p));
+  const anyError = parts.some((p) => isToolPartError(p));
   const isRunning = !allDone && !anyError;
 
   // Single-line active indicator: show ONLY the current running action and remove previous ones
   const activePart =
-    parts.slice().reverse().find((p) => p.state !== "output-available" && p.state !== "output-error") ||
+    parts.slice().reverse().find((p) => !isToolPartDone(p) && !isToolPartError(p)) ||
     parts[parts.length - 1];
 
   const currentLabel = activePart ? getToolLabel(activePart, isRunning) : "Working";
@@ -212,8 +242,8 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
       <CollapsibleContent className="mt-2 ml-2.5 border-l border-border/60 pl-3.5 py-1 space-y-2 text-xs">
         {parts.map((part, idx) => {
           const label = getToolLabel(part, false);
-          const done = part.state === "output-available";
-          const errored = part.state === "output-error";
+          const done = isToolPartDone(part);
+          const errored = isToolPartError(part);
 
           return (
             <div key={idx} className="flex items-center gap-2.5 text-xs">
@@ -233,19 +263,25 @@ function ToolGroup({ parts }: { parts: ToolPartLike[] }) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isRoadmapTool(part: any): boolean {
+  if (!part) return false;
   const typeStr = typeof part.type === "string" ? part.type : "";
-  const toolName = typeof part.toolName === "string" ? part.toolName : typeStr.replace(/^tool-/, "");
+  const toolName =
+    typeof part.toolName === "string"
+      ? part.toolName
+      : (part.toolInvocation?.toolName || typeStr.replace(/^tool-/, ""));
+  const output = getToolPartOutput(part);
   return (
     toolName === "createRoadmap" ||
-    (toolName === "delegateToPlanner" &&
-      Boolean(part.output?.roadmap_id || part.result?.roadmap_id))
+    (toolName === "delegateToPlanner" && Boolean(output?.roadmap_id))
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function RoadmapChatCard({ part }: { part: any }) {
   const navigate = useNavigate();
-  const output = (part.output || part.result || {}) as {
+  const output = getToolPartOutput(part) as {
     success?: boolean;
     roadmap_id?: string;
     topic?: string;
@@ -254,9 +290,9 @@ function RoadmapChatCard({ part }: { part: any }) {
     subtopics?: number;
     summary?: string;
   };
-  const input = (part.input || part.args || {}) as { topic?: string };
-  const isDone = part.state === "output-available" && output.success;
-  const isError = part.state === "output-error" || (output && output.success === false);
+  const input = getToolPartInput(part) as { topic?: string };
+  const isDone = isToolPartDone(part) && output.success !== false;
+  const isError = isToolPartError(part);
   const isRunning = !isDone && !isError;
 
   const topicName = output.topic || input.topic || "Learning Roadmap";
@@ -325,16 +361,27 @@ function RoadmapChatCard({ part }: { part: any }) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isDeepResearchTool(part: any): boolean {
+  if (!part) return false;
   const typeStr = typeof part.type === "string" ? part.type : "";
-  const toolName = typeof part.toolName === "string" ? part.toolName : (part.toolInvocation?.toolName || typeStr.replace(/^tool-/, ""));
-  return toolName === "deepResearch" || toolName === "searchArxiv" || toolName === "searchPapers";
+  const toolName =
+    typeof part.toolName === "string"
+      ? part.toolName
+      : (part.toolInvocation?.toolName || typeStr.replace(/^tool-/, ""));
+  return (
+    toolName === "deepResearch" ||
+    toolName === "searchArxiv" ||
+    toolName === "searchPapers" ||
+    typeStr === "tool-deepResearch"
+  );
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DeepResearchChatCard({ part }: { part: any }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const output = (part.output || part.result || {}) as {
+  const output = getToolPartOutput(part) as {
     success?: boolean;
+    report?: string;
+    sources_markdown?: string;
     plan?: { topic?: string; scope?: string; temporalConstraints?: string };
     subtasks?: Array<{ id: string; title: string; objective: string; query?: string }>;
     action_trail?: Array<{ step: string; details: string; timestamp?: string }>;
@@ -348,14 +395,14 @@ function DeepResearchChatCard({ part }: { part: any }) {
       sources?: Array<{ title?: string; year?: number; url?: string; is_arxiv?: boolean }>;
     }>;
   };
-  const input = (part.input || part.args || part.toolInvocation?.args || {}) as {
+  const input = getToolPartInput(part) as {
     query?: string;
     topic?: string;
     subtasksCount?: number;
   };
 
-  const isDone = part.state === "output-available" && output.success !== false;
-  const isError = part.state === "output-error" || (output && output.success === false);
+  const isDone = isToolPartDone(part) && output.success !== false;
+  const isError = isToolPartError(part);
   const isRunning = !isDone && !isError;
 
   const topicQuery = output.plan?.topic || input.topic || input.query || "Academic & Technical Topic";
@@ -365,8 +412,10 @@ function DeepResearchChatCard({ part }: { part: any }) {
 
   const subtasksList = output.subtasks || [];
   const actionTrail = output.action_trail || [];
-  const verifiedPapersCount = output.verified_papers_count ?? (output.worker_reports?.reduce((acc, w) => acc + (w.sources?.length || 0), 0) || 12);
-  const subagentsCount = output.subagents_count || 4;
+  const verifiedPapersCount =
+    output.verified_papers_count ??
+    (output.worker_reports?.reduce((acc, w) => acc + (w.sources?.length || 0), 0) || 12);
+  const subagentsCount = output.subagents_count || (subtasksList.length > 0 ? subtasksList.length : 4);
 
   return (
     <div className="my-2.5 overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-sm transition-all hover:border-primary/40">
@@ -495,24 +544,25 @@ function DeepResearchChatCard({ part }: { part: any }) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isNotebookTool(part: any): boolean {
+  if (!part) return false;
   const typeStr = typeof part.type === "string" ? part.type : "";
   const toolName =
     typeof part.toolName === "string"
       ? part.toolName
       : (part.toolInvocation?.toolName || typeStr.replace(/^tool-/, ""));
-  return toolName === "generateNotebook";
+  return toolName === "generateNotebook" || typeStr === "tool-generateNotebook";
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function NotebookChatCard({ part }: { part: any }) {
   const navigate = useNavigate();
-  const output = (part.output || part.result || {}) as {
+  const output = getToolPartOutput(part) as {
     success?: boolean;
     pageId?: string;
     blockCount?: number;
     message?: string;
   };
-  const isDone = part.state === "output-available" && output.success;
+  const isDone = isToolPartDone(part) && output.success !== false;
   if (!isDone || !output.pageId) return null;
 
   return (
