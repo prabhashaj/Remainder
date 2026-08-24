@@ -1,7 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heading1, LayoutTemplate, ListTodo, Plus, Quote, Star, Text, Trash2 } from "lucide-react";
+import {
+  ArrowUp,
+  Heading1,
+  LayoutTemplate,
+  ListTodo,
+  Maximize2,
+  Minimize2,
+  Plus,
+  Quote,
+  Star,
+  Text,
+  Trash2,
+  Type,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { cjk } from "@streamdown/cjk";
@@ -164,6 +177,31 @@ function PageView() {
   const [title, setTitle] = useState("");
   useEffect(() => setTitle(page?.title ?? ""), [page?.title]);
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fontSize, setFontSize] = useState<"normal" | "large" | "extra">("large");
+  const [editorWidth, setEditorWidth] = useState<"standard" | "wide" | "full">("standard");
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard shortcut listener (Esc to exit fullscreen)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullscreen]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setShowScrollTop(e.currentTarget.scrollTop > 400);
+  };
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const refreshBlocks = () => void qc.invalidateQueries({ queryKey: ["blocks", pageId] });
   const refreshPages = () => {
     void qc.invalidateQueries({ queryKey: ["pages"] });
@@ -217,52 +255,21 @@ function PageView() {
     },
   });
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="mx-auto max-w-4xl px-6 py-12 sm:px-10"
-    >
-      {/* Notebook Header */}
-      <div className="flex items-center gap-3 pb-4">
-        <span className="text-4xl sm:text-5xl select-none transition-transform hover:scale-110">
-          {page?.icon ?? "📄"}
-        </span>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => title !== page?.title && savePage.mutate({ title: title || "Untitled" })}
-          placeholder="Untitled"
-          aria-label="Page title"
-          className="min-w-0 flex-1 bg-transparent font-display text-3xl sm:text-4xl font-extrabold tracking-tight outline-none placeholder:text-muted-foreground/40 transition-colors focus:placeholder:text-muted-foreground/20"
-        />
-        <motion.div whileTap={{ scale: 1.25, rotate: 15 }}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Toggle favorite"
-            onClick={() => savePage.mutate({ is_favorite: !page?.is_favorite })}
-            className="mt-1 rounded-2xl hover:bg-accent/60"
-          >
-            <Star
-              className={`size-5 transition-colors ${
-                page?.is_favorite ? "fill-amber-500 text-amber-500" : "text-muted-foreground/60"
-              }`}
-            />
-          </Button>
-        </motion.div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Delete page"
-          onClick={() => removePage.mutate()}
-          className="mt-1 rounded-2xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
-        >
-          <Trash2 className="size-5" />
-        </Button>
-      </div>
+  // Calculate notebook metrics
+  const totalWords = blocks.reduce(
+    (acc, b) => acc + (b.content ? b.content.trim().split(/\s+/).filter(Boolean).length : 0),
+    0,
+  );
 
+  const widthClass =
+    editorWidth === "standard"
+      ? "max-w-4xl"
+      : editorWidth === "wide"
+        ? "max-w-5xl"
+        : "max-w-6xl";
+
+  const blockContentRenderer = (
+    <>
       {/* Notebook Blocks */}
       <div className="mt-8 space-y-2">
         <AnimatePresence initial={false}>
@@ -274,7 +281,7 @@ function PageView() {
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
             >
-              <BlockRow block={block} onChanged={refreshBlocks} />
+              <BlockRow block={block} onChanged={refreshBlocks} fontSize={fontSize} />
             </motion.div>
           ))}
         </AnimatePresence>
@@ -319,12 +326,294 @@ function PageView() {
             <Plus className="size-4" /> Sub-page
           </Button>
         </motion.div>
+
+        {blocks.length === 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="press gap-2 rounded-2xl px-4 py-2.5 text-base font-medium text-muted-foreground"
+              >
+                <LayoutTemplate className="size-4 text-primary" /> Templates
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="rounded-2xl p-2 w-64 shadow-lg">
+              {PAGE_TEMPLATES.map((tpl) => (
+                <DropdownMenuItem
+                  key={tpl.id}
+                  className="flex flex-col items-start gap-1 rounded-xl p-3 cursor-pointer"
+                  onClick={() => applyTemplate.mutate(tpl)}
+                >
+                  <div className="flex items-center gap-2 font-semibold">
+                    <span>{tpl.icon}</span>
+                    <span>{tpl.name}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{tpl.description}</p>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
-    </motion.div>
+    </>
+  );
+
+  return (
+    <>
+      {/* ── Normal Embedded Notebook View ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="mx-auto max-w-4xl px-6 py-12 sm:px-10"
+      >
+        {/* Notebook Header */}
+        <div className="flex items-center gap-3 pb-4">
+          <span className="text-4xl sm:text-5xl select-none transition-transform hover:scale-110">
+            {page?.icon ?? "📄"}
+          </span>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => title !== page?.title && savePage.mutate({ title: title || "Untitled" })}
+            placeholder="Untitled"
+            aria-label="Page title"
+            className="min-w-0 flex-1 bg-transparent font-display text-3xl sm:text-4xl font-extrabold tracking-tight outline-none placeholder:text-muted-foreground/40 transition-colors focus:placeholder:text-muted-foreground/20"
+          />
+          <motion.div whileTap={{ scale: 1.25, rotate: 15 }}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Toggle favorite"
+              onClick={() => savePage.mutate({ is_favorite: !page?.is_favorite })}
+              className="mt-1 rounded-2xl hover:bg-accent/60"
+            >
+              <Star
+                className={`size-5 transition-colors ${
+                  page?.is_favorite ? "fill-amber-500 text-amber-500" : "text-muted-foreground/60"
+                }`}
+              />
+            </Button>
+          </motion.div>
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Full screen reading mode"
+            title="Read and edit in full screen mode (Esc to exit)"
+            onClick={() => setIsFullscreen(true)}
+            className="mt-1 rounded-2xl text-muted-foreground/60 hover:text-foreground hover:bg-accent/60 transition-colors"
+          >
+            <Maximize2 className="size-5 text-primary" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Delete page"
+            onClick={() => removePage.mutate()}
+            className="mt-1 rounded-2xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="size-5" />
+          </Button>
+        </div>
+
+        {blockContentRenderer}
+      </motion.div>
+
+      {/* ── Dedicated Full-Screen Notebook Reader / Editor Mode ── */}
+      {isFullscreen && (
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-background text-foreground animate-in fade-in duration-200"
+        >
+          {/* Sticky Fullscreen Top Navigation Bar */}
+          <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/70 bg-background/90 px-4 sm:px-8 backdrop-blur-md">
+            <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFullscreen(false)}
+                className="press rounded-2xl gap-1.5 text-muted-foreground hover:text-foreground"
+                title="Exit full screen (Esc)"
+              >
+                <Minimize2 className="size-4 text-primary" />
+                <span className="hidden sm:inline font-medium text-xs">Exit Full Screen</span>
+                <kbd className="hidden sm:inline-block rounded border border-border/80 bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  Esc
+                </kbd>
+              </Button>
+
+              <div className="flex items-center gap-2 min-w-0 border-l border-border/60 pl-3">
+                <span className="text-xl select-none">{page?.icon ?? "📄"}</span>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  onBlur={() =>
+                    title !== page?.title && savePage.mutate({ title: title || "Untitled" })
+                  }
+                  placeholder="Untitled"
+                  aria-label="Page title"
+                  className="min-w-0 max-w-xs sm:max-w-md bg-transparent font-display text-base sm:text-lg font-bold tracking-tight outline-none placeholder:text-muted-foreground/40 transition-colors"
+                />
+              </div>
+
+              <span className="hidden lg:inline-flex items-center rounded-md bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                {totalWords.toLocaleString()} words · {blocks.length} blocks
+              </span>
+            </div>
+
+            {/* Controls Bar */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Font Size Controls */}
+              <div className="flex items-center rounded-2xl border border-border/60 bg-muted/40 p-0.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFontSize((s) => (s === "extra" ? "large" : s === "large" ? "normal" : "normal"))
+                  }
+                  title="Smaller text"
+                  className={`rounded-xl px-2 py-1 text-xs font-semibold transition-colors ${
+                    fontSize === "normal"
+                      ? "bg-background text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  A-
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFontSize((s) => (s === "normal" ? "large" : s === "large" ? "extra" : "extra"))
+                  }
+                  title="Larger text"
+                  className={`rounded-xl px-2 py-1 text-xs font-semibold transition-colors ${
+                    fontSize === "extra"
+                      ? "bg-background text-foreground shadow-2xs"
+                      : fontSize === "large"
+                        ? "bg-background text-foreground shadow-2xs"
+                        : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  A+
+                </button>
+              </div>
+
+              {/* Editor Width Selector */}
+              <div className="hidden sm:flex items-center rounded-2xl border border-border/60 bg-muted/40 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setEditorWidth("standard")}
+                  title="Standard width"
+                  className={`rounded-xl px-2 py-1 text-xs font-medium transition-colors ${
+                    editorWidth === "standard"
+                      ? "bg-background text-foreground shadow-2xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditorWidth("wide")}
+                  title="Wide width"
+                  className={`rounded-xl px-2 py-1 text-xs font-medium transition-colors ${
+                    editorWidth === "wide"
+                      ? "bg-background text-foreground shadow-2xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Wide
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditorWidth("full")}
+                  title="Full width"
+                  className={`rounded-xl px-2 py-1 text-xs font-medium transition-colors ${
+                    editorWidth === "full"
+                      ? "bg-background text-foreground shadow-2xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Full
+                </button>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Toggle favorite"
+                onClick={() => savePage.mutate({ is_favorite: !page?.is_favorite })}
+                className="rounded-2xl hover:bg-accent/60"
+              >
+                <Star
+                  className={`size-4.5 transition-colors ${
+                    page?.is_favorite ? "fill-amber-500 text-amber-500" : "text-muted-foreground/60"
+                  }`}
+                />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setIsFullscreen(false)}
+                className="rounded-2xl text-muted-foreground hover:text-foreground"
+                aria-label="Close fullscreen"
+              >
+                <Minimize2 className="size-4" />
+              </Button>
+            </div>
+          </header>
+
+          {/* Fullscreen Notebook Canvas */}
+          <main className={`mx-auto w-full ${widthClass} px-6 py-12 sm:px-10 pb-36`}>
+            {/* Title Row in Fullscreen */}
+            <div className="flex items-center gap-3 pb-4">
+              <span className="text-4xl sm:text-5xl select-none transition-transform hover:scale-110">
+                {page?.icon ?? "📄"}
+              </span>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={() =>
+                  title !== page?.title && savePage.mutate({ title: title || "Untitled" })
+                }
+                placeholder="Untitled"
+                aria-label="Page title"
+                className="min-w-0 flex-1 bg-transparent font-display text-3xl sm:text-4xl font-extrabold tracking-tight outline-none placeholder:text-muted-foreground/40 transition-colors focus:placeholder:text-muted-foreground/20"
+              />
+            </div>
+
+            {blockContentRenderer}
+          </main>
+
+          {/* Floating Scroll-to-Top Button */}
+          {showScrollTop && (
+            <button
+              type="button"
+              onClick={scrollToTop}
+              aria-label="Scroll to top"
+              className="press fixed bottom-8 right-8 z-40 flex size-11 items-center justify-center rounded-full bg-card border border-border shadow-lg text-muted-foreground hover:text-foreground transition-transform hover:scale-110"
+            >
+              <ArrowUp className="size-5" />
+            </button>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
-function BlockRow({ block, onChanged }: { block: Block; onChanged: () => void }) {
+function BlockRow({
+  block,
+  onChanged,
+  fontSize = "large",
+}: {
+  block: Block;
+  onChanged: () => void;
+  fontSize?: "normal" | "large" | "extra";
+}) {
   const [value, setValue] = useState(block.content);
   const [isEditing, setIsEditing] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -353,12 +642,19 @@ function BlockRow({ block, onChanged }: { block: Block; onChanged: () => void })
     );
   }
 
+  const baseTextSize =
+    fontSize === "normal"
+      ? "text-[15px] sm:text-base"
+      : fontSize === "extra"
+        ? "text-lg sm:text-xl"
+        : "text-[17px] sm:text-lg";
+
   const textClass =
     block.type === "heading"
-      ? "font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground mt-4 mb-1"
+      ? `font-display ${fontSize === "extra" ? "text-3xl sm:text-4xl" : "text-2xl sm:text-3xl"} font-bold tracking-tight text-foreground mt-4 mb-1`
       : block.type === "quote"
-        ? "border-l-4 border-amber-500/70 bg-amber-500/10 dark:bg-amber-500/15 p-4 rounded-r-2xl italic text-foreground font-medium text-[17px] sm:text-lg leading-relaxed shadow-2xs my-2"
-        : "text-[17px] sm:text-lg leading-relaxed text-foreground/90 font-normal";
+        ? `border-l-4 border-amber-500/70 bg-amber-500/10 dark:bg-amber-500/15 p-4 rounded-r-2xl italic text-foreground font-medium ${baseTextSize} leading-relaxed shadow-2xs my-2`
+        : `${baseTextSize} leading-relaxed text-foreground/90 font-normal`;
 
   return (
     <div className="group flex items-start gap-3 rounded-2xl px-3 py-1.5 transition-all duration-200 hover:bg-muted/40">
