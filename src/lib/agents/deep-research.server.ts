@@ -78,15 +78,15 @@ async function createPlanAndSubtasks(
 ): Promise<{ plan: ResearchPlan; subtasks: ResearchSubtask[] }> {
   const currentYear = new Date().getFullYear();
 
-  const planningPrompt = `You are a Principal AI Research Scientist.
+  const planningPrompt = `You are a Principal Research Scientist and Lead Coordinator.
 Analyze the user's research topic: "${topic}".
 Current Year: ${currentYear}.
 
 Your goal:
-1. Create a structured Research Plan outlining the core scope, temporal constraints (e.g. recent 2024–${currentYear} papers vs foundational baselines), and key technical dimensions.
+1. Create a structured Research Plan outlining the core scope, temporal bounds (e.g. recent ${currentYear - 2}–${currentYear} publications vs foundational literature), and key technical dimensions.
 2. Decompose the research topic into 3 to 4 distinct, orthogonal, non-overlapping investigation subtasks for parallel research workers.
-Each subtask must target a specific architectural angle (e.g., Attention Mechanism Upgrades, Positional Encodings/RoPE, State Space/Hybrid Backbones, Empirical Benchmarks & SOTA comparisons).
-Provide targeted search queries optimized for arXiv API (e.g., all:"vision transformer" AND ("linear attention" OR "locality bias")), Semantic Scholar, and Web.`;
+Each subtask must target a distinct analytical angle, sub-problem, or evaluation dimension of the requested topic.
+Provide targeted search queries optimized for arXiv API, Semantic Scholar, and Web search.`;
 
   const SubtasksSchema = z.object({
     plan: z.object({
@@ -352,17 +352,15 @@ Parallel Subagent Investigation Findings:
 ${subagentDumps.join("\n")}
 
 Report Requirements:
-1. Executive Summary & Paradigm Shift:
-   Explain the foundational transition and high-level breakthroughs in the domain.
+1. Executive Summary & Foundational Context:
+   Explain the primary principles, recent breakthroughs, and paradigm shifts in the domain.
 2. Core Technical Deep Dives (Divide into structured sections based on the subagent findings):
-   - Provide concrete algorithmic/mathematical explanations (use standard LaTeX $$inline$$ or $$block$$ math formulas).
-   - Explain the mechanism: why this solves existing bottlenecks (e.g. quadratic attention complexity $\\mathcal{O}(N^2)$, fixed patch resolution, positional encoding degradation).
-   - Include code blocks or architecture snippets if helpful.
-   - State EXACT publication dates/years accurately. NEVER claim a 2022/2023 paper as 2025/2026.
+   - Provide concrete algorithmic or mathematical explanations (use standard LaTeX $$inline$$ or $$block$$ math formulas where appropriate).
+   - Explain the underlying mechanisms: how key techniques address core bottlenecks and advance the state of the art.
+   - Include code snippets or structural representations if relevant.
+   - State EXACT publication dates/years accurately. NEVER misattribute older papers as recent.
 3. Summary Comparison Table (CRITICAL: Valid Markdown Table):
-   You MUST generate a clean, properly formatted Markdown table with headers and delimiter rows.
-   Columns:
-   | Architecture / Model | Key Innovation | Primary Mechanism | Benchmark Impact | Published Date / Reference |
+   You MUST generate a clean, properly formatted Markdown table with headers and delimiter rows comparing key methods, innovations, mechanisms, metrics, and verified citations.
 4. Strict Rules:
    - ZERO EMOJIS: Do NOT include any emojis anywhere in the report.
    - Professional, deeply technical, precise, and verified.`;
