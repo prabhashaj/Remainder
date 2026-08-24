@@ -401,15 +401,19 @@ Report Structure:
    High-level breakthrough context, core principles, and foundational shifts.
 2. Core Technical Deep Dives:
    - Concrete architectural and mechanical explanations.
-   - Use standard LaTeX math formulas ($inline$ or $$block$$) for equations.
+   - Use standard LaTeX math formulas ($inline$ or $$block$$) for equations — NEVER duplicate the same equation in both inline and block form.
    - Accurate attribution of methods with publication years.
 3. Summary Comparison Table (Valid Markdown Table):
    Clean Markdown table comparing key architectures, mechanisms, empirical benchmarks, and verified trade-offs.
 4. Key Takeaways & Practical Recommendations.
+5. Conclusion with short-term outlook (if requested).
 
 Strict Guidelines:
 - ZERO EMOJIS: Keep the entire report completely emoji-free.
-- Clean, structured, highly readable Markdown formatting.`;
+- NO DUPLICATE EQUATIONS: Each LaTeX formula must appear exactly once — choose either $$block$$ or $inline$, never both for the same formula.
+- RELEVANT CITATIONS ONLY: Only cite sources directly relevant to the topic. Do not include papers about cryptocurrency, blockchain, or unrelated domains unless they directly address the research question.
+- Clean, structured, highly readable Markdown formatting.
+- For dollar amounts, write e.g. "$3,200" without LaTeX math mode to prevent rendering issues.`;
 
   const { text } = await generateText({
     model: gateway(modelName),
