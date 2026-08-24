@@ -78,17 +78,17 @@ async function createPlanAndSubtasks(
 ): Promise<{ plan: ResearchPlan; subtasks: ResearchSubtask[] }> {
   const currentYear = new Date().getFullYear();
 
-  const planningPrompt = `You are a Principal Research Coordinator at Remispace.
+  const planningPrompt = `You are an expert Research Planner Agent.
 Analyze the user's research topic or question: "${topic}".
 Current Year: ${currentYear}.
 
 Your goal:
-1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g. recent ${currentYear - 2}–${currentYear} developments), and key analytical pillars.
+1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g., recent ${currentYear - 2}–${currentYear} developments), and key analytical pillars.
 2. Decompose the topic into 3 to 4 distinct, orthogonal investigation subtasks for parallel research subagents.
 3. Provide targeted search queries for each subtask:
-   - arxivQuery: Pure search keywords (e.g. 'gold price drivers macroeconomics inflation' or 'vision transformer self attention'). NEVER include boolean operators (AND/OR), quotes, or submittedDate filters.
-   - academicQuery: Targeted search query for academic databases and preprint repositories.
-   - webQuery: Targeted search query for the live web index, recent market reports, and empirical sources.`;
+   - arxivQuery: Keywords for academic preprint searches.
+   - academicQuery: Targeted search query for academic databases.
+   - webQuery: Targeted search query for the live web index, recent reports, and empirical sources.`;
 
   const SubtasksSchema = z.object({
     plan: z.object({
@@ -123,7 +123,7 @@ Your goal:
     const { object } = await generateObject({
       model: gateway(modelName),
       system:
-        "You are an expert research coordinator that plans and decomposes technical literature reviews into precise, executable subtasks.",
+        "You are an expert research coordinator that plans and decomposes topics into precise, executable subtasks.",
       prompt: planningPrompt,
       schema: SubtasksSchema,
     });
@@ -371,7 +371,7 @@ async function verifyAndAuditEvidence(
     subagentDumps.push("");
   }
 
-  const verifierPrompt = `You are the Lead Academic Verifier and Fact-Checking Agent at Remispace.
+  const verifierPrompt = `You are an expert Fact-Checking and Verification Agent.
 Audit and cross-verify the following empirical findings gathered by parallel research subagents for the topic: "${topic}".
 
 Scope: ${plan.scope}
@@ -381,27 +381,19 @@ Raw Subagent Findings:
 ${subagentDumps.join("\n")}
 
 Your Verification Tasks:
-1. TEMPORAL AUDIT: Cross-check dates. Clearly label which findings are from recent publications (${plan.temporalConstraints}) vs. older foundational baselines.
-
-2. HALLUCINATION FIREWALL & PRICE/DATA CALIBRATION:
-   - REJECT any numeric statistic (R², RMSE, correlation coefficients, percentage changes) that was NOT explicitly sourced from a real, named publication in the raw findings above.
+1. TEMPORAL AUDIT: Cross-check dates and identify which findings are recent vs. older baselines.
+2. HALLUCINATION FIREWALL:
+   - REJECT any specific statistic, metric, or figure that was NOT explicitly sourced from a real, named publication in the raw findings above.
    - Do NOT invent or synthesize any figures. If a statistic has no traceable citation, write "[Unverified — omit from report]" next to it.
-   - Ground baseline metrics and statistics in empirical reality for the given topic. Reject anomalous claims or extreme outliers unless quoting a specific extreme scenario from a named source.
-   - Reject trivial misstated quantities or widely debunked figures for the given domain.
-   - Do NOT treat future projections as historical facts. Any event or projection after ${new Date().getFullYear()} that is not in a published source must be labeled as "[Speculative — label as hypothetical in report]".
-
-3. CITATION RELEVANCE AUDIT:
-   - Strictly exclude any citation whose subject matter is disconnected from the research topic (e.g., papers on chatbots, medical models, or crypto must NOT appear in a gold price study).
-
-4. EMPIRICAL INTEGRITY:
-   - Only include benchmark comparisons or model performance metrics if they come from a named, traceable source. For metrics without traceable sources, replace with a qualitative description (e.g., "Hybrid models generally outperform ARIMA baselines based on recent literature").
-
-5. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims clearly.`;
+   - Ground baseline metrics and statistics in empirical reality for the given topic.
+3. RELEVANCE AUDIT:
+   - Exclude any citation whose subject matter is completely disconnected from the research topic.
+4. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims clearly.`;
 
   const { text: verifiedDossier } = await generateText({
     model: gateway(modelName),
     system:
-      "You are a rigorous Academic Verifier Agent. You cross-check literature, reject fabricated statistics, audit temporal constraints, validate mathematical equations, and filter out hallucinations. Your primary job is to prevent the writer from citing synthetic data.",
+      "You are a rigorous Fact-Checking Agent. You cross-check literature, filter out hallucinations, and ensure the writer receives only verified facts.",
     prompt: verifierPrompt,
   });
 
@@ -412,8 +404,8 @@ Your Verification Tasks:
 }
 
 /**
- * Step 5: Writer Agent (Scientific Publication Writer)
- * Takes verified evidence and composes a clean, publication-grade, beautifully structured technical report.
+ * Step 5: Writer Agent
+ * Takes verified evidence and composes a clean, professional report.
  */
 async function writePublicationReport(
   topic: string,
@@ -431,8 +423,8 @@ async function writePublicationReport(
 
   const sourcesMarkdown = `### Sources & Literature References\n\n${formattedSources}`;
 
-  const writerPrompt = `You are the Principal Science Writer Agent at Remispace.
-Write a definitive, publication-grade, clean technical research report based strictly on the verified research dossier.
+  const writerPrompt = `You are an expert Research Writer Agent.
+Write a definitive, clean, and comprehensive deep research report based strictly on the verified research dossier.
 
 User Topic: "${topic}"
 Research Scope: ${plan.scope}
@@ -441,55 +433,32 @@ Verified Research Dossier (from Verifier Agent):
 ${verifiedDossier}
 
 Report Structure:
-1. Executive Summary & Paradigm Shifts:
+1. Executive Summary:
    High-level breakthrough context, core principles, and foundational shifts.
-2. Core Technical Deep Dives:
-   - Concrete architectural, economic, and mechanical explanations.
-   - Use standard LaTeX math formulas ($inline$ or $$block$$) for equations — NEVER duplicate the same equation in both inline and block form.
-   - Accurate attribution of methods with publication years.
-3. Summary Comparison Table (Valid Markdown Table):
-   Clean Markdown table comparing key architectures, mechanisms, empirical benchmarks, and verified trade-offs.
-4. Key Takeaways & Practical Recommendations.
-5. Conclusion with short-term outlook (if requested).
+2. Deep Dive Sections:
+   - Concrete, detailed explanations of the core topics.
+   - Proper attribution of methods and findings.
+3. Key Takeaways & Practical Recommendations.
+4. Conclusion.
 
-Strict Writing Rules — All Must Be Followed:
-
-1. ZERO EMOJIS: Keep the entire report completely emoji-free.
-
-2. METRICS & DATA CALIBRATION:
-   - Baselines and forecasts must be realistic and calibrated to real-world domain metrics. Do NOT fabricate anomalous figures or extreme outliers unless citing a labeled tail-risk scenario.
-   - Quantities, benchmarks, and statistical claims must reflect credible consensus standards for the given field.
-
-3. NO HALLUCINATED STATISTICS:
-   - Do NOT invent R², RMSE, correlation coefficients, or percentage changes.
+Strict Writing Rules:
+1. NO EMOJIS: Keep the entire report completely emoji-free and professional.
+2. NO HALLUCINATED STATISTICS:
+   - Do NOT invent metrics or figures.
    - Only quote numeric figures that are explicitly present in the verified dossier above.
    - If the dossier marks something as "[Unverified — omit]", do NOT include it.
-   - If a model comparison exists but has no specific metrics, write qualitatively: e.g. "Recent literature suggests hybrid CNN-LSTM models outperform traditional ARIMA baselines in short-horizon financial forecasting."
-
-4. TEMPORAL HONESTY:
-   - Any event or price move tagged "[Speculative — label as hypothetical in report]" in the dossier MUST be written in future/conditional tense: "If X occurs..." or "In an upside scenario..."
-   - Do NOT present speculative projections as historical facts.
-
-5. NO DUPLICATE EQUATIONS:
-   - Each LaTeX formula must appear exactly once — choose $$block$$ or $inline$, never both for the same formula.
-
-6. CITATION QUALITY:
-   - Do NOT cite papers that are off-topic or irrelevant (e.g. do not cite customer service chatbots, vision models, or crypto papers in a precious metals report).
-
-7. DOLLAR AMOUNTS & NUMBERS:
-   - Write dollar amounts as plain text (e.g., "$2,800" or "$3,200") — do NOT wrap them in LaTeX math mode.
-   - Use ranges like "$2,700–$3,100" with a proper en-dash.
-
-8. TABLE FORMATTING:
-   - All markdown tables must be properly formatted with | separators.
-   - Do not leave raw table fragments without headers.
-
-9. Clean, structured, highly readable Markdown formatting.`;
+3. TEMPORAL HONESTY:
+   - Do NOT present speculative future projections as historical facts.
+4. CITATION QUALITY:
+   - Do NOT cite papers that are completely unrelated to the core topic.
+5. FORMATTING:
+   - Use clean, structured, highly readable Markdown formatting.
+   - All markdown tables (if any) must be properly formatted with | separators.`;
 
   const { text } = await generateText({
     model: gateway(modelName),
     system:
-      "You are a Principal Science Writer Agent. You compose publication-grade, mathematically rigorous, beautifully structured research reports without emojis.",
+      "You are an expert Research Writer Agent. You compose highly structured, thoroughly researched, and professional deep research reports.",
     prompt: writerPrompt,
   });
 
