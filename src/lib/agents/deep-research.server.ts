@@ -83,7 +83,7 @@ Analyze the user's research topic or question: "${topic}".
 Current Year: ${currentYear}.
 
 Your goal:
-1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g., recent ${currentYear - 2}–${currentYear} developments), and key analytical pillars.
+1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g., historical context vs. recent advancements), and key analytical pillars.
 2. Decompose the topic into 3 to 4 distinct, orthogonal investigation subtasks for parallel research subagents.
 3. Provide targeted search queries for each subtask:
    - arxivQuery: Keywords for academic preprint searches.
@@ -96,7 +96,7 @@ Your goal:
       scope: z.string().describe("High-level scope of the investigation"),
       temporalConstraints: z
         .string()
-        .describe("Explicit time window (e.g. 2024–2026 for latest upgrades)"),
+        .describe("Explicit time window relevant to the topic (e.g., 'past 5 years', 'recent advancements')"),
       keyDimensions: z.array(z.string()).describe("3-4 critical technical pillars"),
     }),
     subtasks: z.array(
@@ -135,7 +135,7 @@ Your goal:
       plan: {
         topic,
         scope: `Deep technical investigation into ${topic}`,
-        temporalConstraints: `${currentYear - 2}–${currentYear}`,
+        temporalConstraints: `Recent advancements`,
         keyDimensions: [
           "Core Foundations & Principles",
           "Key Methodologies & Frameworks",
