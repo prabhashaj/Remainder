@@ -1,14 +1,0 @@
-const fs = require('fs');
-let content = fs.readFileSync('src/integrations/supabase/types.ts', 'utf8');
-
-// Replace subscriptions without duplicating the relations
-content = content.replace(/subscriptions: \{/, mcp_servers: { Row: { id: string; user_id: string; name: string; url: string; created_at: string; updated_at: string; }; Insert: { id?: string; user_id: string; name: string; url: string; created_at?: string; updated_at?: string; }; Update: { id?: string; user_id?: string; name?: string; url?: string; created_at?: string; updated_at?: string; }; Relationships: []; }; plans: { Row: { id: string; name: string; razorpay_plan_id: string; price_inr: number; billing_interval: string; daily_message_limit: number; monthly_message_limit: number; features: any; is_active: boolean; created_at: string; updated_at: string; }; Insert: { id?: string; name: string; razorpay_plan_id: string; price_inr: number; billing_interval: string; daily_message_limit: number; monthly_message_limit: number; features?: any; is_active?: boolean; created_at?: string; updated_at?: string; }; Update: { id?: string; name?: string; razorpay_plan_id?: string; price_inr?: number; billing_interval?: string; daily_message_limit?: number; monthly_message_limit?: number; features?: any; is_active?: boolean; created_at?: string; updated_at?: string; }; Relationships: []; }; processed_webhook_events: { Row: { razorpay_event_id: string; processed_at: string; }; Insert: { razorpay_event_id: string; processed_at?: string; }; Update: { razorpay_event_id?: string; processed_at?: string; }; Relationships: []; }; rate_limit_events: { Row: { id: string; user_id: string; event_type: string; created_at: string; }; Insert: { id?: string; user_id: string; event_type: string; created_at?: string; }; Update: { id?: string; user_id?: string; event_type?: string; created_at?: string; }; Relationships: []; }; subscriptions: {);
-
-content = content.replace(/razorpay_subscription_id: string \| null;/g, azorpay_subscription_id: string | null;\n            plan_id: string | null;\n            razorpay_customer_id: string | null;);
-content = content.replace(/razorpay_subscription_id\?: string \| null;/g, azorpay_subscription_id?: string | null;\n            plan_id?: string | null;\n            razorpay_customer_id?: string | null;);
-
-content = content.replace(/subscriptions:\s*\{[\s\S]*?Relationships:\s*\[\];/g, (match) => {
-  return match.replace(/Relationships:\s*\[\];/, Relationships: [\n            {\n              foreignKeyName: "subscriptions_plan_id_fkey";\n              columns: ["plan_id"];\n              isOneToOne: false;\n              referencedRelation: "plans";\n              referencedColumns: ["id"];\n            }\n          ];);
-});
-
-fs.writeFileSync('src/integrations/supabase/types.ts', content);

@@ -458,7 +458,9 @@ class SpeechEngine {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(VOICE_STORAGE_KEY, voiceName);
       }
-    } catch {}
+    } catch (_error) {
+      // Ignore localStorage access failures (e.g. private browsing or restricted iframes)
+    }
     this.syncSnapshot();
   }
 
@@ -468,7 +470,9 @@ class SpeechEngine {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(RATE_STORAGE_KEY, String(rate));
       }
-    } catch {}
+    } catch (_error) {
+      // Ignore localStorage access failures (e.g. private browsing or restricted iframes)
+    }
 
     // If currently speaking, restarting from current chunk applies the new speed immediately
     if (this.status === "playing") {

@@ -850,7 +850,7 @@ export function calculateStreakFromDates(dates: Set<string>): {
 export async function fetchRoadmapStreakInfo(roadmapId?: string): Promise<RoadmapStreakInfo> {
   const userId = await requireUserId();
 
-  let focusQuery = supabase
+  const focusQuery = supabase
     .from("focus_sessions")
     .select("created_at, minutes, counted_minutes, roadmap_item_id")
     .eq("user_id", userId);
@@ -863,7 +863,7 @@ export async function fetchRoadmapStreakInfo(roadmapId?: string): Promise<Roadma
     itemsQuery = itemsQuery.eq("roadmap_id", roadmapId);
   }
 
-  let quizQuery = supabase
+  const quizQuery = supabase
     .from("quiz_attempts")
     .select("created_at, roadmap_item_id")
     .eq("user_id", userId);
