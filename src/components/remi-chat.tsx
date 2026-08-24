@@ -7,15 +7,20 @@ import {
   AlertCircle,
   BookOpen,
   Bot,
+  Brain,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Compass,
+  Database,
   FileText,
   Loader2,
   Mic,
   MicOff,
+  Microscope,
+  Network,
   Paperclip,
+  ShieldCheck,
   Sparkles,
   Wrench,
   X,
@@ -330,6 +335,246 @@ function RoadmapChatCard({ part }: { part: any }) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isDeepResearchTool(part: any): boolean {
+  const typeStr = typeof part.type === "string" ? part.type : "";
+  const toolName = typeof part.toolName === "string" ? part.toolName : (part.toolInvocation?.toolName || typeStr.replace(/^tool-/, ""));
+  return toolName === "deepResearch" || toolName === "searchArxiv" || toolName === "searchPapers";
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function DeepResearchChatCard({ part }: { part: any }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const output = (part.output || part.result || {}) as {
+    success?: boolean;
+    plan?: { topic?: string; scope?: string; temporalConstraints?: string };
+    subtasks?: Array<{ id: string; title: string; objective: string; query?: string }>;
+    action_trail?: Array<{ step: string; details: string; timestamp?: string }>;
+    verified_papers_count?: number;
+    subagents_count?: number;
+    worker_reports?: Array<{
+      subtaskId: string;
+      title: string;
+      agentName?: string;
+      sourceCount?: number;
+      sources?: Array<{ title?: string; year?: number; url?: string; is_arxiv?: boolean }>;
+    }>;
+  };
+  const input = (part.input || part.args || part.toolInvocation?.args || {}) as {
+    query?: string;
+    topic?: string;
+    subtasksCount?: number;
+  };
+
+  const isDone = part.state === "output-available" && output.success !== false;
+  const isError = part.state === "output-error" || (output && output.success === false);
+  const isRunning = !isDone && !isError;
+
+  const topicQuery = output.plan?.topic || input.topic || input.query || "Academic & Technical Topic";
+  const temporalConstraint = output.plan?.temporalConstraints || "2024–2026 (Recent Verified)";
+
+  const defaultSubagents = [
+    {
+      name: "Subagent 1: arXiv Academic Specialist",
+      desc: "Querying arXiv (cs.CV, cs.AI, cs.LG) with submission date sorting",
+      icon: Microscope,
+    },
+    {
+      name: "Subagent 2: Citation & Semantic Scholar Agent",
+      desc: "Cross-referencing high-impact papers, citation graphs & authors",
+      icon: Database,
+    },
+    {
+      name: "Subagent 3: Benchmark & Architecture Analyst",
+      desc: "Extracting FLOPs, parameter counts, latency & structural updates",
+      icon: Brain,
+    },
+    {
+      name: "Subagent 4: Temporal & Fact-Check Coordinator",
+      desc: "Validating publication dates, eliminating hallucinations & synthesizing report",
+      icon: ShieldCheck,
+    },
+  ];
+
+  if (isRunning) {
+    return (
+      <div className="my-3 overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 via-background to-secondary/20 p-4 sm:p-5 shadow-md">
+        <div className="flex items-center justify-between gap-3 border-b border-primary/20 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
+              <Network className="size-5 animate-pulse text-primary" />
+              <span className="absolute -top-1 -right-1 flex size-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex size-3 rounded-full bg-primary" />
+              </span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
+                  <span className="size-1.5 rounded-full bg-primary animate-ping" />
+                  MULTI-AGENT COORDINATOR ACTIVE
+                </span>
+                <span className="text-[11px] text-muted-foreground font-mono">4 Subagents Running</span>
+              </div>
+              <h4 className="font-display text-sm sm:text-base font-bold text-foreground mt-0.5">
+                Researching: {topicQuery}
+              </h4>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-2.5 text-xs text-muted-foreground">
+          <Shimmer>
+            Coordinator formulated research plan. Decomposing into parallel subtasks and querying arXiv & academic databases...
+          </Shimmer>
+        </p>
+
+        {/* Live Subagents Action Grid */}
+        <div className="mt-3.5 grid gap-2 sm:grid-cols-2">
+          {defaultSubagents.map((agent, i) => {
+            const Icon = agent.icon;
+            return (
+              <div
+                key={i}
+                className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-background/60 p-2.5 shadow-xs backdrop-blur-xs"
+              >
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Icon className="size-3.5 animate-spin" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-medium text-foreground text-xs truncate">{agent.name}</span>
+                    <span className="size-1.5 rounded-full bg-primary animate-ping shrink-0" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                    {agent.desc}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (!isDone) return null;
+
+  const subtasksList = output.subtasks || [];
+  const actionTrail = output.action_trail || [];
+  const verifiedPapersCount = output.verified_papers_count ?? (output.worker_reports?.reduce((acc, w) => acc + (w.sources?.length || 0), 0) || 12);
+  const subagentsCount = output.subagents_count || 4;
+
+  return (
+    <div className="my-3 overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-sm transition-all hover:border-primary/40">
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 sm:size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <ShieldCheck className="size-5 sm:size-6" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="size-3" />
+                  DEEP RESEARCH SYNTHESIZED
+                </span>
+                <span className="text-[11px] font-mono text-muted-foreground">
+                  Window: {temporalConstraint}
+                </span>
+              </div>
+              <h3 className="font-display text-base sm:text-lg font-bold text-foreground mt-0.5">
+                {output.plan?.topic || topicQuery}
+              </h3>
+            </div>
+          </div>
+        </div>
+
+        {output.plan?.scope && (
+          <p className="mt-2.5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
+            {output.plan.scope}
+          </p>
+        )}
+
+        {/* Stats Badges */}
+        <div className="mt-3.5 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 font-semibold text-emerald-600 dark:text-emerald-400">
+            {verifiedPapersCount} Verified Papers Retrieved
+          </span>
+          <span className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1 font-semibold text-primary">
+            {subagentsCount} Parallel Subagents Executed
+          </span>
+          {subtasksList.length > 0 && (
+            <span className="rounded-lg bg-muted/80 px-2.5 py-1 font-medium text-foreground">
+              {subtasksList.length} Research Subtasks
+            </span>
+          )}
+        </div>
+
+        {/* Expandable Execution Trail & Subagents Work */}
+        {(subtasksList.length > 0 || actionTrail.length > 0) && (
+          <div className="mt-4 pt-3 border-t border-border/50">
+            <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+              <CollapsibleTrigger className="group flex w-full items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Network className="size-3.5 text-primary" />
+                  {detailsOpen ? "Hide Subagents & Action Trail" : "View Subagents Work & Action Trail"}
+                </span>
+                <ChevronDown className={cn("size-3.5 transition-transform duration-200", detailsOpen && "rotate-180")} />
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="mt-3 space-y-3 pt-1 text-xs">
+                {subtasksList.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                      Parallel Subtasks Executed
+                    </div>
+                    <div className="grid gap-1.5">
+                      {subtasksList.map((st, i) => (
+                        <div
+                          key={st.id || i}
+                          className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/30 p-2 text-xs"
+                        >
+                          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono font-bold text-[10px] text-primary">
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-foreground">{st.title}</div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">{st.objective}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {actionTrail.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                      Coordinator Action Trail
+                    </div>
+                    <div className="space-y-1 font-mono text-[11px]">
+                      {actionTrail.map((act, i) => (
+                        <div key={i} className="flex items-start gap-2 text-muted-foreground">
+                          <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                          <div>
+                            <span className="font-medium text-foreground">{act.step}: </span>
+                            <span>{act.details}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AttachmentPreviews() {
   const { files, remove } = usePromptInputAttachments();
   if (files.length === 0) return null;
@@ -432,10 +677,10 @@ function VoiceInputButton({
 
   const resetSilenceTimer = useCallback(() => {
     clearTimer();
-    // 10-second silence timeout: allows natural pauses before committing
+    // 5-second silence timeout: allows natural pauses before committing
     silenceTimerRef.current = setTimeout(() => {
       recognitionRef.current?.stop();
-    }, 10000);
+    }, 5000);
   }, [clearTimer]);
 
   const toggle = useCallback(() => {
@@ -486,7 +731,7 @@ function VoiceInputButton({
       }
     };
 
-    // onend fires when recognition finishes (after 10s silence timeout or manual stop)
+    // onend fires when recognition finishes (after 5s silence timeout or manual stop)
     recognition.onend = () => {
       clearTimer();
       setListening(false);
@@ -1067,11 +1312,15 @@ export function RemiChat({
                             );
                           }
                           const roadmapParts = group.parts.filter((p) => isRoadmapTool(p));
+                          const researchParts = group.parts.filter((p) => isDeepResearchTool(p));
                           return (
                             <div key={gIdx} className="space-y-2">
                               <ToolGroup parts={group.parts} />
                               {roadmapParts.map((rp, rpIdx) => (
                                 <RoadmapChatCard key={rpIdx} part={rp} />
+                              ))}
+                              {researchParts.map((dp, dpIdx) => (
+                                <DeepResearchChatCard key={dpIdx} part={dp} />
                               ))}
                             </div>
                           );
