@@ -137,37 +137,37 @@ Your goal:
         scope: `Deep technical investigation into ${topic}`,
         temporalConstraints: `${currentYear - 2}–${currentYear}`,
         keyDimensions: [
-          "Architectural Foundations",
-          "Efficiency & Attention Scaling",
-          "Empirical SOTA Benchmarks",
+          "Core Foundations & Principles",
+          "Key Methodologies & Frameworks",
+          "Empirical Evidence & Current State-of-the-Art",
         ],
       },
       subtasks: [
         {
           id: "subtask_1",
-          title: "Core Architectural Upgrades & Mechanisms",
-          objective: "Identify structural modifications, attention variants, and layer designs.",
-          arxivQuery: `${topic} architecture transformer attention`,
-          academicQuery: `${topic} architecture advancements`,
-          webQuery: `${topic} latest architecture breakthroughs ${currentYear}`,
-          targetYearMin: currentYear - 2,
+          title: "Core Foundations & Historical Context",
+          objective: "Identify the foundational principles, historical context, and fundamental mechanisms.",
+          arxivQuery: `${topic} overview foundations`,
+          academicQuery: `${topic} foundational principles review`,
+          webQuery: `${topic} overview core concepts ${currentYear}`,
+          targetYearMin: currentYear - 5,
         },
         {
           id: "subtask_2",
-          title: "Efficiency, Complexity & Scaling",
-          objective: "Investigate linear attention, sparsity, token pruning, and memory scaling.",
-          arxivQuery: `${topic} efficiency scaling linear attention`,
-          academicQuery: `${topic} linear complexity efficiency`,
-          webQuery: `${topic} efficient scaling linear attention ${currentYear}`,
-          targetYearMin: currentYear - 2,
+          title: "Key Methodologies & Applications",
+          objective: "Investigate practical methodologies, key applications, and notable advancements.",
+          arxivQuery: `${topic} methodology applications`,
+          academicQuery: `${topic} methodology advancement applications`,
+          webQuery: `${topic} latest applications methodology ${currentYear}`,
+          targetYearMin: currentYear - 3,
         },
         {
           id: "subtask_3",
-          title: "State-of-the-Art Benchmarks & Practical Validations",
-          objective: "Collect verified empirical metrics, ImageNet/COCO benchmarks, and comparative gains.",
-          arxivQuery: `${topic} benchmark SOTA performance`,
-          academicQuery: `${topic} benchmark results SOTA`,
-          webQuery: `${topic} benchmark comparison SOTA ${currentYear}`,
+          title: "Current State-of-the-Art & Empirical Benchmarks",
+          objective: "Collect verified empirical metrics, state-of-the-art comparisons, and real-world validations.",
+          arxivQuery: `${topic} benchmark state-of-the-art performance`,
+          academicQuery: `${topic} benchmark results comparison`,
+          webQuery: `${topic} latest benchmark comparison ${currentYear}`,
           targetYearMin: currentYear - 2,
         },
       ],
@@ -301,80 +301,17 @@ function filterRelevantSources(
     .split(/\s+/)
     .filter((tok) => tok.length >= 3 && !stopWords.has(tok));
 
-  const isCommodityOrFinance =
-    topicLower.includes("gold") ||
-    topicLower.includes("silver") ||
-    topicLower.includes("oil") ||
-    topicLower.includes("commodity") ||
-    topicLower.includes("price") ||
-    topicLower.includes("inflation") ||
-    topicLower.includes("macroeconomic") ||
-    topicLower.includes("stock") ||
-    topicLower.includes("market") ||
-    topicLower.includes("economy");
-
-  const isAiOrTech =
-    topicLower.includes("transformer") ||
-    topicLower.includes("llm") ||
-    topicLower.includes("vision") ||
-    topicLower.includes("neural") ||
-    topicLower.includes("diffusion") ||
-    topicLower.includes("agent") ||
-    topicLower.includes("attention");
-
   return sources.filter((src) => {
     const title = src.title.toLowerCase();
 
     // 1. Direct topic token match
     const hasDirectMatch = topicTokens.some((tok) => title.includes(tok));
 
-    // 2. Reject cross-domain noise for finance/commodity topics
-    if (isCommodityOrFinance) {
-      const isNoiseForFinance =
-        title.includes("chatbot") ||
-        title.includes("customer service") ||
-        title.includes("language model") ||
-        title.includes("large causal model") ||
-        title.includes("speech synthesis") ||
-        title.includes("segmentation") ||
-        title.includes("medical") ||
-        title.includes("cancer") ||
-        title.includes("surgical") ||
-        title.includes("crypto") ||
-        title.includes("bitcoin") ||
-        title.includes("blockchain") ||
-        title.includes("ethereum") ||
-        title.includes("nft") ||
-        title.includes("defi") ||
-        title.includes("probing");
+    // 2. Web sources ("Technical Literature") are filtered by the search engine (Tavily/Google)
+    if (src.type === "Technical Literature") return true;
 
-      if (isNoiseForFinance) return false;
-
-      const hasFinanceContext =
-        hasDirectMatch ||
-        title.includes("gold") ||
-        title.includes("precious metal") ||
-        title.includes("commodity") ||
-        title.includes("inflation") ||
-        title.includes("interest rate") ||
-        title.includes("monetary") ||
-        title.includes("central bank") ||
-        title.includes("reserve") ||
-        title.includes("dollar") ||
-        title.includes("dxy") ||
-        title.includes("forecast") ||
-        title.includes("volatility") ||
-        title.includes("econometric") ||
-        title.includes("garch");
-
-      return hasFinanceContext;
-    }
-
-    if (isAiOrTech) {
-      return hasDirectMatch || title.includes("model") || title.includes("network") || title.includes("learning");
-    }
-
-    return hasDirectMatch || src.type === "Technical Literature";
+    // 3. For academic/arXiv papers, require at least one topical keyword match to avoid domain crossover noise
+    return hasDirectMatch;
   });
 }
 
@@ -449,9 +386,9 @@ Your Verification Tasks:
 2. HALLUCINATION FIREWALL & PRICE/DATA CALIBRATION:
    - REJECT any numeric statistic (R², RMSE, correlation coefficients, percentage changes) that was NOT explicitly sourced from a real, named publication in the raw findings above.
    - Do NOT invent or synthesize any figures. If a statistic has no traceable citation, write "[Unverified — omit from report]" next to it.
-   - Ground baseline asset prices in empirical market reality (e.g. Gold traded in the ~$2,000–$2,800/oz range across 2024–2025, with consensus baseline forecast ranges around ~$2,600–$3,200/oz). Reject anomalous price levels (e.g. $5,000+ spot claims) unless quoting a specific extreme scenario from a named source.
-   - Central Bank Gold Demand: Global central bank demand according to the World Gold Council is on the scale of ~1,000+ tons annually (~200–300+ tons per quarter). Reject trivial misstated quantities (e.g. 16 tons).
-   - Do NOT treat future projections as historical facts. Any price move or market event after ${new Date().getFullYear()} that is not in a published source must be labeled as "[Speculative — label as hypothetical in report]".
+   - Ground baseline metrics and statistics in empirical reality for the given topic. Reject anomalous claims or extreme outliers unless quoting a specific extreme scenario from a named source.
+   - Reject trivial misstated quantities or widely debunked figures for the given domain.
+   - Do NOT treat future projections as historical facts. Any event or projection after ${new Date().getFullYear()} that is not in a published source must be labeled as "[Speculative — label as hypothetical in report]".
 
 3. CITATION RELEVANCE AUDIT:
    - Strictly exclude any citation whose subject matter is disconnected from the research topic (e.g., papers on chatbots, medical models, or crypto must NOT appear in a gold price study).
@@ -519,9 +456,9 @@ Strict Writing Rules — All Must Be Followed:
 
 1. ZERO EMOJIS: Keep the entire report completely emoji-free.
 
-2. PRICE & MACROECONOMIC CALIBRATION:
-   - Spot price baselines and forecasts must be realistic and calibrated to real-world market ranges (e.g. Gold spot baseline ~$2,400–$2,800/oz; near-term 3–6M scenarios ~$2,600–$3,200/oz). Do NOT fabricate anomalous $5,000+ spot prices unless citing a labeled tail-risk scenario.
-   - Global central bank gold accumulation should reflect World Gold Council metrics (~1,000+ tons/year, ~200–300 tons/quarter across major central banks).
+2. METRICS & DATA CALIBRATION:
+   - Baselines and forecasts must be realistic and calibrated to real-world domain metrics. Do NOT fabricate anomalous figures or extreme outliers unless citing a labeled tail-risk scenario.
+   - Quantities, benchmarks, and statistical claims must reflect credible consensus standards for the given field.
 
 3. NO HALLUCINATED STATISTICS:
    - Do NOT invent R², RMSE, correlation coefficients, or percentage changes.
