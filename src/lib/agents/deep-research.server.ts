@@ -19,11 +19,11 @@ import { tavilySearch, type WebResult } from "@/lib/tavily.server";
 import type { Database } from "@/integrations/supabase/types";
 
 import {
-  type CanonicalSource,
   type ClaimEvidenceLedgerItem,
   type ResearchQualityMetrics,
-  CanonicalSourceRegistry,
+  type ResearchSource,
   LedgerExtractionSchema,
+  rankAndFilterSources,
   verifyNumericalClaim,
   auditContextMismatch,
   executeCounterEvidenceSearch,
@@ -313,8 +313,6 @@ Your task:
    - Highlight exact methodologies, architectural mechanics, and models evaluated.
    - For every numerical result, note the exact baseline, dataset, model, and experimental conditions.
    - For every claim, explicitly reference the supporting paper/source.
-   - Note whether a paper is the creator of a method vs. a study evaluating/citing a related concept.
-   - Write "Hardware: Not reported in the source" if hardware is absent. NEVER assume or infer GPU setup.
    - Flag limitations and what the papers did NOT demonstrate.
    - Flag any conflicting findings across sources.
 3. Do NOT invent or generalize figures beyond the text.`;
@@ -372,37 +370,35 @@ Your task:
 async function extractClaimEvidenceLedger(
   topic: string,
   subagentResults: SubagentFinding[],
-  registry: CanonicalSourceRegistry,
+  rankedSources: ResearchSource[],
   gateway: ReturnType<typeof createAiGatewayProvider>,
   modelName: string,
 ): Promise<ClaimEvidenceLedgerItem[]> {
-  const canonicalSources = registry.getAllSources();
-
   const findingsBlock = subagentResults
     .map((s, idx) => `### Subtask ${idx + 1}: ${s.title}\nObjective: ${s.objective}\nFindings:\n${s.findingsSummary}`)
     .join("\n\n");
 
-  const sourcesBlock = canonicalSources
+  const sourcesBlock = rankedSources
     .slice(0, 15)
-    .map((s) => `[${s.source_id}] "${s.canonical_title}" (${s.yearOrId}) - Venue: ${s.venue || "arXiv/Web"} | Tier: ${s.source_tier} | URL: ${s.canonical_url}\nAbstract: ${s.abstractOrSnippet.slice(0, 300)}`)
+    .map((s) => `[${s.id}] "${s.title}" (${s.tier}) - URL: ${s.url}\nAbstract: ${s.abstractOrSnippet.slice(0, 300)}`)
     .join("\n\n");
 
   const extractionPrompt = `You are an expert Research Knowledge Engineer.
 Extract a structured Claim-Evidence Ledger from the synthesized research findings for topic: "${topic}".
 
-Canonical Source Registry (Match claims ONLY to these exact source IDs):
+Primary Literature Sources Available:
 ${sourcesBlock}
 
 Synthesized Findings from Parallel Subagents:
 ${findingsBlock}
 
-Strict Extraction Instructions:
+Extraction Instructions:
 1. Extract 8 to 15 core and supporting claims across all dimensions (factual, theoretical, empirical, numerical, comparative, research_gap).
-2. PAPER CONTRIBUTION VS RELATED CONCEPT: Distinguish whether the cited paper proposed the method (paper_contribution) vs merely cited or evaluated a related concept (related_concept). Never attribute a method to the wrong paper.
-3. METRIC FIDELITY: Retain original metric wording (e.g. "peak best-score attainment"). Do not drift metrics into "final reward".
-4. NO INVENTED HARDWARE: If hardware is absent in source, write "Hardware: Not reported in the source". Never assume or guess.
-5. If a claim lacks direct support in the sources, classify verification_status as "UNSUPPORTED" or "PARTIALLY_SUPPORTED".
-6. If an asserted research gap is found (e.g., "no benchmark exists"), classify claim_type as "research_gap".`;
+2. For every numerical or empirical claim:
+   - Extract the exact model, dataset, metric, reported result, baseline, and hardware context.
+   - Note what the source showed vs what the source did NOT show (e.g. tested on small models only, not validated in production).
+3. If a claim lacks direct support in the sources, classify verification_status as "UNSUPPORTED" or "PARTIALLY_SUPPORTED".
+4. If an asserted research gap is found (e.g., "no benchmark exists"), classify claim_type as "research_gap".`;
 
   try {
     const { object } = await withAiRateLimitRetry(
@@ -418,40 +414,31 @@ Strict Extraction Instructions:
     );
 
     return object.claims.map((rawClaim, idx) => {
-      const matchedSource =
-        (rawClaim.source_id ? registry.getSourceById(rawClaim.source_id) : undefined) ||
-        canonicalSources.find(
-          (s) => s.canonical_title.toLowerCase().includes(rawClaim.source_title.slice(0, 20).toLowerCase()) || s.canonical_url === rawClaim.source_url,
-        ) || canonicalSources[0]!;
+      const matchedSource = rankedSources.find(
+        (s) => s.title.toLowerCase().includes(rawClaim.source_title.slice(0, 20).toLowerCase()) || s.url === rawClaim.source_url,
+      ) || rankedSources[0];
 
       const item: ClaimEvidenceLedgerItem = {
         claim_id: `claim_${idx + 1}`,
         claim: rawClaim.claim,
         claim_type: rawClaim.claim_type,
         importance: rawClaim.importance,
-        source_ids: [matchedSource.source_id],
-        source_quality: matchedSource.source_tier,
-        source_title: matchedSource.canonical_title,
-        source_url: matchedSource.canonical_url,
-        source_type: matchedSource.source_type,
-        publication_year: matchedSource.publication_year || new Date().getFullYear(),
+        source_ids: matchedSource ? [matchedSource.id] : ["src_1"],
+        source_quality: matchedSource ? matchedSource.tier : "Tier 2: arXiv Preprint / Official Lab Publication",
+        source_title: matchedSource ? matchedSource.title : rawClaim.source_title,
+        source_url: matchedSource ? matchedSource.url : rawClaim.source_url,
+        source_type: matchedSource ? matchedSource.type : "Academic Paper",
+        publication_year: matchedSource?.year || new Date().getFullYear(),
         exact_support: rawClaim.exact_support,
-        support_level: rawClaim.support_level || "DIRECTLY_SUPPORTED",
-        paper_contribution_vs_related: rawClaim.paper_contribution_vs_related,
-        original_metric_wording: rawClaim.original_metric_wording,
-        metric_name: rawClaim.metric_name,
         model: rawClaim.model,
         dataset: rawClaim.dataset,
         task: rawClaim.task,
         metric: rawClaim.metric,
         reported_result: rawClaim.reported_result,
         baseline: rawClaim.baseline,
-        hardware: rawClaim.hardware || "Not reported in the source",
-        hardware_reported: Boolean(rawClaim.hardware && !rawClaim.hardware.includes("Not reported")),
+        hardware: rawClaim.hardware,
         experimental_context: rawClaim.experimental_context,
         evidence_level: rawClaim.evidence_level,
-        math_formulation_type: rawClaim.math_formulation_type,
-        math_equation: rawClaim.math_equation,
         what_source_showed: rawClaim.what_source_showed,
         what_source_did_not_show: rawClaim.what_source_did_not_show,
         limitations: rawClaim.limitations,
@@ -463,10 +450,9 @@ Strict Extraction Instructions:
 
       // Run deterministic numerical verification
       if (item.claim_type === "numerical" || /\d+/.test(item.claim)) {
-        const numCheck = verifyNumericalClaim(item.claim, item.exact_support, matchedSource.abstractOrSnippet || "");
+        const numCheck = verifyNumericalClaim(item.claim, item.exact_support, matchedSource?.abstractOrSnippet || "");
         if (numCheck.verificationStatus === "UNSUPPORTED") {
           item.verification_status = "UNSUPPORTED";
-          item.support_level = "UNSUPPORTED";
           item.confidence = "LOW";
         }
       }
@@ -475,7 +461,6 @@ Strict Extraction Instructions:
       const contextCheck = auditContextMismatch(item.claim, item);
       if (contextCheck.hasMismatch) {
         item.verification_status = "PARTIALLY_SUPPORTED";
-        item.support_level = "PARTIALLY_SUPPORTED";
         if (contextCheck.calibratedClaim) {
           item.claim = contextCheck.calibratedClaim;
         }
@@ -485,25 +470,22 @@ Strict Extraction Instructions:
     });
   } catch (err) {
     log("warn", "ledger_extraction_fallback", { error: String(err) });
-    return subagentResults.map((s, idx) => {
-      const src = canonicalSources[idx] || canonicalSources[0]!;
-      return {
-        claim_id: `claim_${idx + 1}`,
-        claim: s.findingsSummary.slice(0, 180),
-        claim_type: "empirical" as const,
-        importance: "core" as const,
-        source_ids: [src.source_id],
-        source_quality: src.source_tier,
-        source_title: src.canonical_title,
-        source_url: src.canonical_url,
-        source_type: src.source_type,
-        publication_year: src.publication_year || new Date().getFullYear(),
-        exact_support: s.findingsSummary.slice(0, 300),
-        support_level: "DIRECTLY_SUPPORTED" as const,
-        confidence: "MEDIUM" as const,
-        verification_status: "VERIFIED" as const,
-      };
-    });
+    // Fallback basic ledger
+    return subagentResults.map((s, idx) => ({
+      claim_id: `claim_${idx + 1}`,
+      claim: s.findingsSummary.slice(0, 180),
+      claim_type: "empirical" as const,
+      importance: "core" as const,
+      source_ids: ["src_1"],
+      source_quality: rankedSources[0]?.tier || "Tier 2: arXiv Preprint / Official Lab Publication",
+      source_title: s.papers[0]?.title || s.title,
+      source_url: s.papers[0]?.url || rankedSources[0]?.url || "https://arxiv.org",
+      source_type: "arXiv Paper",
+      publication_year: new Date().getFullYear(),
+      exact_support: s.findingsSummary.slice(0, 300),
+      confidence: "MEDIUM" as const,
+      verification_status: "VERIFIED" as const,
+    }));
   }
 }
 
@@ -518,16 +500,24 @@ async function verifyAndAuditEvidence(
   modelName: string,
 ): Promise<{
   verifiedDossier: string;
-  registry: CanonicalSourceRegistry;
+  rankedSources: ResearchSource[];
   ledger: ClaimEvidenceLedgerItem[];
   contradictionsFound: Array<{ claim: string; counterEvidence: string; source: string }>;
 }> {
-  const registry = new CanonicalSourceRegistry();
+  // Aggregate all raw sources from subagents
+  const rawSourcesList: Array<{
+    title: string;
+    url: string;
+    authors?: string[];
+    yearOrId?: string;
+    venue?: string;
+    type?: string;
+    content?: string;
+  }> = [];
 
-  // Register all raw sources into Canonical Source Registry (performing entity resolution & deduplication)
   for (const sub of subagentResults) {
     for (const p of sub.papers) {
-      registry.registerSource({
+      rawSourcesList.push({
         title: p.title,
         url: p.url || `https://arxiv.org/abs/${p.id}`,
         authors: p.authors,
@@ -535,11 +525,10 @@ async function verifyAndAuditEvidence(
         type: "arXiv Paper",
         venue: "arXiv",
         content: p.summary,
-        arxivId: p.id,
       });
     }
     for (const w of sub.webSources) {
-      registry.registerSource({
+      rawSourcesList.push({
         title: w.title,
         url: w.url,
         yearOrId: "Web",
@@ -549,19 +538,22 @@ async function verifyAndAuditEvidence(
     }
   }
 
-  // Extract Claim-Evidence Ledger using canonical registry
-  const rawLedger = await extractClaimEvidenceLedger(topic, subagentResults, registry, gateway, modelName);
+  // 1. Source Quality Ranking (Tier 1 - Tier 6)
+  const rankedSources = rankAndFilterSources(rawSourcesList, topic);
 
-  // Counter-Evidence and Contradiction Search
+  // 2. Extract Claim-Evidence Ledger
+  const rawLedger = await extractClaimEvidenceLedger(topic, subagentResults, rankedSources, gateway, modelName);
+
+  // 3. Counter-Evidence and Contradiction Search
   const { updatedLedger, contradictionsFound, verifiedGaps } = await executeCounterEvidenceSearch(topic, rawLedger);
 
-  // Build Verified Research Dossier
+  // 4. Build Verified Research Dossier
   const ledgerDumps = updatedLedger.map((item, i) => {
-    return `### Claim ${i + 1} [${item.claim_type.toUpperCase()}] - Status: ${item.verification_status} (Support: ${item.support_level} | Conf: ${item.confidence})
+    return `### Claim ${i + 1} [${item.claim_type.toUpperCase()}] - Status: ${item.verification_status} (Confidence: ${item.confidence})
 - Statement: ${item.claim}
-- Source: [${item.source_title}](${item.source_url}) [ID: ${item.source_ids.join(", ")}] — *${item.source_quality}* (${item.publication_year})
+- Source: [${item.source_title}](${item.source_url}) — *${item.source_quality}* (${item.publication_year})
 - Exact Evidence: "${item.exact_support}"
-- Experimental Setup: Model=${item.model || "Not reported"} | Dataset=${item.dataset || "Not reported"} | Metric=${item.metric || "Not reported"} | Hardware=${item.hardware || "Not reported in the source"}
+- Experimental Setup: Model=${item.model || "N/A"} | Dataset=${item.dataset || "N/A"} | Metric=${item.metric || "N/A"} | Hardware=${item.hardware || "N/A"}
 - Evaluated Reality: Shown="${item.what_source_showed || "N/A"}" | Not Shown="${item.what_source_did_not_show || "N/A"}"
 - Limitations / Caveats: ${item.limitations || "None reported"}
 - Counter-Evidence / Disagreements: ${item.counter_evidence || "No direct contradictions found in literature"}`;
@@ -579,20 +571,20 @@ ${verifiedGaps.length > 0 ? `\n### Verified Open Research Challenges:\n` + verif
 
   return {
     verifiedDossier,
-    registry,
+    rankedSources,
     ledger: updatedLedger,
     contradictionsFound,
   };
 }
 
 /**
- * Step 5: Writer Agent with Adversarial Review & Canonical Reference Generation
+ * Step 5: Writer Agent with Adversarial Review & Epistemic Calibration
  */
 async function writePublicationReport(
   topic: string,
   plan: ResearchPlan,
   verifiedDossier: string,
-  registry: CanonicalSourceRegistry,
+  rankedSources: ResearchSource[],
   ledger: ClaimEvidenceLedgerItem[],
   contradictionsCount: number,
   gateway: ReturnType<typeof createAiGatewayProvider>,
@@ -602,12 +594,13 @@ async function writePublicationReport(
   sourcesMarkdown: string;
   qualityMetrics: ResearchQualityMetrics;
 }> {
-  const canonicalSources = registry.getTopRankedSources(10);
-  const sourcesMarkdown = registry.renderCanonicalBibliography(10);
-
-  const formattedSourcesList = canonicalSources
-    .map((s, i) => `${i + 1}. [${s.source_id}] [**${s.canonical_title}**](${s.canonical_url}) (${s.yearOrId}) — *${s.source_tier.split(":")[0]}*`)
+  // Format top 10 verified primary sources (Tier 1 & Tier 2 preferred)
+  const topSources = rankedSources.slice(0, 10);
+  const formattedSources = topSources
+    .map((s, i) => `${i + 1}. [**${s.title}**](${s.url}) (${s.yearOrId}) — *${s.tier.split(":")[0]}*`)
     .join("\n");
+
+  const sourcesMarkdown = `### Sources & Literature References\n\n${formattedSources}`;
 
   const writerPrompt = `You are an expert Technical Synthesis Author and Research Writer.
 Write an extensive, definitive, publication-grade deep research report based strictly on the verified research dossier and claim-evidence ledger.
@@ -617,8 +610,8 @@ Research Scope: ${plan.scope}
 
 ${verifiedDossier}
 
-Canonical Sources Available:
-${formattedSourcesList}
+Verified Primary Sources (Top 10):
+${formattedSources}
 
 Report Structure & Depth Requirements:
 1. Executive Summary & State-of-the-Art Landscape (2-3 extensive paragraphs):
@@ -641,17 +634,18 @@ Strict Writing Rules:
 1. PROSE-FIRST EXPANSIVE WRITING:
    - Prioritize rich, exhaustive narrative prose over tables and bulleted lists.
    - Do NOT substitute tables for explanatory text. Tables should only be used as occasional, concise summary aids (maximum 1-2 tables across the entire report).
-2. CANONICAL CITATION GROUNDING:
-   - Every citation MUST correspond to a canonical source from the registry.
-   - Never cite a paper for an algorithm or contribution made by a different paper.
-   - If hardware or seeds were not reported in the source, write "Hardware: Not reported in the source". NEVER infer GPU clusters or typical configurations.
-3. PRESERVE METRIC SEMANTICS:
-   - Do not drift metrics (e.g., peak best scores -> final reward). Retain the paper's original metric semantics.
-4. MATHEMATICAL FIDELITY:
-   - Distinguish background formulations from algorithm-specific equations.
-5. NO EMOJIS: Keep the entire report completely emoji-free, formal, and authoritative.
-6. NO HALLUCINATED STATISTICS OR IDENTIFIERS:
+2. SEAMLESS INLINE CITATIONS WITHOUT REPETITION:
+   - Naturally integrate citations into the prose flow as standard academic in-text references (e.g. *[Author, Year]* or *(Smith et al., 2024)*) matching entries in the verified source list.
+   - Do NOT output repetitive source/link dumps at the end of each section. The complete reference bibliography is automatically appended once at the end of the document.
+3. NO EMOJIS: Keep the entire report completely emoji-free, formal, and authoritative.
+4. NO HALLUCINATED STATISTICS OR IDENTIFIERS:
+   - Do NOT invent metrics, percentages, benchmark numbers, or citation identifiers.
    - Only quote figures and identifiers explicitly present in the verified dossier above.
+   - If quantitative data is absent for a constrained topic, explicitly state that as a named research gap in the prose.
+5. PROVENANCE & RIGOR DIFFERENTIATION:
+   - Explicitly note differences in evidence tier (e.g. peer-reviewed vs. lab preprint vs. vendor blog) in the analytical text and comparison table.
+6. PARADIGM & CONTEXT INTEGRITY:
+   - Never treat disparate operational contexts (e.g. theoretical vs. applied, synthetic benchmarks vs. live production) as interchangeable support for a single claim.
 7. TEMPORAL HONESTY:
    - Do NOT present speculative future projections as historical facts.`;
 
@@ -690,14 +684,14 @@ Strict Writing Rules:
   }
 
   // Step 6: Citation Entailment Audit
-  const citationAudit = auditCitationEntailment(draftReport, ledger, canonicalSources);
+  const citationAudit = auditCitationEntailment(draftReport, ledger, rankedSources);
 
   // Step 7: Adversarial Peer Review & Epistemic Calibration Pass
   const reviewResult = await runAdversarialReview({
     topic,
     draftReport,
     ledger,
-    sources: canonicalSources,
+    sources: rankedSources,
     gateway,
     modelName,
   });
@@ -707,11 +701,10 @@ Strict Writing Rules:
   // Step 8: Quality Gate Evaluation
   const qualityMetrics = evaluateResearchQualityGate({
     ledger,
-    sources: canonicalSources,
+    sources: rankedSources,
     citationAudit,
     contradictionsCount,
     uncalibratedTermsCount: reviewResult.absoluteClaimsToCalibrate.length,
-    inventedContextsCount: reviewResult.inventedContextsToCleanse.length,
   });
 
   return {
@@ -779,13 +772,13 @@ export async function runDeepResearch(params: {
     }),
   );
 
-  // 3. Canonical Registry, Claim-Evidence Ledger & Contradiction Search
+  // 3. Source Ranking, Claim-Evidence Ledger & Contradiction Search
   recordStep(
     "Evidence Engine",
-    "Resolving canonical source entities, constructing Claim-Evidence Ledger, and executing contradiction searches.",
+    "Classifying source quality hierarchy (Tier 1-6), extracting Claim-Evidence Ledger, and executing contradiction searches.",
   );
 
-  const { verifiedDossier, registry, ledger, contradictionsFound } = await verifyAndAuditEvidence(
+  const { verifiedDossier, rankedSources, ledger, contradictionsFound } = await verifyAndAuditEvidence(
     params.topic,
     plan,
     subagentResults,
@@ -795,7 +788,7 @@ export async function runDeepResearch(params: {
 
   recordStep(
     "Evidence Ledger",
-    `Resolved ${registry.getAllSources().length} canonical sources and ${ledger.length} verified claim-evidence records with zero invented experimental details.`,
+    `Constructed ${ledger.length} verified claim-evidence records with experimental context (${contradictionsFound.length} literature caveats identified).`,
   );
 
   // 4. Writer Agent, Citation Audit, Adversarial Review & Quality Gate
@@ -808,7 +801,7 @@ export async function runDeepResearch(params: {
     params.topic,
     plan,
     verifiedDossier,
-    registry,
+    rankedSources,
     ledger,
     contradictionsFound.length,
     gateway,
@@ -817,13 +810,13 @@ export async function runDeepResearch(params: {
 
   recordStep(
     "Quality Gate Passed",
-    `Research Quality Score: ${qualityMetrics.overallScore}/100 (Citation Correctness: ${Math.round(qualityMetrics.citationCorrectnessScore * 100)}%, Direct Support: ${Math.round(qualityMetrics.claimEvidenceSupportScore * 100)}%, Metadata Accuracy: ${Math.round(qualityMetrics.sourceIdentityMetadataScore * 100)}%).`,
+    `Research Quality Score: ${qualityMetrics.overallScore}/100 (${qualityMetrics.verifiedClaimsCount}/${qualityMetrics.totalClaims} verified claims, ${Math.round(qualityMetrics.tier1And2SourcesRatio * 100)}% Tier 1/2 literature).`,
   );
 
   log("info", "deep_research_completed", {
     topic: params.topic,
     subtasksCount: subtasks.length,
-    canonicalSourcesCount: registry.getAllSources().length,
+    totalSources: rankedSources.length,
     ledgerClaimsCount: ledger.length,
     qualityScore: qualityMetrics.overallScore,
   });

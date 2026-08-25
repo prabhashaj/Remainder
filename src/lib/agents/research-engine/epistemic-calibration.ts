@@ -10,7 +10,6 @@ export interface CalibrationResult {
   flaggedTerms: string[];
   replacementsCount: number;
   uncalibratedTablesFound: number;
-  inventedContextsCleansed: number;
 }
 
 // Regex patterns for high-risk absolute and uncalibrated phrasing
@@ -66,31 +65,8 @@ const CALIBRATION_RULES: Array<{
   },
 ];
 
-// Anti-Invented Context cleansing rules
-const INVENTED_CONTEXT_RULES: Array<{
-  pattern: RegExp;
-  replacement: string;
-  description: string;
-}> = [
-  {
-    pattern: /\bHardware:\s*(?:Not specified\s*)?\(assumed\s+[^)]+\)/gi,
-    replacement: "Hardware: Not reported in the source",
-    description: "Cleansed inferred hardware assumption to explicit 'Not reported in the source'",
-  },
-  {
-    pattern: /\b(?:assumed|likely|probably)\s+(?:standard\s+gpu\s+clusters?|h100|a100|v100|3\s+seeds)\b/gi,
-    replacement: "unspecified in primary publication",
-    description: "Cleansed inferred hardware/seed assumption",
-  },
-  {
-    pattern: /\btypical\s+configuration\s*\(assumed\)/gi,
-    replacement: "experimental configuration not explicitly detailed in source",
-    description: "Cleansed assumed typical configuration",
-  },
-];
-
 /**
- * Deterministically audits and calibrates text, enforcing epistemic modesty and removing invented details.
+ * Deterministically audits and calibrates text, enforcing epistemic modesty.
  */
 export function auditAndCalibrateText(
   text: string,
@@ -99,9 +75,7 @@ export function auditAndCalibrateText(
   let calibratedText = text;
   const flaggedTerms: string[] = [];
   let replacementsCount = 0;
-  let inventedContextsCleansed = 0;
 
-  // 1. Enforce Epistemic Calibration
   for (const rule of CALIBRATION_RULES) {
     if (rule.pattern.test(calibratedText)) {
       flaggedTerms.push(rule.description);
@@ -112,34 +86,17 @@ export function auditAndCalibrateText(
     }
   }
 
-  // 2. Cleanse Invented Experimental Context
-  for (const rule of INVENTED_CONTEXT_RULES) {
-    if (rule.pattern.test(calibratedText)) {
-      inventedContextsCleansed++;
-      flaggedTerms.push(rule.description);
-      calibratedText = calibratedText.replace(rule.pattern, () => rule.replacement);
-    }
-  }
-
-  // 3. Mathematical Formulation Labeling check
-  // If equations appear in text, ensure they do not claim generic equations as algorithm-specific formulations
-  if (/\$\$[\s\S]*?\$\$/g.test(calibratedText)) {
-    calibratedText = calibratedText.replace(
-      /(The (?:algorithm|method|model) (?:uses|is defined by) the following (?:exact )?formulation:\s*\n+\$\$)/gi,
-      "Theoretical formulation synthesized from reviewed literature:\n$$",
-    );
-  }
-
-  // 4. Audit markdown tables for undefined "High / Medium / Low" qualitative ratings
+  // Audit markdown tables for undefined "High / Medium / Low" qualitative ratings
   let uncalibratedTablesFound = 0;
   if (/\|\s*(High|Medium|Low|Very High)\s*\|/i.test(calibratedText)) {
+    // If table contains subjective ratings without an explicit legend/note, append calibration note
     if (!calibratedText.includes("Qualitative assessment based on reviewed literature")) {
       uncalibratedTablesFound++;
       calibratedText = calibratedText.replace(
         /(\|[\s\S]*?\|\n\n)/g,
         (tableMatch) => {
           if (/\|\s*(High|Medium|Low)\s*\|/i.test(tableMatch) && !tableMatch.includes("Qualitative assessment")) {
-            return `${tableMatch}*Note: Qualitative ratings in the comparison matrix reflect comparative assessments synthesized across reviewed literature, not direct single-benchmark empirical measurements.*\n\n`;
+            return `${tableMatch}*Note: Qualitative ratings in the comparison matrix reflect comparative assessments synthesized across reviewed literature, not standardized single-benchmark metrics.*\n\n`;
           }
           return tableMatch;
         },
@@ -152,6 +109,5 @@ export function auditAndCalibrateText(
     flaggedTerms,
     replacementsCount,
     uncalibratedTablesFound,
-    inventedContextsCleansed,
   };
 }

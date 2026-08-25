@@ -1,346 +1,292 @@
 /**
- * Research Quality & Canonical Source Verification Regression Suite
+ * Research Quality Verification Test Suite
  * Remispace Deep Research Agent
  * 
- * Verifies all 8 core failure cases & regression dimensions:
- * - Test 1: Source Entity Resolution & Deduplication (resolving arXiv + PDF + Web into 1 canonical source)
- * - Test 2: Publication Year vs Preprint Year Resolution (preventing wrong years like 2026 for 2022 papers)
- * - Test 3: Wrong Paper Attribution Rejection (RUDDER vs related sparse rewards paper)
- * - Test 4: Invented Experimental Context Cleansing ("assumed standard GPU" -> "Not reported in the source")
- * - Test 5: Metric Drift Detection & Semantic Preservation ("best scores" vs "final reward")
- * - Test 6: Mathematical Formulation Labeling & Fidelity
- * - Test 7: Context Mismatch & Overgeneralization (GPT-2 vs frontier LLMs)
- * - Test 8: Cross-Paper Comparison Qualification (direct vs indirect)
- * - Test 9: Research Gap Verification & Epistemic Calibration
- * - Test 10: Canonical Reference Bibliography Rendering (zero duplicate citations)
- * - Test 11: Quality Gate 9-Pillar Weighted Scoring
+ * Verifies all 7 core quality failure modes:
+ * - Test 1: Unsupported claim
+ * - Test 2: Numerical mismatch
+ * - Test 3: Context mismatch
+ * - Test 4: Citation mismatch
+ * - Test 5: Absolute claim
+ * - Test 6: Cross-paper comparison
+ * - Test 7: Research gap verification
+ * - Test 8: Source tier ranking hierarchy
+ * - Test 9: Quality gate scoring
  */
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  CanonicalSourceRegistry,
+  classifySourceTier,
+  rankAndFilterSources,
   verifyNumericalClaim,
-  auditMetricDrift,
-  sanitizeExperimentalContext,
   auditContextMismatch,
   auditCrossPaperComparison,
   auditAndCalibrateText,
   auditCitationEntailment,
   evaluateResearchQualityGate,
   type ClaimEvidenceLedgerItem,
+  type ResearchSource,
 } from "../index";
 
-describe("Deep Research Agent — Research Quality & Canonical Source Verification", () => {
-  // Test 1: Source Entity Resolution & Deduplication
-  it("Test 1: Source Entity Resolution — deduplicates same paper across arXiv, HTML, and Conference URLs", () => {
-    const registry = new CanonicalSourceRegistry();
+describe("Research Quality & Epistemic Verification Engine", () => {
+  // Test 1: Unsupported claim
+  it("Test 1: Unsupported claim — flags claims when source does not support the claim", () => {
+    const claim = "Method X achieves 4.5x faster training throughput than AdamW.";
+    const exactSupport = "We evaluated learning rates from 1e-4 to 1e-3 on standard optimizer convergence.";
+    const sourceText = "Adam optimizer converges faster than SGD on convex optimization objectives.";
 
-    // 1. First discovered via arXiv search
-    const s1 = registry.registerSource({
-      title: "RUDDER: Return Decomposition for Delayed Rewards",
-      url: "https://arxiv.org/abs/1906.07073",
-      arxivId: "1906.07073",
-      year: 2019,
-      authors: ["Jose A. Arjona-Medina", "Michael Gillhofer", "Michael Widrich", "Sepp Hochreiter"],
-      type: "arXiv Paper",
-    });
+    const result = verifyNumericalClaim(claim, exactSupport, sourceText);
 
-    // 2. Discovered via NeurIPS conference proceedings
-    const s2 = registry.registerSource({
-      title: "RUDDER: Return Decomposition for Delayed Rewards",
-      url: "https://proceedings.neurips.cc/paper/2019/hash/rudder.html",
-      venue: "NeurIPS 2019",
-      year: 2019,
-      authors: ["J. Arjona-Medina", "M. Gillhofer", "M. Widrich", "S. Hochreiter"],
-      type: "Conference",
-    });
-
-    // 3. Discovered via PDF download link
-    const s3 = registry.registerSource({
-      title: "[PDF] RUDDER: Return Decomposition for Delayed Rewards - arXiv",
-      url: "https://arxiv.org/pdf/1906.07073.pdf",
-      year: 2019,
-      authors: ["Arjona-Medina et al."],
-      type: "arXiv",
-    });
-
-    assert.equal(s1.source_id, s2.source_id);
-    assert.equal(s2.source_id, s3.source_id);
-    assert.equal(registry.getAllSources().length, 1);
-    assert.equal(s1.venue, "NeurIPS 2019");
-    assert.equal(s1.tierRank, 1); // Upgraded to Tier 1 via NeurIPS venue
-    assert.equal(s1.retrieved_urls.length, 3);
+    assert.equal(result.verificationStatus, "UNSUPPORTED");
+    assert.equal(result.numberFoundInSource, false);
+    assert.ok(result.notes.includes("not found in cited source text"));
   });
 
-  // Test 2: Publication Year vs Preprint Year Resolution
-  it("Test 2: Publication Year Resolution — resolves preprint vs conference publication without arbitrary 2026 dates", () => {
-    const registry = new CanonicalSourceRegistry();
+  // Test 2: Numerical mismatch
+  it("Test 2: Numerical mismatch — flags 99.2% when source says 97.2%", () => {
+    const claim = "The model achieved 99.2% accuracy on the MMLU benchmark.";
+    const exactSupport = "The evaluated model reached 97.2% top-1 accuracy on MMLU.";
+    const sourceText = "Our evaluation on MMLU demonstrates a peak accuracy of 97.2% with 5-shot prompting.";
 
-    const s = registry.registerSource({
-      title: "Off-Policy Reinforcement Learning with Delayed Rewards",
-      url: "https://arxiv.org/abs/2106.12345",
-      arxivId: "2106.12345",
-      year: 2021,
-      authors: ["Author A", "Author B"],
-      type: "arXiv Paper",
-    });
+    const result = verifyNumericalClaim(claim, exactSupport, sourceText);
 
-    registry.registerSource({
-      title: "Off-Policy Reinforcement Learning with Delayed Rewards",
-      url: "https://icml.cc/virtual/2022/poster/123",
-      venue: "ICML 2022",
-      year: 2022,
-      authors: ["Author A", "Author B"],
-      type: "Conference",
-    });
-
-    assert.equal(s.preprint_year, 2021);
-    assert.equal(s.publication_year, 2022);
-    assert.ok(!s.yearOrId.includes("2026"));
+    assert.equal(result.verificationStatus, "UNSUPPORTED");
+    assert.equal(result.numberFoundInSource, false);
+    assert.ok(result.extractedFigures.includes("99.2%"));
   });
 
-  // Test 3: Wrong Paper Attribution Rejection
-  it("Test 3: Wrong Paper Attribution — rejects citing a 2024 related paper as the creator of RUDDER", () => {
-    const registry = new CanonicalSourceRegistry();
+  // Test 3: Context mismatch
+  it("Test 3: Context mismatch — catches when GPT-2 evaluation is claimed for modern frontier LLMs", () => {
+    const claim = "Our memory pruning technique improves inference latency across all modern LLMs.";
+    const ledgerItem: Partial<ClaimEvidenceLedgerItem> = {
+      model: "GPT-2 Small (117M)",
+      dataset: "WikiText-103",
+      what_source_showed: "Demonstrated 15% latency reduction on GPT-2 small research models",
+      what_source_did_not_show: "Not validated on modern 70B+ frontier models or mixture-of-experts architectures",
+      evidence_level: "laboratory_experiment",
+    };
 
-    const relatedPaper = registry.registerSource({
-      title: "Revisiting Sparse Rewards for Goal-Reaching Reinforcement Learning",
-      url: "https://arxiv.org/abs/2402.00001",
-      year: 2024,
-      authors: ["Researcher X", "Researcher Y"],
-      type: "arXiv Paper",
-    });
+    const result = auditContextMismatch(claim, ledgerItem);
+
+    assert.equal(result.hasMismatch, true);
+    assert.ok(result.mismatchReason?.includes("Context mismatch"));
+    assert.ok(result.calibratedClaim?.includes("GPT-2"));
+  });
+
+  // Test 4: Citation mismatch
+  it("Test 4: Citation mismatch — flags citations where topic is relevant but claim is unsupported", () => {
+    const reportText = "Speculative decoding eliminates autoregressive memory bandwidth bottlenecks entirely (Vaswani et al., 2017).";
+    
+    const mockSources: ResearchSource[] = [
+      {
+        id: "src_1",
+        title: "Attention Is All You Need",
+        url: "https://arxiv.org/abs/1706.03762",
+        authors: ["Vaswani et al."],
+        year: 2017,
+        yearOrId: "2017",
+        type: "arXiv Paper",
+        tier: "Tier 1: Peer-Reviewed Journal / Top Conference",
+        tierRank: 1,
+        abstractOrSnippet: "We introduce the Transformer, a model architecture relying entirely on an attention mechanism...",
+        isPrimarySource: true,
+      },
+    ];
 
     const mockLedger: ClaimEvidenceLedgerItem[] = [
       {
         claim_id: "claim_1",
-        claim: "Revisiting Sparse Rewards introduces the RUDDER algorithm for reward redistribution.",
-        claim_type: "factual",
+        claim: "Speculative decoding eliminates autoregressive memory bandwidth bottlenecks entirely.",
+        claim_type: "empirical",
         importance: "core",
-        source_ids: [relatedPaper.source_id],
-        source_quality: relatedPaper.source_tier,
-        source_title: relatedPaper.canonical_title,
-        source_url: relatedPaper.canonical_url,
-        source_type: relatedPaper.source_type,
-        publication_year: 2024,
-        exact_support: "We compare our goal-reaching baseline against prior work including RUDDER.",
-        paper_contribution_vs_related: "related_concept", // Merely cited/evaluated
-        support_level: "UNSUPPORTED",
+        source_ids: ["src_1"],
+        source_quality: "Tier 1: Peer-Reviewed Journal / Top Conference",
+        source_title: "Attention Is All You Need",
+        source_url: "https://arxiv.org/abs/1706.03762",
+        source_type: "arXiv Paper",
+        publication_year: 2017,
+        exact_support: "The Transformer uses multi-head self-attention.",
         confidence: "LOW",
         verification_status: "UNSUPPORTED",
       },
     ];
 
-    const reportText = `The algorithm was proposed in Revisiting Sparse Rewards for Goal-Reaching Reinforcement Learning (Researcher X, 2024).`;
-    const audit = auditCitationEntailment(reportText, mockLedger, [relatedPaper]);
+    const audit = auditCitationEntailment(reportText, mockLedger, mockSources);
 
-    assert.equal(audit.wrongPaperAttributionCount, 1);
     assert.equal(audit.unsupportedCount, 1);
-    assert.ok(audit.auditItems[0]?.reason.includes("Wrong paper attribution"));
+    assert.equal(audit.auditItems[0]?.status, "UNSUPPORTED");
   });
 
-  // Test 4: Invented Experimental Context Cleansing
-  it("Test 4: Anti-Invented Context — cleanses 'assumed standard GPU' to explicit 'Not reported in the source'", () => {
-    const check1 = sanitizeExperimentalContext("Hardware: Not specified (assumed standard GPU clusters)");
-    assert.equal(check1.wasInvented, true);
-    assert.equal(check1.value, "Not reported in the source");
-
-    const text = "The authors evaluated training efficiency. Hardware: (assumed standard GPU clusters). Batch size: likely 32.";
-    const calibrated = auditAndCalibrateText(text);
-
-    assert.ok(calibrated.calibratedText.includes("Hardware: Not reported in the source"));
-    assert.ok(!calibrated.calibratedText.includes("assumed standard GPU"));
-    assert.ok(calibrated.inventedContextsCleansed >= 1);
-  });
-
-  // Test 5: Metric Drift Detection & Semantic Preservation
-  it("Test 5: Metric Drift — flags transforming 'best scores' into 'final reward'", () => {
-    const claim = "The method achieved a 4x final reward improvement.";
-    const exactSupport = "We observed up to 4x improvement in reaching higher best scores across Atari environments.";
-
-    const driftCheck = auditMetricDrift(claim, exactSupport);
-
-    assert.equal(driftCheck.hasDrift, true);
-    assert.ok(driftCheck.warning?.includes("Metric drift"));
-    assert.ok(driftCheck.calibratedClaim?.includes("peak best-score attainment"));
-
-    const numCheck = verifyNumericalClaim(claim, exactSupport, exactSupport);
-    assert.equal(numCheck.metricDriftDetected, true);
-    assert.equal(numCheck.verificationStatus, "PARTIALLY_SUPPORTED");
-  });
-
-  // Test 6: Mathematical Formulation Fidelity
-  it("Test 6: Mathematical Fidelity — ensures generic equations are labeled as background formulation", () => {
-    const text = `The method is defined by the following exact formulation:
-$$
-V(s) = \\mathbb{E} [R_{t+1} + \\gamma V(S_{t+1}) | S_t = s]
-$$`;
+  // Test 5: Absolute claim calibration
+  it("Test 5: Absolute claim — detects unhedged 'No method exists' and calibrates it", () => {
+    const text = "Currently, no method exists to prevent attention key-value cache memory growth in autoregressive generation.";
 
     const result = auditAndCalibrateText(text);
 
-    assert.ok(result.calibratedText.includes("Theoretical formulation synthesized from reviewed literature:"));
-    assert.ok(!result.calibratedText.includes("The method is defined by the following exact formulation"));
+    assert.ok(result.flaggedTerms.length > 0);
+    assert.ok(result.calibratedText.includes("the reviewed literature does not establish a standardized approach"));
+    assert.equal(result.replacementsCount >= 1, true);
   });
 
-  // Test 7: Context Mismatch & Overgeneralization
-  it("Test 7: Context Mismatch — catches when GPT-2 evaluation is claimed for all frontier LLMs", () => {
-    const claim = "The optimization universally accelerates all modern LLMs.";
-    const ledgerItem: Partial<ClaimEvidenceLedgerItem> = {
-      model: "GPT-2 (117M)",
-      dataset: "WikiText-2",
-      what_source_showed: "Demonstrated speedup on GPT-2 small architecture",
-      what_source_did_not_show: "Not tested on modern 70B+ LLMs or Mixture-of-Experts",
-    };
-
-    const mismatch = auditContextMismatch(claim, ledgerItem);
-    assert.equal(mismatch.hasMismatch, true);
-    assert.ok(mismatch.calibratedClaim?.includes("GPT-2"));
-  });
-
-  // Test 8: Cross-Paper Comparison Qualification
-  it("Test 8: Cross-Paper Comparison — distinguishes direct from indirect cross-study comparisons", () => {
+  // Test 6: Cross-paper comparison
+  it("Test 6: Cross-paper comparison — tags comparisons between disparate models/hardware as indirect", () => {
     const itemA: ClaimEvidenceLedgerItem = {
       claim_id: "c1",
-      claim: "Method A achieves 50 ms latency.",
+      claim: "System A processes 120 tokens/sec.",
       claim_type: "numerical",
       importance: "core",
       source_ids: ["s1"],
-      source_quality: "Tier 1: Peer-Reviewed Journal / Top Conference",
+      source_quality: "Tier 2: arXiv Preprint / Official Lab Publication",
       source_title: "Paper A",
-      source_url: "https://arxiv.org/abs/1",
-      source_type: "Paper",
+      source_url: "https://arxiv.org/abs/2401.00001",
+      source_type: "arXiv Paper",
       publication_year: 2024,
-      exact_support: "50 ms on LLaMA-3-8B with A100",
+      exact_support: "120 tokens/sec on LLaMA-3-8B with batch size 1 on H100",
       model: "LLaMA-3-8B",
-      hardware: "NVIDIA A100",
       dataset: "GSM8K",
-      support_level: "DIRECTLY_SUPPORTED",
+      hardware: "NVIDIA H100",
       confidence: "HIGH",
       verification_status: "VERIFIED",
     };
 
     const itemB: ClaimEvidenceLedgerItem = {
       claim_id: "c2",
-      claim: "Method B achieves 35 ms latency.",
+      claim: "System B processes 95 tokens/sec.",
       claim_type: "numerical",
       importance: "core",
       source_ids: ["s2"],
-      source_quality: "Tier 1: Peer-Reviewed Journal / Top Conference",
+      source_quality: "Tier 2: arXiv Preprint / Official Lab Publication",
       source_title: "Paper B",
-      source_url: "https://arxiv.org/abs/2",
-      source_type: "Paper",
+      source_url: "https://arxiv.org/abs/2401.00002",
+      source_type: "arXiv Paper",
       publication_year: 2024,
-      exact_support: "35 ms on Gemma-2B with H100",
-      model: "Gemma-2B",
-      hardware: "NVIDIA H100",
+      exact_support: "95 tokens/sec on Mistral-7B with batch size 4 on A100",
+      model: "Mistral-7B",
       dataset: "MMLU",
-      support_level: "DIRECTLY_SUPPORTED",
+      hardware: "NVIDIA A100",
       confidence: "HIGH",
       verification_status: "VERIFIED",
     };
 
     const comparison = auditCrossPaperComparison(itemA, itemB);
+
     assert.equal(comparison.isDirect, false);
     assert.ok(comparison.note.includes("Indirect comparison"));
+    assert.ok(comparison.note.includes("different evaluation conditions"));
   });
 
-  // Test 9: Research Gap Verification & Epistemic Calibration
-  it("Test 9: Research Gap Verification — calibrates unhedged 'No method exists' claims", () => {
-    const text = "Currently, no method exists to solve delayed reward credit assignment.";
+  // Test 7: Research gap verification
+  it("Test 7: Research gap verification — calibrates 'no benchmark exists' to unstandardized coverage", () => {
+    const text = "To date, no benchmark exists for evaluating agentic reflection loops.";
+
     const result = auditAndCalibrateText(text);
 
-    assert.ok(result.calibratedText.includes("the reviewed literature does not establish a standardized approach"));
-    assert.ok(!result.calibratedText.includes("no method exists"));
+    assert.ok(result.calibratedText.includes("standardized cross-domain benchmarks remain limited"));
+    assert.ok(!result.calibratedText.includes("no benchmark exists"));
   });
 
-  // Test 10: Canonical Reference Bibliography Rendering
-  it("Test 10: Canonical Reference Generation — renders deduplicated bibliography strictly from registry", () => {
-    const registry = new CanonicalSourceRegistry();
+  // Test 8: Source Tier Ranking Hierarchy
+  it("Test 8: Source Tier Ranking — properly orders Tier 1 peer-reviewed ahead of Tier 5/6 blogs", () => {
+    const rawSources = [
+      { title: "Random Post on Reddit", url: "https://www.reddit.com/r/MachineLearning/comments/123", type: "Web" },
+      { title: "Attention Is All You Need", url: "https://arxiv.org/abs/1706.03762", venue: "NeurIPS 2017", type: "Conference" },
+      { title: "FlashAttention: Fast and Memory-Efficient Exact Attention", url: "https://arxiv.org/abs/2205.14135", venue: "arXiv:2205.14135", type: "arXiv" },
+      { title: "My Tech Blog Post", url: "https://medium.com/@dev/my-thoughts", type: "Blog" },
+    ];
 
-    registry.registerSource({
-      title: "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning",
-      url: "https://arxiv.org/abs/2307.08691",
-      arxivId: "2307.08691",
-      year: 2023,
-      venue: "ICLR 2024",
-      authors: ["Tri Dao"],
-      type: "arXiv",
-    });
+    const ranked = rankAndFilterSources(rawSources, "Attention Mechanisms");
 
-    registry.registerSource({
-      title: "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning",
-      url: "https://arxiv.org/pdf/2307.08691.pdf",
-      arxivId: "2307.08691",
-      year: 2023,
-      authors: ["Tri Dao"],
-      type: "arXiv",
-    });
-
-    const bibliography = registry.renderCanonicalBibliography(10);
-
-    assert.ok(bibliography.includes("### Sources & Literature References"));
-    assert.ok(bibliography.includes("FlashAttention-2"));
-    assert.ok(bibliography.includes("Tri Dao"));
-    // Verify only ONE numbered item rendered despite 2 registrations
-    const matches = bibliography.match(/^\d+\.\s/gm);
-    assert.equal(matches?.length, 1);
+    assert.equal(ranked[0]?.tier.startsWith("Tier 1"), true);
+    assert.equal(ranked[1]?.tier.startsWith("Tier 2"), true);
+    assert.equal(ranked[ranked.length - 1]?.tier.startsWith("Tier 6"), true);
   });
 
-  // Test 11: Quality Gate 9-Pillar Weighted Scoring
-  it("Test 11: Quality Gate Scoring — evaluates all 9 weighted quality pillars", () => {
-    const registry = new CanonicalSourceRegistry();
-
-    const s = registry.registerSource({
-      title: "Direct Preference Optimization",
-      url: "https://arxiv.org/abs/2305.18290",
-      venue: "NeurIPS 2023",
-      year: 2023,
-      authors: ["Rafael Rafailov", "Archit Sharma", "Eric Mitchell", "Stefano Ermon", "Christopher D. Manning", "Chelsea Finn"],
-      type: "Conference",
-    });
-
+  // Test 9: Quality Gate Scoring
+  it("Test 9: Quality Gate Scoring — computes comprehensive score and identifies gate failures", () => {
     const mockLedger: ClaimEvidenceLedgerItem[] = [
       {
         claim_id: "c1",
-        claim: "DPO implicitly optimizes the Bradley-Terry preference model without a reinforcement learning loop.",
-        claim_type: "theoretical",
+        claim: "Claim 1",
+        claim_type: "empirical",
         importance: "core",
-        source_ids: [s.source_id],
-        source_quality: s.source_tier,
-        source_title: s.canonical_title,
-        source_url: s.canonical_url,
-        source_type: s.source_type,
-        publication_year: 2023,
-        exact_support: "DPO derives a closed-form expression for the optimal policy under the Bradley-Terry preference model.",
-        support_level: "DIRECTLY_SUPPORTED",
+        source_ids: ["s1"],
+        source_quality: "Tier 1: Peer-Reviewed Journal / Top Conference",
+        source_title: "Paper 1",
+        source_url: "https://arxiv.org/abs/1",
+        source_type: "Paper",
+        publication_year: 2024,
+        exact_support: "Support 1",
+        confidence: "HIGH",
+        verification_status: "VERIFIED",
+      },
+      {
+        claim_id: "c2",
+        claim: "Claim 2",
+        claim_type: "numerical",
+        importance: "core",
+        source_ids: ["s2"],
+        source_quality: "Tier 2: arXiv Preprint / Official Lab Publication",
+        source_title: "Paper 2",
+        source_url: "https://arxiv.org/abs/2",
+        source_type: "Paper",
+        publication_year: 2024,
+        exact_support: "Support 2",
+        model: "LLaMA-3",
+        dataset: "GSM8K",
         confidence: "HIGH",
         verification_status: "VERIFIED",
       },
     ];
 
+    const mockSources: ResearchSource[] = [
+      {
+        id: "s1",
+        title: "Paper 1",
+        url: "https://arxiv.org/abs/1",
+        authors: ["Author 1"],
+        year: 2024,
+        yearOrId: "2024",
+        type: "Paper",
+        tier: "Tier 1: Peer-Reviewed Journal / Top Conference",
+        tierRank: 1,
+        abstractOrSnippet: "Snippet 1",
+        isPrimarySource: true,
+      },
+      {
+        id: "s2",
+        title: "Paper 2",
+        url: "https://arxiv.org/abs/2",
+        authors: ["Author 2"],
+        year: 2024,
+        yearOrId: "2024",
+        type: "Paper",
+        tier: "Tier 2: arXiv Preprint / Official Lab Publication",
+        tierRank: 2,
+        abstractOrSnippet: "Snippet 2",
+        isPrimarySource: true,
+      },
+    ];
+
     const metrics = evaluateResearchQualityGate({
       ledger: mockLedger,
-      sources: registry.getAllSources(),
+      sources: mockSources,
       citationAudit: {
-        totalCitationsAudited: 1,
-        verifiedCount: 1,
+        totalCitationsAudited: 2,
+        verifiedCount: 2,
         partiallySupportedCount: 0,
         unsupportedCount: 0,
-        wrongPaperAttributionCount: 0,
         citationEntailmentRatio: 1.0,
         auditItems: [],
       },
       contradictionsCount: 1,
       uncalibratedTermsCount: 0,
-      inventedContextsCount: 0,
     });
 
     assert.equal(metrics.passedQualityGate, true);
     assert.equal(metrics.overallScore >= 80, true);
-    assert.equal(metrics.citationCorrectnessScore, 1.0);
-    assert.equal(metrics.claimEvidenceSupportScore, 1.0);
-    assert.equal(metrics.sourceIdentityMetadataScore, 1.0);
+    assert.equal(metrics.verifiedClaimsRatio, 1.0);
+    assert.equal(metrics.tier1And2SourcesRatio, 1.0);
   });
 });

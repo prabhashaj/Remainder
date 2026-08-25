@@ -4,16 +4,16 @@
  */
 
 import { generateText } from "ai";
-import { withAiRateLimitRetry, createAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { withAiRateLimitRetry, getAiModelName, createAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { log } from "@/lib/logger.server";
-import type { AdversarialReviewResult, CanonicalSource, ClaimEvidenceLedgerItem } from "./types";
+import type { AdversarialReviewResult, ClaimEvidenceLedgerItem, ResearchSource } from "./types";
 import { auditAndCalibrateText } from "./epistemic-calibration";
 
 export async function runAdversarialReview(params: {
   topic: string;
   draftReport: string;
   ledger: ClaimEvidenceLedgerItem[];
-  sources: CanonicalSource[];
+  sources: ResearchSource[];
   gateway: ReturnType<typeof createAiGatewayProvider>;
   modelName: string;
 }): Promise<AdversarialReviewResult> {
@@ -21,42 +21,40 @@ export async function runAdversarialReview(params: {
 
   // Build condensed ledger summary for reviewer
   const ledgerSummary = ledger.map((item, idx) => {
-    return `[Claim ${idx + 1}] (${item.claim_type.toUpperCase()} | ${item.verification_status} | Support: ${item.support_level} | Conf: ${item.confidence})
+    return `[Claim ${idx + 1}] (${item.claim_type.toUpperCase()} | ${item.verification_status} | Conf: ${item.confidence})
 - Claim: "${item.claim}"
-- Canonical Source: "${item.source_title}" [ID: ${item.source_ids.join(", ")}] (${item.source_quality})
-- Exact Verbatim Support: "${item.exact_support}"
-- Contribution vs Related: ${item.paper_contribution_vs_related || "paper_contribution"}
-- Experimental Context: Model=${item.model || "Not reported"}, Dataset=${item.dataset || "Not reported"}, Metric=${item.metric || "Not reported"}, Hardware=${item.hardware || "Not reported in the source"}
-- Evaluated Scope: Shown="${item.what_source_showed || "N/A"}" | Not Shown="${item.what_source_did_not_show || "N/A"}"
+- Source: "${item.source_title}" (${item.source_quality})
+- Exact Support: ${item.exact_support}
+- Experimental Context: Model=${item.model || "N/A"}, Dataset=${item.dataset || "N/A"}, Metric=${item.metric || "N/A"}, Hardware=${item.hardware || "N/A"}
+- Shown vs Not Shown: Shown="${item.what_source_showed || "N/A"}" | Not Shown="${item.what_source_did_not_show || "N/A"}"
 - Counter Evidence: ${item.counter_evidence || "None found"}`;
   }).join("\n\n");
 
-  const sourcesList = sources.slice(0, 15).map((s) => `[${s.source_id}] "${s.canonical_title}" (${s.yearOrId}) - ${s.source_tier}`).join("\n");
-
   const reviewerPrompt = `You are a Hostile, Rigorous Academic Peer Reviewer auditing a research draft for topic: "${topic}".
-Your mission is to catch:
-1. Source-Entity Resolution Errors & Wrong Paper Attributions (e.g., citing a 2024 related paper for an algorithm introduced in 2019/2020).
-2. Publication Year Inaccuracies (e.g., representing a 2022 paper as 2026).
-3. Metric Drift (e.g., rewriting "best scores" into "final reward").
-4. Invented Experimental Contexts (e.g., "assumed standard GPU clusters" -> MUST be "Hardware: Not reported in the source").
-5. Mathematical Formulation Drift (e.g., generic background equations attributed as a specific algorithm's formulation).
-6. Incorrect "No Empirical Validation" claims for papers that have experiments.
-7. Subjective comparison tables (High/Medium/Low) without defined methodology.
-8. Uncalibrated absolute assertions ("no method exists", "universally proves", "solves").
+Your mission is to catch unsubstantiated claims, invalid cross-paper comparisons, missing experimental baselines, overgeneralized conclusions, and unhedged absolute assertions.
 
-Canonical Source Registry (Ground Truth Sources):
-${sourcesList}
-
-Claim-Evidence Ledger (Ground Truth Primary Evidence):
+Claim-Evidence Ledger (Ground Truth from Primary Literature):
 ${ledgerSummary}
 
 Draft Report to Audit:
 ${draftReport}
 
-Audit & Repair Instructions:
+Audit Checklist (Examine all 14 dimensions):
+1. Unsupported claims: Any claim in draft not backed by the ledger?
+2. Citation mismatches: Citations disconnected from actual paper findings?
+3. Numerical numbers: Missing baselines, hardware, or datasets?
+4. Overgeneralization: Results on small models/synthetic datasets claimed as universal for frontier LLMs?
+5. Cross-paper comparisons: Results from disparate setups compared directly without noting "indirect comparison"?
+6. Absolute language: Unverified "no method exists", "universally proves", "solves"?
+7. Paper characterization: Misrepresenting what the paper actually proved vs what it did NOT show?
+8. Weak research gaps: Asserting "no benchmark exists" without verifying benchmark repos?
+9. Correlation vs Causation confusion?
+10. Unclear experimental boundaries?
+11. Contradictions ignored?
+
+Instructions:
 1. Provide a revised, publication-grade version of the report that:
-   - Fixes all identified inaccuracies, wrong paper attributions, and metric drifts.
-   - Cleanses any invented hardware/experimental context to explicit "Not reported in the source".
+   - Fixes all identified inaccuracies and attaches missing experimental contexts (model, dataset, hardware, baseline).
    - Weakens or calibrates any overconfident or absolute claims.
    - Clarifies indirect cross-paper comparisons with explicit notes.
    - Preserves all valid technical depth, mathematical LaTeX expressions, and core verified findings.
@@ -69,7 +67,7 @@ Audit & Repair Instructions:
         generateText({
           model: gateway(modelName),
           system:
-            "You are a rigorous, hostile academic reviewer and revision editor who enforces strict evidence grounding, canonical citation identity, and epistemic modesty.",
+            "You are a rigorous, hostile academic reviewer and revision editor who enforces strict evidence grounding and epistemic modesty.",
           prompt: reviewerPrompt,
         }),
       { label: "Adversarial Reviewer", maxRetries: 2 },
@@ -82,14 +80,14 @@ Audit & Repair Instructions:
     log("warn", "adversarial_review_fallback", { error: String(err) });
   }
 
-  // Run deterministic epistemic calibration on the revised report
+  // Run final deterministic epistemic calibration on the revised report
   const calibration = auditAndCalibrateText(revisedReport, ledger);
   revisedReport = calibration.calibratedText;
 
   return {
     overallAssessment: "REVISE",
     identifiedWeaknesses: calibration.flaggedTerms.map((t) => ({
-      dimension: "Epistemic Calibration & Rigor",
+      dimension: "Epistemic Calibration",
       issue: t,
       recommendedCorrection: "Calibrated to evidence-bounded formulation",
       severity: "MINOR",
@@ -97,8 +95,6 @@ Audit & Repair Instructions:
     unsupportedClaimsToPrune: ledger.filter((l) => l.verification_status === "UNSUPPORTED").map((l) => l.claim),
     absoluteClaimsToCalibrate: calibration.flaggedTerms.map((t) => ({ original: t, calibrated: "Calibrated" })),
     uncalibratedComparisons: [],
-    inventedContextsToCleanse: calibration.flaggedTerms.filter((t) => t.includes("hardware") || t.includes("assumed")),
-    wrongPaperAttributions: [],
     revisedReport,
   };
 }

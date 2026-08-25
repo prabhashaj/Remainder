@@ -1,37 +1,32 @@
 /**
- * Citation Entailment & Source Attribution Auditor
+ * Citation Entailment Auditor
  * Remispace Deep Research Agent
  */
 
-import type {
-  CanonicalSource,
-  CitationAuditResult,
-  ClaimEvidenceLedgerItem,
-  SupportLevel,
-  VerificationStatus,
-} from "./types";
+import type { CitationAuditResult, ClaimEvidenceLedgerItem, ResearchSource, VerificationStatus } from "./types";
 
 /**
- * Audits citations in the drafted report against the Claim-Evidence Ledger and Canonical Sources.
+ * Audits citations in the drafted report against the Claim-Evidence Ledger and Verified Sources.
  */
 export function auditCitationEntailment(
   reportText: string,
   ledger: ClaimEvidenceLedgerItem[],
-  sources: CanonicalSource[],
+  sources: ResearchSource[],
 ): CitationAuditResult {
   const auditItems: CitationAuditResult["auditItems"] = [];
   let verifiedCount = 0;
   let partiallySupportedCount = 0;
   let unsupportedCount = 0;
-  let wrongPaperAttributionCount = 0;
 
+  // Extract inline citation references like [1], [Author, Year], [arXiv:2301.12345], (Vaswani et al., 2017)
   const paragraphs = reportText.split(/\n\n+/).filter((p) => p.trim().length > 30 && !p.startsWith("#"));
 
   for (const para of paragraphs) {
+    // Check if paragraph makes concrete claims
     const matchedSources = sources.filter((s) => {
-      const titleSnippet = s.canonical_title.slice(0, 25).toLowerCase();
-      const idSnippet = s.source_id.toLowerCase();
-      const urlSnippet = s.canonical_url.toLowerCase();
+      const titleSnippet = s.title.slice(0, 25).toLowerCase();
+      const idSnippet = s.id.toLowerCase();
+      const urlSnippet = s.url.toLowerCase();
       const authorSnippet = s.authors[0] ? s.authors[0].toLowerCase() : "";
 
       const paraLower = para.toLowerCase();
@@ -39,35 +34,21 @@ export function auditCitationEntailment(
         paraLower.includes(titleSnippet) ||
         paraLower.includes(idSnippet) ||
         (authorSnippet && paraLower.includes(authorSnippet)) ||
-        (s.arxiv_id && paraLower.includes(s.arxiv_id.toLowerCase()))
+        (s.url.includes("arxiv.org") && paraLower.includes(s.yearOrId.toLowerCase()))
       );
     });
 
     if (matchedSources.length > 0) {
       for (const src of matchedSources) {
-        const relevantLedgerItems = ledger.filter(
-          (l) => l.source_title === src.canonical_title || l.source_url === src.canonical_url || l.source_ids.includes(src.source_id),
-        );
+        // Find matching ledger items for this source
+        const relevantLedgerItems = ledger.filter((l) => l.source_title === src.title || l.source_url === src.url);
 
         let status: VerificationStatus = "VERIFIED";
-        let supportLevel: SupportLevel = "DIRECTLY_SUPPORTED";
         let reason = "Directly supported by verified primary source.";
 
-        // Check for Wrong Paper Attribution (e.g. Paper evaluating or citing method X attributed as proposing method X)
-        const isWrongPaper = relevantLedgerItems.some(
-          (l) => l.paper_contribution_vs_related === "related_concept" && l.claim.toLowerCase().includes("propose") || l.claim.toLowerCase().includes("introduces"),
-        );
-
-        if (isWrongPaper) {
-          status = "UNSUPPORTED";
-          supportLevel = "UNSUPPORTED";
-          reason = `Wrong paper attribution: Source "${src.canonical_title}" is a related work that evaluates/cites the concept, not the primary origin of the method.`;
-          wrongPaperAttributionCount++;
-          unsupportedCount++;
-        } else if (relevantLedgerItems.length === 0) {
+        if (relevantLedgerItems.length === 0) {
           status = "PARTIALLY_SUPPORTED";
-          supportLevel = "PARTIALLY_SUPPORTED";
-          reason = "Source cited in text exists in registry but lacks structured primary claim extraction.";
+          reason = "Source cited in text is present in bibliography but lacks structured ledger claim extraction.";
           partiallySupportedCount++;
         } else {
           const hasUnsupported = relevantLedgerItems.some((l) => l.verification_status === "UNSUPPORTED");
@@ -75,12 +56,10 @@ export function auditCitationEntailment(
 
           if (hasUnsupported) {
             status = "UNSUPPORTED";
-            supportLevel = "UNSUPPORTED";
-            reason = "Claim contains figures or assertions not confirmed by source text.";
+            reason = "Claim contains numerical figures or assertions not confirmed by source text.";
             unsupportedCount++;
           } else if (hasPartial) {
             status = "PARTIALLY_SUPPORTED";
-            supportLevel = "PARTIALLY_SUPPORTED";
             reason = "Context or baseline partially mismatched with primary study.";
             partiallySupportedCount++;
           } else {
@@ -89,12 +68,10 @@ export function auditCitationEntailment(
         }
 
         auditItems.push({
-          claimSnippet: para.slice(0, 140) + "...",
-          sourceId: src.source_id,
-          sourceTitle: src.canonical_title,
-          sourceUrl: src.canonical_url,
+          claimSnippet: para.slice(0, 120) + "...",
+          sourceTitle: src.title,
+          sourceUrl: src.url,
           status,
-          supportLevel,
           reason,
         });
       }
@@ -109,7 +86,6 @@ export function auditCitationEntailment(
     verifiedCount,
     partiallySupportedCount,
     unsupportedCount,
-    wrongPaperAttributionCount,
     citationEntailmentRatio,
     auditItems,
   };

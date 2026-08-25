@@ -163,26 +163,22 @@ export function rankAndFilterSources(
       abstractOrContent: raw.content,
     });
 
-    const sourceId = `src_${normalizedSources.length + 1}`;
+    const id = `src_${normalizedSources.length + 1}`;
     const year = raw.year || (raw.yearOrId ? parseInt(raw.yearOrId, 10) : undefined);
 
     normalizedSources.push({
-      source_id: sourceId,
-      canonical_title: raw.title.trim() || "Untitled Source",
-      normalized_title: raw.title.trim().toLowerCase(),
-      canonical_url: cleanUrl,
+      id,
+      title: raw.title.trim() || "Untitled Source",
+      url: cleanUrl,
       authors: raw.authors && raw.authors.length > 0 ? raw.authors : ["Research Author(s)"],
-      publication_year: isNaN(year!) ? undefined : year,
+      year: isNaN(year!) ? undefined : year,
       yearOrId: raw.yearOrId || (year ? String(year) : "Recent"),
       venue: raw.venue,
-      source_type: raw.type || classification.tier.split(":")[0]!,
-      source_tier: classification.tier,
+      type: raw.type || classification.tier.split(":")[0]!,
+      tier: classification.tier,
       tierRank: classification.rank,
-      retrieved_urls: [cleanUrl],
-      aliases: [raw.title],
       abstractOrSnippet: raw.content || "",
       citationCount: raw.citationCount,
-      verification_status: "VERIFIED",
       isPrimarySource: classification.isPrimary,
     });
   }
@@ -195,15 +191,15 @@ export function rankAndFilterSources(
     }
 
     // 2. Topical keyword density in title
-    const aMatches = topicKeywords.filter((k) => a.canonical_title.toLowerCase().includes(k)).length;
-    const bMatches = topicKeywords.filter((k) => b.canonical_title.toLowerCase().includes(k)).length;
+    const aMatches = topicKeywords.filter((k) => a.title.toLowerCase().includes(k)).length;
+    const bMatches = topicKeywords.filter((k) => b.title.toLowerCase().includes(k)).length;
     if (aMatches !== bMatches) {
       return bMatches - aMatches;
     }
 
     // 3. Year (newer first)
-    const aYear = a.publication_year ?? 0;
-    const bYear = b.publication_year ?? 0;
+    const aYear = a.year ?? 0;
+    const bYear = b.year ?? 0;
     return bYear - aYear;
   });
 }
