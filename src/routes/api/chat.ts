@@ -816,9 +816,12 @@ Title: "${curPage.title}"
         }
 
         const gateway = createAiGatewayProvider(key);
-        // For deep research, stop after 2 steps (1 tool call + optional 1 short text turn)
-        // to avoid the model timing out while trying to re-generate the full report.
-        const stopCondition = body.deepResearch ? stepCountIs(2) : stepCountIs(50);
+        // For deep research, stop after step 1 (1 tool call only).
+        // A 2nd step would send the entire ~10k-token report back to the LLM as context,
+        // which frequently fails with context-length / rate-limit errors and causes
+        // the "Completed with warnings" dropout. The UI reads the report directly from
+        // the tool output, so no follow-up text generation is needed.
+        const stopCondition = body.deepResearch ? stepCountIs(1) : stepCountIs(50);
         const modelMessages = await convertToModelMessages(sanitizedUiMessages);
 
         // createUIMessageStream keeps the HTTP response alive via writer.merge().
@@ -833,46 +836,8 @@ Title: "${curPage.title}"
               tools,
               maxRetries: 5,
               stopWhen: stopCondition,
-              onFinish: async ({ text, steps }) => {
-                if (!assistantPersisted) {
-                  const parts: Array<{ type: string; text?: string; toolName?: string; input?: unknown; output?: unknown; state?: string }> = [];
-                  if (Array.isArray(steps)) {
-                    for (const step of steps) {
-                      if (Array.isArray(step.toolCalls)) {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        for (const tc of step.toolCalls as any[]) {
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          const res = (step.toolResults as any[])?.find((tr: any) => tr.toolCallId === tc.toolCallId);
-                          parts.push({
-                            type: `tool-${tc.toolName}`,
-                            toolName: tc.toolName,
-                            input: tc.args ?? tc.input,
-                            output: res?.result ?? res?.output,
-                            state: res ? "output-available" : "output-error",
-                          });
-                        }
-                      }
-                    }
-                  }
-                  if (text) {
-                    parts.push({ type: "text", text });
-                  }
-                  if (parts.length === 0) {
-                    parts.push({ type: "text", text: text || "" });
-                  }
-                  const fallbackMsg = {
-                    id: nanoid(),
-                    role: "assistant",
-                    parts,
-                  };
-                  await persistAssistant(fallbackMsg, fallbackMsg.id);
-                }
-              },
             });
 
-            // Merge the streamText output into the outer UI stream.
-            // writer.merge() consumes the inner stream without closing the outer one,
-            // keeping bytes flowing to the client during long tool calls.
             writer.merge(
               result.toUIMessageStream({
                 originalMessages: uiMessages,
