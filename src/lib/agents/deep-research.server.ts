@@ -303,9 +303,7 @@ Your task:
 5. Do NOT add any claim, statistic, or figure that isn't explicitly present
    in the raw evidence above. Do not fill gaps with general knowledge.
 
-Output a findings summary of no more than 400-500 words. This will be handed
-to a Verifier agent, not shown directly to the user — prioritize traceability
-and honesty over polish.`;
+Output a detailed, substantive findings summary (500-800 words) detailing the specific mechanisms, architectures, methodologies, quantitative data, and evidence. This will be handed to a Verifier agent, not shown directly to the user — prioritize concrete factual depth, traceability, and honesty.`;
 
   let findingsSummary = "";
   try {
@@ -535,14 +533,14 @@ async function writePublicationReport(
   });
 
   const formattedSources = sortedSources
-    .slice(0, 15) // take top 15 highest ranked sources
+    .slice(0, 10) // top 10 most relevant/authoritative verified sources
     .map((s, i) => `${i + 1}. [**${s.title}**](${s.url}) (${s.yearOrId}) — *${s.type}*`)
     .join("\n");
 
   const sourcesMarkdown = `### Sources & Literature References\n\n${formattedSources}`;
 
-  const writerPrompt = `You are an expert Research Writer Agent.
-Write a definitive, clean, and comprehensive deep research report based strictly on the verified research dossier.
+  const writerPrompt = `You are an expert Technical Synthesis Author and Research Writer.
+Write an extensive, definitive, long-form deep research report based strictly on the verified research dossier.
 
 User Topic: "${topic}"
 Research Scope: ${plan.scope}
@@ -553,37 +551,47 @@ ${verifiedDossier}
 Verified Source List:
 ${formattedSources}
 
+Target Depth & Length:
+- Write an exhaustive, highly detailed technical publication (1,500 to 3,000+ words).
+- Prioritize deep, continuous narrative prose paragraphs that explain mechanisms, theory, system architecture, engineering decisions, and practical tradeoffs in thorough detail.
+
 Report Structure:
-1. Executive Summary:
-   High-level breakthrough context, core principles, and foundational shifts.
-2. Deep Dive Sections:
-   - Concrete, detailed explanations of the core topics.
-   - Proper attribution of methods and findings.
-3. Key Takeaways & Practical Recommendations.
-4. Conclusion.
+1. Executive Summary & State-of-the-Art Landscape (2-3 extensive paragraphs):
+   - Set the strategic landscape, foundational breakthroughs, core paradigms, and high-level synthesis of findings.
+2. Foundational Architecture & Mechanistic Deep Dives (multiple rich, multi-paragraph sections):
+   - Exhaustively unpack the underlying mechanics: explain *how* and *why* things work, step-by-step execution flows, protocols, internal representations, and algorithms.
+   - Use standard LaTeX ($inline$ or $$block$$) for mathematical expressions, equations, and formulations where appropriate.
+3. Implementation Patterns, Frameworks & Practical Workflows:
+   - Provide concrete, end-to-end operational workflows, engineering patterns, and practical execution details.
+4. Comparative Analysis, Bottlenecks & Tradeoffs:
+   - Provide deep analytical narrative examining tradeoffs, failure modes, computational/scaling constraints, and design alternatives.
+   - You may include AT MOST ONE concise, high-signal summary comparison table in this section to synthesize key dimensions.
+5. Empirical Evidence & Benchmark Performance:
+   - Synthesize verified empirical metrics, evaluation benchmarks, and quantitative performance grounded strictly in the dossier.
+6. Strategic Implications, Actionable Takeaways & Research Gaps:
+   - Concrete takeaways, architectural recommendations, and explicitly identified open research challenges or unverified performance constraints.
 
 Strict Writing Rules:
-1. NO EMOJIS: Keep the entire report completely emoji-free and professional.
-2. NO HALLUCINATED STATISTICS:
-   - Do NOT invent metrics or figures.
-   - Only quote numeric figures that are explicitly present in the verified dossier above.
+1. PROSE-FIRST EXPANSIVE WRITING:
+   - Prioritize rich, exhaustive narrative prose over tables and bulleted lists.
+   - Do NOT substitute tables for explanatory text. Tables should only be used as occasional, concise summary aids (maximum 1-2 tables across the entire report). All core concepts, architectures, and findings MUST be thoroughly explained in continuous, well-developed paragraphs.
+2. SEAMLESS INLINE CITATIONS WITHOUT REPETITION:
+   - Naturally integrate citations into the prose flow as standard academic in-text references (e.g. *[Author, Year]* or *(Smith et al., 2024)*) matching entries in the verified source list.
+   - Do NOT output repetitive source/link dumps at the end of each section. The complete reference bibliography is automatically appended once at the end of the document.
+   - If a claim lacks an exact structured source ID, cite it by author/organization name in plain text rather than creating an identifier-shaped placeholder.
+3. NO EMOJIS: Keep the entire report completely emoji-free, formal, and authoritative.
+4. NO HALLUCINATED STATISTICS OR IDENTIFIERS:
+   - Do NOT invent metrics, percentages, benchmark numbers, or citation identifiers.
+   - Only quote figures and identifiers explicitly present in the verified dossier above.
    - If the dossier marks something as "[Unverified — omit]", do NOT include it.
-   - RESEARCH GAPS FOR QUANTITATIVE CONSTRAINTS: If the verified dossier lacks quantitative benchmark or latency data for a topic that has a numeric performance constraint, explicitly state that as a named research gap (do not silently omit it and do not invent numbers to fill it).
-3. PARADIGM & CONTEXT INTEGRITY:
-   - Never treat disparate operational contexts (e.g. theoretical vs. applied, synthetic benchmarks vs. live production, training-time vs. runtime mechanisms) as interchangeable support for a single claim. Where the dossier's audit flags an operational or category mismatch, state the distinction explicitly in the report rather than citing it as if it directly transfers.
-4. TEMPORAL HONESTY:
-   - Do NOT present speculative future projections as historical facts.
-5. CITATION GROUNDING & INTEGRITY:
-   - Every inline citation in the body of the report MUST correspond to an entry in the supplied verified sources list (formattedSources / verified dossier) — cited by title or short reference — rather than being freely generated as prose text disconnected from that list.
-   - If a claim does not have a matching structured source in the verified list, cite it by source name in plain text or omit the citation rather than inventing an identifier-shaped placeholder.
-   - Do NOT cite papers or sources that are completely unrelated to the core topic.
-6. PROVENANCE & RIGOR DIFFERENTIATION IN COMPARISONS:
-   - When the dossier includes multiple comparable items of clearly different provenance or rigor (e.g., peer-reviewed research vs. industry engineering blog vs. commercial/vendor marketing vs. academic curriculum vs. for-profit program/promotional content), you MUST explicitly note that distinction in comparison tables and text rather than presenting all of them under a single undifferentiated "Verified" status.
-   - The Verification Status column or label must reflect the actual evidentiary tier (e.g., "Verified (Peer-Reviewed Paper)", "Verified (Official Documentation)", "Vendor Claim (Unbenchmarked)", "Industry Survey") and never imply equal rigor across fundamentally disparate source types.
-7. TABLE CONSOLIDATION & FORMATTING:
-   - Consolidate findings into fewer, larger comparison tables when multiple small tables would otherwise share the same columns (e.g., "Verified Source", "Temporal Validity", "Verification Status") — merge them into one unified matrix per major section instead of fragmenting into many 2-3 row tables.
-   - Use clean, structured, highly readable Markdown formatting.
-   - All markdown tables (if any) must be properly formatted with | separators.`;
+   - If quantitative data is absent for a constrained topic, explicitly state that as a named research gap in the prose.
+5. PROVENANCE & RIGOR DIFFERENTIATION:
+   - When the dossier includes multiple comparable items of clearly different provenance or rigor (e.g., peer-reviewed research vs. industry engineering blog vs. vendor marketing vs. academic program vs. for-profit course), you MUST explicitly note that distinction in the analytical prose and comparison table rather than presenting all of them under a single undifferentiated "Verified" status.
+   - The Verification Status column or label must reflect the actual evidentiary tier (e.g., "Verified (Peer-Reviewed Paper)", "Verified (Official Documentation)", "Vendor Claim (Unbenchmarked)", "Industry Survey").
+6. PARADIGM & CONTEXT INTEGRITY:
+   - Never treat disparate operational contexts (e.g. theoretical vs. applied, synthetic benchmarks vs. live production, training-time vs. runtime mechanisms) as interchangeable support for a single claim. State distinctions clearly in the text.
+7. TEMPORAL HONESTY:
+   - Do NOT present speculative future projections as historical facts.`;
 
   let report = "";
   try {
