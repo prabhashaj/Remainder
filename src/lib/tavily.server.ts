@@ -104,6 +104,7 @@ export async function tavilySearch(
     includeImages?: boolean;
     includeDomains?: string[];
     depth?: "basic" | "advanced";
+    timeRange?: "day" | "week" | "month" | "year" | "d" | "w" | "m" | "y" | string;
   } = {},
 ): Promise<TavilySearch> {
   const key = process.env["TAVILY_API_KEY"];
@@ -111,7 +112,7 @@ export async function tavilySearch(
   const depth = opts.depth ?? "basic"; // Cost optimization: default to 'basic' (1 credit vs 2 credits)
 
   // Check cache first for $0 cost on repeated queries
-  const cacheKey = `${query.toLowerCase().trim()}:${depth}:${opts.includeImages ? 1 : 0}:${opts.includeDomains?.slice().sort().join(",") ?? ""}:${maxResults}`;
+  const cacheKey = `${query.toLowerCase().trim()}:${depth}:${opts.includeImages ? 1 : 0}:${opts.includeDomains?.slice().sort().join(",") ?? ""}:${maxResults}:${opts.timeRange ?? ""}`;
   const cached = searchCache.get(cacheKey);
   if (cached) {
     return cached;
@@ -133,6 +134,7 @@ export async function tavilySearch(
           include_answer: true,
           include_images: opts.includeImages ?? false,
           include_image_descriptions: opts.includeImages ?? false,
+          ...(opts.timeRange ? { time_range: opts.timeRange } : {}),
           ...(opts.includeDomains?.length ? { include_domains: opts.includeDomains } : {}),
         }),
       });

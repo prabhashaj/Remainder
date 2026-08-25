@@ -111,12 +111,20 @@ export function getResearchTools(
           .describe(
             "The targeted search query, including domain context keywords if needed for disambiguation",
           ),
+        time_range: z
+          .enum(["day", "week", "month", "year", "d", "w", "m", "y", ""])
+          .optional()
+          .describe("Optional time range for the search (e.g. 'day' for yesterday/today, 'week' for recent events)"),
       }),
-      execute: async ({ query }: { query: string }) =>
+      execute: async ({ query, time_range }) =>
         wrapTool(
           "webSearch",
           async () => {
-            const res = await tavilySearch(query, { maxResults: 5, depth: "basic" });
+            const res = await tavilySearch(query, {
+              maxResults: 5,
+              depth: "basic",
+              ...(time_range ? { timeRange: time_range } : {}),
+            });
             const formattedSources = res.results.map(
               (r, i) => `${i + 1}. [**${r.title}**](${r.url}) — *${r.domain}*`,
             );

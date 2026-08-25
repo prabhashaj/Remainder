@@ -2,7 +2,7 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createAiGatewayProvider, getResearchModelName } from "@/lib/ai-gateway.server";
+import { createAiGatewayProvider, getResearchModelName, getAiModelName } from "@/lib/ai-gateway.server";
 import { log } from "@/lib/logger.server";
 import {
   searchArxivServer,
@@ -194,6 +194,7 @@ async function executeSubagentWorker(
   subtask: ResearchSubtask,
   gateway: ReturnType<typeof createAiGatewayProvider>,
   modelName: string,
+  onStepProgress?: (step: string, details: string) => void,
 ): Promise<SubagentFinding> {
   const [arxivPapers, academicPapers, ...webResultsArray] = await Promise.all([
     searchArxivServer(subtask.arxivQuery, {
@@ -260,41 +261,62 @@ async function executeSubagentWorker(
     evidenceLines.push(`- [${wr.title}](${wr.url}): ${wr.content.slice(0, 350)}...`);
   }
 
-  const extractedArchitectures = allArxivPapers.slice(0, 4).map((p) => p.title);
-  const paperBulletPoints = allArxivPapers
-    .slice(0, 5)
-    .map(
-      (p) =>
-        `• [${p.title}](${p.arxivUrl || p.pdfUrl}) (${p.published ? p.published.slice(0, 10) : "Recent"})\n  Authors: ${p.authors.slice(0, 3).join(", ")}\n  Abstract: ${p.summary.slice(0, 300)}...`,
-    )
-    .join("\n\n");
+  const subagentSynthesisPrompt = `You are a Research Subagent focused on ONE specific investigation objective.
 
-  const academicBulletPoints = academicPapers
-    .slice(0, 3)
-    .map((ap) => `• [${ap.title}](${ap.url}) (${ap.year || "Recent"})\n  Abstract: ${ap.abstract.slice(0, 250)}...`)
-    .join("\n\n");
+Subtask: "${subtask.title}"
+Objective: ${subtask.objective}
 
-  const webBulletPoints = allWebResults
-    .slice(0, 5)
-    .map((w) => `• [${w.title}](${w.url}): ${w.content.slice(0, 250)}...`)
-    .join("\n\n");
+Raw evidence gathered from arXiv, academic databases, and web search:
+${evidenceLines.join("\n")}
 
-  const findingsSummary = [
-    `Specialized Subagent Analysis for "${subtask.title}" (${subtask.objective}):`,
-    `Discovered ${allArxivPapers.length} arXiv papers, ${academicPapers.length} academic preprints, and ${allWebResults.length} web benchmark sources.`,
-    paperBulletPoints ? `Primary arXiv Preprints:\n${paperBulletPoints}` : "",
-    academicBulletPoints ? `Academic Literature:\n${academicBulletPoints}` : "",
-    webBulletPoints ? `Web & Technical Metrics:\n${webBulletPoints}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+Your task:
+1. Filter this raw evidence down to only what is actually relevant to the
+   objective above. Discard sources that are tangential, off-topic, or don't
+   meaningfully address the objective, even if they were returned by search.
+2. Synthesize the relevant evidence into a concise, structured findings
+   summary — organized by sub-claim, not by source. Do not just re-list
+   abstracts.
+3. For each claim you include, note which source(s) support it, so the
+   Verifier agent downstream can trace it back.
+4. Flag disagreement: if sources conflict on a fact, note both positions
+   rather than silently picking one.
+5. Do NOT add any claim, statistic, or figure that isn't explicitly present
+   in the raw evidence above. Do not fill gaps with general knowledge.
+
+Output a findings summary of no more than 400-500 words. This will be handed
+to a Verifier agent, not shown directly to the user — prioritize traceability
+and honesty over polish.`;
+
+  let findingsSummary = "";
+  try {
+    const { text } = await generateText({
+      model: gateway(getAiModelName()), // cheaper/faster model — see point 1 from before
+      system: "You are a rigorous research subagent. You filter noise and synthesize only well-sourced findings for a downstream fact-checker.",
+      prompt: subagentSynthesisPrompt,
+    });
+    findingsSummary = text;
+  } catch (err) {
+    log("warn", "subagent_synthesis_failed", { subtaskId: subtask.id, error: String(err) });
+    findingsSummary = evidenceLines.join("\n").slice(0, 2000) + "\n\n[Note: Subagent synthesis failed, showing truncated raw findings.]";
+  }
+
+
+
+
+
+  if (onStepProgress) {
+    onStepProgress(
+      `Research Subagent: ${subtask.title}`,
+      `Completed synthesis of ${allArxivPapers.length} arXiv papers and ${allWebResults.length} web sources.`,
+    );
+  }
 
   return {
     subtaskId: subtask.id,
     title: subtask.title,
     objective: subtask.objective,
     findingsSummary,
-    keyArchitectures: extractedArchitectures,
+    keyArchitectures: allArxivPapers.slice(0, 4).map((p) => p.title),
     papers: allArxivPapers.map((p) => ({
       title: p.title,
       id: p.id,
@@ -398,30 +420,36 @@ async function verifyAndAuditEvidence(
   }
 
   const verifierPrompt = `You are an expert Fact-Checking and Verification Agent.
-Audit and cross-verify the following empirical findings gathered by parallel research subagents for the topic: "${topic}".
+Audit and cross-verify the following synthesized claims gathered by parallel research subagents for the topic: "${topic}".
+These findings have already been pre-filtered for relevance by the subagents. Your job is to audit them for accuracy, temporal validity, and hallucination removal.
 
 Scope: ${plan.scope}
 Temporal Bounds: ${plan.temporalConstraints}
 
-Raw Subagent Findings:
+Synthesized Subagent Findings:
 ${subagentDumps.join("\n")}
 
 Your Verification Tasks:
 1. TEMPORAL AUDIT: Cross-check dates and identify which findings are recent vs. older baselines.
 2. HALLUCINATION FIREWALL:
-   - REJECT any specific statistic, metric, or figure that was NOT explicitly sourced from a real, named publication in the raw findings above.
+   - REJECT any specific statistic, metric, or figure that was NOT explicitly sourced in the findings above.
    - Do NOT invent or synthesize any figures. If a statistic has no traceable citation, write "[Unverified — omit from report]" next to it.
    - Ground baseline metrics and statistics in empirical reality for the given topic.
-3. RELEVANCE AUDIT:
-   - Exclude any citation whose subject matter is completely disconnected from the research topic.
-4. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims clearly.`;
+3. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims clearly.`;
 
-  const { text: verifiedDossier } = await generateText({
-    model: gateway(modelName),
-    system:
-      "You are a rigorous Fact-Checking Agent. You cross-check literature, filter out hallucinations, and ensure the writer receives only verified facts.",
-    prompt: verifierPrompt,
-  });
+  let verifiedDossier = "";
+  try {
+    const { text } = await generateText({
+      model: gateway(modelName),
+      system:
+        "You are a rigorous Fact-Checking Agent. You cross-check literature, filter out hallucinations, and ensure the writer receives only verified facts.",
+      prompt: verifierPrompt,
+    });
+    verifiedDossier = text;
+  } catch (err) {
+    log("warn", "verifier_agent_failed", { error: String(err) });
+    verifiedDossier = subagentDumps.join("\n\n");
+  }
 
   return {
     verifiedDossier,
@@ -441,9 +469,25 @@ async function writePublicationReport(
   gateway: ReturnType<typeof createAiGatewayProvider>,
   modelName: string,
 ): Promise<{ report: string; sourcesMarkdown: string }> {
-  // Only include verified relevant sources in the bibliography
-  const formattedSources = verifiedSources
-    .slice(0, 12)
+  // Sort sources by relevance/recency
+  const sortedSources = [...verifiedSources].sort((a, b) => {
+    // 1. Prefer academic papers over web sources
+    const aIsAcademic = a.type.includes("arXiv") || a.type.includes("Academic");
+    const bIsAcademic = b.type.includes("arXiv") || b.type.includes("Academic");
+    if (aIsAcademic && !bIsAcademic) return -1;
+    if (!aIsAcademic && bIsAcademic) return 1;
+
+    // 2. Sort by year (descending)
+    const aYear = parseInt(a.yearOrId, 10);
+    const bYear = parseInt(b.yearOrId, 10);
+    if (!isNaN(aYear) && !isNaN(bYear)) {
+      return bYear - aYear;
+    }
+    return 0;
+  });
+
+  const formattedSources = sortedSources
+    .slice(0, 15) // take top 15 highest ranked sources
     .map((s, i) => `${i + 1}. [**${s.title}**](${s.url}) (${s.yearOrId}) — *${s.type}*`)
     .join("\n");
 
@@ -481,15 +525,22 @@ Strict Writing Rules:
    - Use clean, structured, highly readable Markdown formatting.
    - All markdown tables (if any) must be properly formatted with | separators.`;
 
-  const { text } = await generateText({
-    model: gateway(modelName),
-    system:
-      "You are an expert Research Writer Agent. You compose highly structured, thoroughly researched, and professional deep research reports.",
-    prompt: writerPrompt,
-  });
+  let report = "";
+  try {
+    const { text } = await generateText({
+      model: gateway(modelName),
+      system:
+        "You are an expert Research Writer Agent. You compose highly structured, thoroughly researched, and professional deep research reports.",
+      prompt: writerPrompt,
+    });
+    report = text;
+  } catch (err) {
+    log("warn", "writer_agent_failed", { error: String(err) });
+    report = `# Research Report on ${topic}\n\n${verifiedDossier}\n\n[Note: Final report synthesis failed. Raw verified dossier shown instead.]`;
+  }
 
   return {
-    report: `${text}\n\n${sourcesMarkdown}`,
+    report: `${report}\n\n${sourcesMarkdown}`,
     sourcesMarkdown,
   };
 }
@@ -534,7 +585,7 @@ export async function runDeepResearch(params: {
   );
 
   const subagentPromises = subtasks.map((subtask) =>
-    executeSubagentWorker(subtask, gateway, modelName).catch((err) => {
+    executeSubagentWorker(subtask, gateway, modelName, params.onStepProgress).catch((err) => {
       log("error", "subagent_worker_failed", { subtaskId: subtask.id, error: String(err) });
       return {
         subtaskId: subtask.id,
@@ -549,13 +600,6 @@ export async function runDeepResearch(params: {
   );
 
   const subagentResults = await Promise.all(subagentPromises);
-
-  for (const res of subagentResults) {
-    recordStep(
-      `Research Subagent: ${res.title}`,
-      `Retrieved ${res.papers.length} academic papers and ${res.webSources.length} web sources.`,
-    );
-  }
 
   // 3. Verifier Agent: Academic Fact-Checking & Temporal Verification
   recordStep(

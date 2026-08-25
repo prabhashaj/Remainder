@@ -16,6 +16,7 @@ Steps:
 3. Prefer well-regarded resources — YouTube tutorials, official documentation, free university courses, interactive platforms.
 4. Give a brief summary of what you found.
 5. NO EMOJIS: Do NOT use emojis in your summaries, titles, or resource notes. Keep all text completely emoji-free.
+6. TIMELINE AWARENESS: If the user implies recent information (e.g., 'latest', 'yesterday', 'recent'), specify the appropriate time_range in webSearch.
 
 If web search is unavailable, say so and suggest the user try again later.`;
 
@@ -49,9 +50,19 @@ export async function runResearch(params: {
   const tools = {
     webSearch: tool({
       description: "Search the web for learning resources, tutorials, and videos.",
-      inputSchema: z.object({ query: z.string().describe("The search query") }),
-      execute: async ({ query }: { query: string }) => {
-        const res = await tavilySearch(query, { maxResults: 5, depth: "basic" });
+      inputSchema: z.object({ 
+        query: z.string().describe("The search query"),
+        time_range: z
+          .enum(["day", "week", "month", "year", "d", "w", "m", "y", ""])
+          .optional()
+          .describe("Optional time range for the search (e.g. 'day' for yesterday/today, 'week' for recent events)"),
+      }),
+      execute: async ({ query, time_range }) => {
+        const res = await tavilySearch(query, {
+          maxResults: 5,
+          depth: "basic",
+          ...(time_range ? { timeRange: time_range } : {}),
+        });
         return {
           results: res.results.map((r) => ({
             title: r.title,
