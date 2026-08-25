@@ -200,7 +200,7 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {data.action_trail.map((act: any, i: number) => (
                 <div key={i} className="flex items-center gap-2 text-muted-foreground">
-                  <span className="text-emerald-500 font-bold">✓</span>
+                  <span className="text-primary font-bold">✓</span>
                   <span className="font-medium text-foreground">{act.step}:</span>
                   <span className="truncate">{act.details}</span>
                 </div>
@@ -211,11 +211,11 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
 
         {data.verified_papers_count !== undefined && (
           <div className="flex items-center gap-2 pt-1 font-medium text-muted-foreground text-xs">
-            <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              {data.verified_papers_count} Verified Papers Retrieved
+            <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+              {data.verified_papers_count} Verified Papers
             </Badge>
-            <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
-              {data.subagents_count || 4} Parallel Subagents
+            <Badge variant="outline" className="border-border bg-muted/30 text-muted-foreground">
+              {data.subagents_count || 4} Subagents
             </Badge>
           </div>
         )}

@@ -426,8 +426,7 @@ function DeepResearchChatCard({
   const isRunning = !isDone && !isError && isActivelyStreaming && !timedOut;
   const isInterrupted = (!isActivelyStreaming && !isDone && !output.report) || timedOut;
 
-  const topicQuery = output.plan?.topic || input.topic || input.query || "Academic & Technical Investigation";
-  const temporalConstraint = output.plan?.temporalConstraints || "Recent Verified Literature";
+  const topicQuery = output.plan?.topic || input.topic || input.query || "Research Investigation";
 
   // Client-side execution timer: triggers timeout error if exceeding 280s (under the 300s server maxDuration)
   useEffect(() => {
@@ -455,7 +454,7 @@ function DeepResearchChatCard({
           : "Deep research investigation encountered an error.");
 
     return (
-      <div className="my-2.5 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive">
+      <div className="my-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-xs text-destructive">
         <div className="flex items-start gap-2.5">
           <AlertCircle className="size-4 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -477,31 +476,31 @@ function DeepResearchChatCard({
     );
   }
 
-  // While running and no report yet: render active progress banner with timer
+  // While running and no report yet: render clean progress banner matching theme
   if (isRunning && !output.report) {
     return (
-      <div className="my-2.5 overflow-hidden rounded-2xl border border-emerald-500/30 bg-card/95 p-4 shadow-sm">
+      <div className="my-2 overflow-hidden rounded-2xl border border-border/80 bg-card/80 p-4 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-            <Microscope className="size-5 animate-pulse" />
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <Microscope className="size-4.5 animate-pulse" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-ping" />
-                DEEP RESEARCH IN PROGRESS
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                <span className="size-1.5 rounded-full bg-primary animate-ping" />
+                Research in progress
               </span>
               {elapsedSeconds > 0 && (
                 <span className="font-mono text-[11px] text-muted-foreground">
-                  {elapsedSeconds}s elapsed
+                  {elapsedSeconds}s
                 </span>
               )}
             </div>
-            <h3 className="font-display text-sm font-semibold text-foreground mt-0.5 truncate">
+            <h3 className="font-display text-sm font-semibold text-foreground mt-1 truncate">
               {topicQuery}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Coordinating parallel arXiv searches, academic databases, fact-checking verifier, and report writer...
+              Searching academic databases, verifying claims, and synthesizing report…
             </p>
           </div>
         </div>
@@ -520,81 +519,58 @@ function DeepResearchChatCard({
   const subagentsCount = output.subagents_count || (subtasksList.length > 0 ? subtasksList.length : 4);
 
   return (
-    <div className="my-2.5 overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-sm transition-all hover:border-primary/40">
+    <div className="my-2 overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-xs transition-all">
       <div className="p-4 sm:p-5">
+        {/* Clean Header */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="size-5" />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Sparkles className="size-4" />
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="size-3" />
-                  DEEP RESEARCH SYNTHESIZED
-                </span>
-                <span className="text-[11px] font-mono text-muted-foreground">
-                  Window: {temporalConstraint}
-                </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Deep Research Report</span>
+                <span>•</span>
+                <span>{verifiedPapersCount} sources</span>
+                <span>•</span>
+                <span>{subagentsCount} subagents</span>
               </div>
-              <h3 className="font-display text-sm sm:text-base font-bold text-foreground mt-0.5">
+              <h3 className="font-display text-base font-bold text-foreground mt-0.5 truncate">
                 {output.plan?.topic || topicQuery}
               </h3>
             </div>
           </div>
         </div>
 
-        {output.plan?.scope && (
-          <p className="mt-2 text-xs sm:text-sm leading-relaxed text-muted-foreground">
-            {output.plan.scope}
-          </p>
-        )}
-
-        {/* Stats Badges */}
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 font-semibold text-emerald-600 dark:text-emerald-400">
-            {verifiedPapersCount} Verified Papers Retrieved
-          </span>
-          <span className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-0.5 font-semibold text-primary">
-            {subagentsCount} Subagent Workers
-          </span>
-          <span className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 font-semibold text-blue-600 dark:text-blue-400">
-            Verifier Agent Audited
-          </span>
-          <span className="rounded-lg bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 font-semibold text-purple-600 dark:text-purple-400">
-            Writer Agent Formatted
-          </span>
-        </div>
-
-        {/* Expandable Execution Trail & Subagents Work */}
+        {/* Collapsible Agent Actions & Trail */}
         {(subtasksList.length > 0 || actionTrail.length > 0) && (
-          <div className="mt-3 pt-2.5 border-t border-border/50">
+          <div className="mt-3 border-t border-border/40 pt-2.5">
             <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-              <CollapsibleTrigger className="group flex w-full items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground">
+              <CollapsibleTrigger className="group flex w-full items-center justify-between py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
                 <span className="flex items-center gap-1.5">
                   <Network className="size-3.5 text-primary" />
-                  {detailsOpen ? "Hide Subagents & Action Trail" : "View Subagents Work & Action Trail"}
+                  {detailsOpen ? "Hide agent steps" : "View agent steps & sources"}
                 </span>
                 <ChevronDown className={cn("size-3.5 transition-transform duration-200", detailsOpen && "rotate-180")} />
               </CollapsibleTrigger>
 
-              <CollapsibleContent className="mt-2.5 space-y-2.5 pt-1 text-xs">
+              <CollapsibleContent className="mt-2 space-y-2 pt-1 text-xs">
                 {subtasksList.length > 0 && (
                   <div className="space-y-1">
-                    <div className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
-                      Parallel Subtasks Executed
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Subtasks
                     </div>
                     <div className="grid gap-1">
                       {subtasksList.map((st, i) => (
                         <div
                           key={st.id || i}
-                          className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/30 p-2 text-xs"
+                          className="flex items-start gap-2 rounded-lg border border-border/40 bg-muted/20 p-2 text-xs"
                         >
-                          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono font-bold text-[10px] text-primary">
+                          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/15 font-mono font-bold text-[10px] text-primary">
                             {i + 1}
                           </span>
                           <div className="min-w-0">
-                            <div className="font-semibold text-foreground">{st.title}</div>
+                            <div className="font-medium text-foreground">{st.title}</div>
                             <div className="text-[11px] text-muted-foreground mt-0.5">{st.objective}</div>
                           </div>
                         </div>
@@ -605,16 +581,16 @@ function DeepResearchChatCard({
 
                 {actionTrail.length > 0 && (
                   <div className="space-y-1">
-                    <div className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
-                      Coordinator Action Trail
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Action Trail
                     </div>
-                    <div className="space-y-1 font-mono text-[11px]">
+                    <div className="space-y-1 rounded-lg border border-border/40 bg-muted/20 p-2 font-mono text-[11px]">
                       {actionTrail.map((act, i) => (
                         <div key={i} className="flex items-start gap-2 text-muted-foreground">
-                          <span className="text-emerald-500 font-bold shrink-0">✓</span>
-                          <div>
+                          <span className="text-primary font-bold shrink-0">✓</span>
+                          <div className="min-w-0">
                             <span className="font-medium text-foreground">{act.step}: </span>
-                            <span>{act.details}</span>
+                            <span className="text-muted-foreground">{act.details}</span>
                           </div>
                         </div>
                       ))}
@@ -628,14 +604,14 @@ function DeepResearchChatCard({
 
         {/* Full Synthesized Technical Research Report */}
         {output.report && (
-          <div className="mt-4 pt-3.5 border-t border-border/60">
+          <div className="mt-4 border-t border-border/50 pt-4">
             <div className="text-foreground text-sm sm:text-base leading-relaxed">
               <MessageResponse>{output.report}</MessageResponse>
             </div>
             <SpeechAndCopyToolbar
               text={output.report}
               id={`deep-research-report-${part.toolInvocation?.toolCallId || "done"}`}
-              className="mt-3.5"
+              className="mt-3"
             />
           </div>
         )}
@@ -756,25 +732,25 @@ function DeepResearchToggleButton({
       disabled={disabled}
       title={
         active
-          ? "Deep Research Mode ON (Multi-Agent: Planner, Subagents, Verifier, Writer)"
-          : "Turn on Deep Research for multi-agent arXiv discovery, academic verification & publication report"
+          ? "Deep Research ON"
+          : "Turn on Deep Research for multi-agent literature search & verified report"
       }
       className={cn(
         "inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition-all duration-200 cursor-pointer select-none",
         active
-          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-xs ring-1 ring-emerald-500/25 hover:bg-emerald-500/20"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50 hover:border-border",
+          ? "bg-primary/15 text-primary border border-primary/30 shadow-xs ring-1 ring-primary/20 hover:bg-primary/20"
+          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground border border-transparent hover:border-border/50",
       )}
     >
       <Microscope
         className={cn(
           "size-3.5 transition-transform",
-          active ? "text-emerald-600 dark:text-emerald-400 scale-105" : "text-muted-foreground",
+          active ? "text-primary scale-105" : "text-muted-foreground",
         )}
       />
       <span>Deep Research</span>
       {active && (
-        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="size-1.5 rounded-full bg-primary animate-pulse" />
       )}
     </button>
   );
@@ -1485,9 +1461,14 @@ export function RemiChat({
                           const roadmapParts = group.parts.filter((p) => isRoadmapTool(p));
                           const researchParts = group.parts.filter((p) => isDeepResearchTool(p));
                           const notebookParts = group.parts.filter((p) => isNotebookTool(p));
+                          const otherToolParts = group.parts.filter(
+                            (p) => !isRoadmapTool(p) && !isDeepResearchTool(p) && !isNotebookTool(p),
+                          );
                           return (
                             <div key={gIdx} className="space-y-2">
-                              <ToolGroup parts={group.parts} isActivelyStreaming={isActivelyStreaming} />
+                              {otherToolParts.length > 0 && (
+                                <ToolGroup parts={otherToolParts} isActivelyStreaming={isActivelyStreaming} />
+                              )}
                               {roadmapParts.map((rp, rpIdx) => (
                                 <RoadmapChatCard key={rpIdx} part={rp} isActivelyStreaming={isActivelyStreaming} />
                               ))}
