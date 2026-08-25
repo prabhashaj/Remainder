@@ -1,3 +1,8 @@
+export const maxDuration = 300;
+export const config = {
+  maxDuration: 300,
+};
+
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 // @ts-ignore - dist/server/server.js is compiled at build time

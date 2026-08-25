@@ -30,6 +30,7 @@ import { getResearchTools } from "@/lib/chat-tools/research";
 import { getDocumentTools } from "@/lib/chat-tools/documents";
 import { getNotebookTools } from "@/lib/chat-tools/notebook";
 import { getSystemTools } from "@/lib/chat-tools/system";
+import { classifyQueryRouting } from "@/lib/agents/router.server";
 
 const SYSTEM_PROMPT = `You are Remi, an intelligent, versatile AI tutor and workspace assistant inside Remispace.
 
@@ -56,7 +57,7 @@ Capabilities & Tools:
     1. Call \`createRoadmap\` using any details provided (or sensible defaults for omitted points).
     2. Provide a structured summary of the learning phases and milestones.
 - Workspace Management: Create and update tasks, goals, milestones, and notebook pages when requested (createTask, createGoal, generateNotebook, editNotebook).
-- Memory & Personalization (saveMemory): Whenever the user shares a personal preference, learning style, background, or long-term objective, call \`saveMemory\` immediately to store it in their workspace profile.`;
+- Memory & Personalization (saveMemory / updateMemory / forgetMemory): Whenever the user shares a personal preference, learning style, background, or long-term objective, call \`saveMemory\` immediately to store or update it in their workspace profile. If an earlier preference is changed or obsolete, update or forget it.`;
 
 type ChatBody = {
   messages?: unknown;
@@ -74,6 +75,7 @@ function fmtDate(d: Date): string {
 
 async function buildUserContext(
   supabase: ReturnType<typeof createClient<Database>>,
+  userId: string,
 ): Promise<string> {
   const now = new Date();
   const todayStr = fmtDate(now);
@@ -93,23 +95,40 @@ async function buildUserContext(
     supabase
       .from("tasks")
       .select("id,title,done,due_date,created_at,roadmap_id")
+      .eq("user_id", userId)
       .eq("done", false)
       .limit(50),
-    supabase.from("goals").select("id,title,progress,status,target_date,created_at").limit(20),
+    supabase
+      .from("goals")
+      .select("id,title,progress,status,target_date,created_at")
+      .eq("user_id", userId)
+      .limit(20),
     supabase
       .from("roadmaps")
       .select("id,topic,goal_id,created_at")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(5),
     supabase
       .from("roadmap_items")
       .select("id,roadmap_id,title,done,updated_at,created_at")
+      .eq("user_id", userId)
       .limit(100),
-    supabase.from("journal_entries").select("mood,day").order("day", { ascending: false }).limit(7),
-    supabase.from("focus_sessions").select("minutes,counted_minutes,created_at").gte("created_at", thirtyDaysAgo.toISOString()),
+    supabase
+      .from("journal_entries")
+      .select("mood,day")
+      .eq("user_id", userId)
+      .order("day", { ascending: false })
+      .limit(7),
+    supabase
+      .from("focus_sessions")
+      .select("minutes,counted_minutes,created_at")
+      .eq("user_id", userId)
+      .gte("created_at", thirtyDaysAgo.toISOString()),
     supabase
       .from("agent_memories")
-      .select("content,category")
+      .select("content,category,importance")
+      .eq("user_id", userId)
       .not("category", "in", "(flashcard,quiz,quiz_attempt)")
       .order("importance", { ascending: false })
       .order("created_at", { ascending: false })
@@ -117,11 +136,13 @@ async function buildUserContext(
     supabase
       .from("study_resources")
       .select("id,title,kind,status")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(15),
     supabase
       .from("milestones")
       .select("id,goal_id,title,done")
+      .eq("user_id", userId)
       .order("position", { ascending: true }),
   ]);
 
@@ -257,7 +278,7 @@ async function getOrBuildUserContext(
   if (cached) {
     return cached;
   }
-  const text = await buildUserContext(supabase);
+  const text = await buildUserContext(supabase, userId);
   setCachedUserContext(userId, text, 20_000);
   return text;
 }
@@ -732,8 +753,23 @@ Title: "${curPage.title}"
         };
 
         // --- Sanitize UI messages to prevent raw PDF dataUrl payloads from crashing AI Gateway ---
+        // Find the latest message index for each file attachment so we only inline full text once
+        const lastFileMsgIdxMap: Record<string, number> = {};
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sanitizedUiMessages = uiMessages.map((m: any) => {
+        uiMessages.forEach((m: any, mIdx: number) => {
+          if (Array.isArray(m.parts)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            m.parts.forEach((p: any) => {
+              if (p.type === "file") {
+                const fn = p.filename ?? p.name ?? "attached document";
+                lastFileMsgIdxMap[fn] = mIdx;
+              }
+            });
+          }
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sanitizedUiMessages = uiMessages.map((m: any, mIdx: number) => {
           if (!Array.isArray(m.parts)) return m;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const cleanParts = m.parts.map((p: any) => {
@@ -743,12 +779,20 @@ Title: "${curPage.title}"
             }
             if (p.type === "file") {
               const filename = p.filename ?? p.name ?? "attached document";
+              const isLatestReference = lastFileMsgIdxMap[filename] === mIdx;
               const textContent = attachedTextMap[filename];
               if (textContent) {
-                return {
-                  type: "text",
-                  text: `[Attached Document: "${filename}"]\n--- BEGIN DOCUMENT CONTENT ("${filename}") ---\n${textContent.slice(0, 40000)}\n--- END DOCUMENT CONTENT ---`,
-                };
+                if (isLatestReference) {
+                  return {
+                    type: "text",
+                    text: `[Attached Document: "${filename}"]\n--- BEGIN DOCUMENT CONTENT ("${filename}") ---\n${textContent.slice(0, 40000)}\n--- END DOCUMENT CONTENT ---`,
+                  };
+                } else {
+                  return {
+                    type: "text",
+                    text: `[Attached Document: "${filename}" — content previously analyzed in earlier turn]`,
+                  };
+                }
               }
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const uploadedDoc = rawUploaded.find((u: any) => u.filename === filename);
@@ -810,7 +854,50 @@ Title: "${curPage.title}"
 
         const chatModelName = isComplexResearchQuery ? getResearchModelName() : getAiModelName();
 
-        let finalSystemPrompt = systemPrompt;
+        // Fast query routing pre-pass (Option A) to inform model of search necessity
+        let routingDirective = "";
+        if (!body.deepResearch && lastUserText.trim().length > 3) {
+          try {
+            // Extract recent 2-3 turns for disambiguation context
+            const recentTurns = uiMessages
+              .slice(-4)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .map((m: any) => {
+                const txt =
+                  m.parts
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    ?.filter((p: any) => p.type === "text")
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    .map((p: any) => p.text)
+                    .join(" ") ?? "";
+                return `${m.role}: ${txt.slice(0, 300)}`;
+              })
+              .join("\n");
+
+            const routingPromise = classifyQueryRouting({
+              query: lastUserText,
+              apiKey: key,
+              conversationContext: recentTurns,
+              traceId,
+            });
+
+            // 1500ms non-blocking timeout: if fast model responds quickly, use routing directive; otherwise proceed
+            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+            const routingResult = await Promise.race([routingPromise, timeoutPromise]);
+
+            if (routingResult) {
+              if (routingResult.search_required && routingResult.confidence !== "low") {
+                routingDirective = `\n\nROUTING DIRECTIVE: Search analysis indicates external grounding is needed (${routingResult.reasoning}). You SHOULD call webSearch, searchArxiv, or searchPapers before finalizing claims.`;
+              } else if (!routingResult.search_required && routingResult.confidence === "high") {
+                routingDirective = `\n\nROUTING DIRECTIVE: Query is grounded in workspace data or established principles (${routingResult.reasoning}). Avoid unnecessary web searches.`;
+              }
+            }
+          } catch (routeErr) {
+            log("warn", "query_routing_classification_failed", { error: String(routeErr) }, { userId, traceId });
+          }
+        }
+
+        let finalSystemPrompt = `${systemPrompt}${routingDirective}`;
         if (body.deepResearch) {
           finalSystemPrompt += `\n\nCRITICAL DIRECTIVE: The user has EXPLICITLY activated Deep Research Mode. You MUST immediately call the \`deepResearch\` tool. After the tool returns its result, output ONLY a single short sentence: "Deep research complete — see the report card below." Do NOT repeat or re-summarize the report text.`;
         }
@@ -822,7 +909,17 @@ Title: "${curPage.title}"
         // the "Completed with warnings" dropout. The UI reads the report directly from
         // the tool output, so no follow-up text generation is needed.
         const stopCondition = body.deepResearch ? stepCountIs(1) : stepCountIs(50);
-        const modelMessages = await convertToModelMessages(sanitizedUiMessages);
+
+        // Sliding context window for model generation to prevent unbounded token/latency growth
+        // If history is longer than 20 messages, preserve the initial message (thread context) and the last 18 messages
+        const MAX_HISTORY_MESSAGES = 20;
+        let messagesForModel = sanitizedUiMessages;
+        if (sanitizedUiMessages.length > MAX_HISTORY_MESSAGES) {
+          const firstMsg = sanitizedUiMessages[0];
+          const recentMsgs = sanitizedUiMessages.slice(-(MAX_HISTORY_MESSAGES - 1));
+          messagesForModel = [firstMsg, ...recentMsgs];
+        }
+        const modelMessages = await convertToModelMessages(messagesForModel);
 
         // createUIMessageStream keeps the HTTP response alive via writer.merge().
         // Without this wrapper, the connection goes idle while deepResearch tool

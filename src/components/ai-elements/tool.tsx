@@ -52,6 +52,8 @@ const getToolName = (toolName: string, isRunning: boolean) => {
     generateNotebook: { active: "Generating study notebook", done: "Generated study notebook" },
     editNotebook: { active: "Updating study notebook", done: "Updated study notebook" },
     saveMemory: { active: "Saving memory note", done: "Saved memory note" },
+    updateMemory: { active: "Updating memory note", done: "Updated memory note" },
+    forgetMemory: { active: "Removing memory note", done: "Removed memory note" },
     readDocument: { active: "Reading document", done: "Read document" },
     deepResearch: { active: "Executing deep multi-agent research...", done: "Completed deep research" },
     getCurrentTime: { active: "Checking time", done: "Checked time" },

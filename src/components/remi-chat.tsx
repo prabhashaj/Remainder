@@ -153,6 +153,8 @@ function getToolLabel(
     generateNotebook: { active: "Creating notebook", done: "Created notebook" },
     editNotebook: { active: "Updating notebook", done: "Updated notebook" },
     saveMemory: { active: "Saving memory", done: "Saved memory" },
+    updateMemory: { active: "Updating memory", done: "Updated memory" },
+    forgetMemory: { active: "Removing memory", done: "Removed memory" },
     readDocument: { active: "Reading document", done: "Read document" },
     getCurrentTime: { active: "Checking time", done: "Checked time" },
     getWeather: { active: "Checking weather", done: "Checked weather" },

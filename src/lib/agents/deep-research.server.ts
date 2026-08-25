@@ -455,7 +455,7 @@ ${subagentDumps.join("\n")}
 
 Your Verification Tasks:
 1. TEMPORAL AUDIT: Cross-check dates and identify which findings are recent vs. older baselines.
-2. PARADIGM AUDIT: For each finding, check whether the source's actual operational context (training-time model/weight-level mechanisms vs. runtime/inference-time reasoning-level mechanisms) matches the context implied by how it is being used as evidence. Flag and label any mismatch explicitly — e.g., "[Training-time evidence — not directly applicable to runtime inference claims]" — rather than passing it through as if it directly supports the claim.
+2. PARADIGM & CONTEXT AUDIT: For each finding, verify whether the source's actual operational context (e.g. theoretical vs. applied, laboratory/synthetic benchmark vs. live production, historical baseline vs. contemporary system, or training-time vs. runtime mechanism) strictly matches the context required by the claim. Flag and label any category or operational mismatch explicitly (e.g., "[Context Mismatch: laboratory benchmark — not validated in live production]") rather than passing it through as direct evidentiary support.
 3. HALLUCINATION FIREWALL:
    - REJECT any specific statistic, metric, or figure that was NOT explicitly sourced in the findings above.
    - Do NOT invent or synthesize any figures. If a statistic has no traceable citation, write "[Unverified — omit from report]" next to it.
@@ -476,8 +476,25 @@ Your Verification Tasks:
     );
     verifiedDossier = text;
   } catch (err) {
-    log("warn", "verifier_agent_failed", { error: String(err) });
-    verifiedDossier = subagentDumps.join("\n\n");
+    log("warn", "verifier_primary_model_failed", { error: String(err) });
+    // Tier 2 Fallback: Attempt verification with fast/secondary model before resorting to raw dump
+    try {
+      const fallbackModel = getAiModelName();
+      const { text } = await withAiRateLimitRetry(
+        () =>
+          generateText({
+            model: gateway(fallbackModel),
+            system:
+              "You are a rigorous Fact-Checking Agent. You cross-check literature, filter out hallucinations, and ensure the writer receives only verified facts.",
+            prompt: verifierPrompt,
+          }),
+        { label: "Verifier Agent Fallback", maxRetries: 2 },
+      );
+      verifiedDossier = text;
+    } catch (fallbackErr) {
+      log("error", "verifier_fallback_failed", { error: String(fallbackErr) });
+      verifiedDossier = subagentDumps.join("\n\n");
+    }
   }
 
   return {
@@ -547,8 +564,8 @@ Strict Writing Rules:
    - Only quote numeric figures that are explicitly present in the verified dossier above.
    - If the dossier marks something as "[Unverified — omit]", do NOT include it.
    - RESEARCH GAPS FOR QUANTITATIVE CONSTRAINTS: If the verified dossier lacks quantitative benchmark or latency data for a topic that has a numeric performance constraint, explicitly state that as a named research gap (do not silently omit it and do not invent numbers to fill it).
-3. PARADIGM INTEGRITY:
-   - Never treat training-time evidence and runtime/inference-time evidence as interchangeable support for the same claim. Where the dossier's PARADIGM AUDIT flags a mismatch, state the distinction explicitly in the report rather than cite it as if it directly transfers.
+3. PARADIGM & CONTEXT INTEGRITY:
+   - Never treat disparate operational contexts (e.g. theoretical vs. applied, synthetic benchmarks vs. live production, training-time vs. runtime mechanisms) as interchangeable support for a single claim. Where the dossier's audit flags an operational or category mismatch, state the distinction explicitly in the report rather than citing it as if it directly transfers.
 4. TEMPORAL HONESTY:
    - Do NOT present speculative future projections as historical facts.
 5. CITATION QUALITY:
@@ -572,8 +589,25 @@ Strict Writing Rules:
     );
     report = text;
   } catch (err) {
-    log("warn", "writer_agent_failed", { error: String(err) });
-    report = `# Research Report on ${topic}\n\n${verifiedDossier}\n\n[Note: Final report synthesis failed. Raw verified dossier shown instead.]`;
+    log("warn", "writer_primary_model_failed", { error: String(err) });
+    // Tier 2 Fallback: Attempt synthesis with fast/secondary model before resorting to raw verified dossier
+    try {
+      const fallbackModel = getAiModelName();
+      const { text } = await withAiRateLimitRetry(
+        () =>
+          generateText({
+            model: gateway(fallbackModel),
+            system:
+              "You are an expert Research Writer Agent. You compose highly structured, thoroughly researched, and professional deep research reports.",
+            prompt: writerPrompt,
+          }),
+        { label: "Writer Agent Fallback", maxRetries: 2 },
+      );
+      report = text;
+    } catch (fallbackErr) {
+      log("error", "writer_fallback_failed", { error: String(fallbackErr) });
+      report = `# Research Report on ${topic}\n\n${verifiedDossier}\n\n[Note: Final report synthesis used fallback raw dossier format.]`;
+    }
   }
 
   return {
