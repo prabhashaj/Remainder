@@ -34,6 +34,7 @@ export interface ResearchSubtask {
   webQueries: string[];
   category?: string | undefined;
   targetYearMin?: number | undefined;
+  objectiveType?: "conceptual/qualitative" | "quantitative/benchmark" | undefined;
 }
 
 export interface SubagentFinding {
@@ -88,8 +89,11 @@ Analyze the user's research topic or question: "${topic}".
 Current Year: ${currentYear}.
 
 Your goal:
-1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g., historical context vs. recent advancements), and key analytical pillars.
-2. Decompose the topic into 3 to 4 distinct, orthogonal investigation subtasks for parallel research subagents.
+1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g., historical context vs. recent advancements), and key analytical pillars (keyDimensions).
+   - Training vs. Runtime Paradigm Distinction: When the topic spans both training-time and inference/runtime-time mechanisms (e.g., distributed training protocols vs. real-time reasoning coordination), make that distinction an explicit keyDimension so subtasks do not blur the two.
+2. Decompose the topic into 3 to 4 distinct, orthogonal investigation subtasks for parallel research subagents:
+   - Quantitative Engineering Constraints: When the research topic includes a quantitative engineering constraint (a latency budget, a numeric threshold, a performance target, etc.), you MUST include at least one subtask specifically targeting quantitative benchmarks and system parameters for that constraint (e.g., network RTT, processing time per step, throughput figures) — not just a conceptual/survey subtask.
+   - For each subtask, classify its objectiveType as either "conceptual/qualitative" or "quantitative/benchmark" so this is traceable downstream.
 3. Provide targeted search queries for each subtask:
    - arxivQuery: Keywords for academic preprint searches.
    - academicQuery: Targeted search query for academic databases.
@@ -109,6 +113,9 @@ Your goal:
         id: z.string().describe("Unique identifier like subtask_1"),
         title: z.string().describe("Short descriptive title of the subtask"),
         objective: z.string().describe("Specific technical question to resolve"),
+        objectiveType: z
+          .enum(["conceptual/qualitative", "quantitative/benchmark"])
+          .describe("Whether the subtask objective is conceptual/qualitative or quantitative/benchmark"),
         arxivQuery: z.string().describe("Optimized search query for arXiv API"),
         academicQuery: z.string().describe("Optimized query for Semantic Scholar / OpenAlex"),
         webQueries: z.array(z.string()).describe("3 diverse Tavily search queries (general, news, forums)"),
@@ -156,6 +163,7 @@ Your goal:
           id: "subtask_1",
           title: "Core Foundations & Historical Context",
           objective: "Identify the foundational principles, historical context, and fundamental mechanisms.",
+          objectiveType: "conceptual/qualitative",
           arxivQuery: `${topic} overview foundations`,
           academicQuery: `${topic} foundational principles review`,
           webQueries: [
@@ -169,6 +177,7 @@ Your goal:
           id: "subtask_2",
           title: "Key Methodologies & Applications",
           objective: "Investigate practical methodologies, key applications, and notable advancements.",
+          objectiveType: "conceptual/qualitative",
           arxivQuery: `${topic} methodology applications`,
           academicQuery: `${topic} methodology advancement applications`,
           webQueries: [
@@ -182,6 +191,7 @@ Your goal:
           id: "subtask_3",
           title: "Current State-of-the-Art & Empirical Benchmarks",
           objective: "Collect verified empirical metrics, state-of-the-art comparisons, and real-world validations.",
+          objectiveType: "quantitative/benchmark",
           arxivQuery: `${topic} benchmark state-of-the-art performance`,
           academicQuery: `${topic} benchmark results comparison`,
           webQueries: [
@@ -435,7 +445,7 @@ async function verifyAndAuditEvidence(
 
   const verifierPrompt = `You are an expert Fact-Checking and Verification Agent.
 Audit and cross-verify the following synthesized claims gathered by parallel research subagents for the topic: "${topic}".
-These findings have already been pre-filtered for relevance by the subagents. Your job is to audit them for accuracy, temporal validity, and hallucination removal.
+These findings have already been pre-filtered for relevance by the subagents. Your job is to audit them for accuracy, temporal validity, paradigm consistency, and hallucination removal.
 
 Scope: ${plan.scope}
 Temporal Bounds: ${plan.temporalConstraints}
@@ -445,11 +455,12 @@ ${subagentDumps.join("\n")}
 
 Your Verification Tasks:
 1. TEMPORAL AUDIT: Cross-check dates and identify which findings are recent vs. older baselines.
-2. HALLUCINATION FIREWALL:
+2. PARADIGM AUDIT: For each finding, check whether the source's actual operational context (training-time model/weight-level mechanisms vs. runtime/inference-time reasoning-level mechanisms) matches the context implied by how it is being used as evidence. Flag and label any mismatch explicitly — e.g., "[Training-time evidence — not directly applicable to runtime inference claims]" — rather than passing it through as if it directly supports the claim.
+3. HALLUCINATION FIREWALL:
    - REJECT any specific statistic, metric, or figure that was NOT explicitly sourced in the findings above.
    - Do NOT invent or synthesize any figures. If a statistic has no traceable citation, write "[Unverified — omit from report]" next to it.
    - Ground baseline metrics and statistics in empirical reality for the given topic.
-3. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims clearly.`;
+4. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims and paradigm mismatches clearly.`;
 
   let verifiedDossier = "";
   try {
@@ -535,11 +546,15 @@ Strict Writing Rules:
    - Do NOT invent metrics or figures.
    - Only quote numeric figures that are explicitly present in the verified dossier above.
    - If the dossier marks something as "[Unverified — omit]", do NOT include it.
-3. TEMPORAL HONESTY:
+   - RESEARCH GAPS FOR QUANTITATIVE CONSTRAINTS: If the verified dossier lacks quantitative benchmark or latency data for a topic that has a numeric performance constraint, explicitly state that as a named research gap (do not silently omit it and do not invent numbers to fill it).
+3. PARADIGM INTEGRITY:
+   - Never treat training-time evidence and runtime/inference-time evidence as interchangeable support for the same claim. Where the dossier's PARADIGM AUDIT flags a mismatch, state the distinction explicitly in the report rather than cite it as if it directly transfers.
+4. TEMPORAL HONESTY:
    - Do NOT present speculative future projections as historical facts.
-4. CITATION QUALITY:
+5. CITATION QUALITY:
    - Do NOT cite papers that are completely unrelated to the core topic.
-5. FORMATTING:
+6. TABLE CONSOLIDATION & FORMATTING:
+   - Consolidate findings into fewer, larger comparison tables when multiple small tables would otherwise share the same columns (e.g., "Verified Source", "Temporal Validity", "Verification Status") — merge them into one unified matrix per major section instead of fragmenting into many 2-3 row tables.
    - Use clean, structured, highly readable Markdown formatting.
    - All markdown tables (if any) must be properly formatted with | separators.`;
 
