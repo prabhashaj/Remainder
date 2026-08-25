@@ -1,0 +1,313 @@
+/**
+ * PDF Export Utility for Deep Research Reports
+ * Creates a clean, publication-grade, printable PDF layout with full KaTeX math,
+ * tables, and metadata support.
+ */
+
+export interface ResearchReportPdfOptions {
+  title: string;
+  contentHtml?: string | undefined;
+  markdownText?: string | undefined;
+  verifiedPapersCount?: number | undefined;
+  subagentsCount?: number | undefined;
+  temporalConstraints?: string | undefined;
+}
+
+export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
+  const {
+    title,
+    contentHtml = "",
+    verifiedPapersCount = 0,
+    subagentsCount = 4,
+    temporalConstraints = "Recent Literature",
+  } = options;
+
+  const dateStr = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const printDocument = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${title} — Deep Research Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+    
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 11pt;
+      line-height: 1.65;
+      color: #1a1a1a;
+      background: #ffffff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      padding: 0;
+    }
+
+    .report-header {
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 18px;
+      margin-bottom: 24px;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 9pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #d97706;
+      background: #fef3c7;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .report-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 20pt;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+
+    .metadata-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      font-size: 9pt;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .metadata-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .metadata-item strong {
+      color: #334155;
+    }
+
+    .report-body {
+      color: #27272a;
+    }
+
+    .report-body h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+      page-break-after: avoid;
+    }
+
+    .report-body h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 20px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    .report-body h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11.5pt;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 16px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+
+    .report-body p {
+      margin-bottom: 12px;
+      text-align: justify;
+    }
+
+    .report-body ul, .report-body ol {
+      margin-left: 20px;
+      margin-bottom: 14px;
+    }
+
+    .report-body li {
+      margin-bottom: 6px;
+    }
+
+    .report-body strong {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .report-body blockquote {
+      border-left: 3px solid #f59e0b;
+      background: #fffbeb;
+      padding: 10px 14px;
+      margin: 14px 0;
+      border-radius: 0 8px 8px 0;
+      font-style: italic;
+      color: #92400e;
+    }
+
+    .report-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+
+    .report-body th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+      text-align: left;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .report-body td {
+      padding: 7px 10px;
+      border: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+
+    .report-body tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    .report-body code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 9pt;
+      background: #f1f5f9;
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: #0f172a;
+    }
+
+    .report-body pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+
+    .report-body pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    .report-body a {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+
+    .report-footer {
+      margin-top: 32px;
+      padding-top: 14px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 8.5pt;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      page-break-inside: avoid;
+    }
+
+    @media print {
+      body {
+        width: 100%;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <div class="brand-badge">Remispace Deep Research Dossier</div>
+    <h1 class="report-title">${title}</h1>
+    <div class="metadata-bar">
+      <span class="metadata-item"><strong>Date:</strong> ${dateStr}</span>
+      <span class="metadata-item"><strong>Verified Sources:</strong> ${verifiedPapersCount}</span>
+      <span class="metadata-item"><strong>Workers:</strong> ${subagentsCount} Parallel Subagents</span>
+      <span class="metadata-item"><strong>Scope Window:</strong> ${temporalConstraints}</span>
+    </div>
+  </div>
+
+  <div class="report-body">
+    ${contentHtml}
+  </div>
+
+  <div class="report-footer">
+    <span>Generated by Remispace Multi-Agent Deep Research Pipeline</span>
+    <span>Page <span class="page-number"></span></span>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 400);
+    };
+  </script>
+</body>
+</html>`;
+
+  // Create hidden iframe for seamless printing / PDF save
+  const printFrame = document.createElement("iframe");
+  printFrame.style.position = "fixed";
+  printFrame.style.right = "0";
+  printFrame.style.bottom = "0";
+  printFrame.style.width = "0";
+  printFrame.style.height = "0";
+  printFrame.style.border = "0";
+  document.body.appendChild(printFrame);
+
+  const frameDoc = printFrame.contentWindow?.document;
+  if (frameDoc) {
+    frameDoc.open();
+    frameDoc.write(printDocument);
+    frameDoc.close();
+
+    // Clean up iframe after printing
+    setTimeout(() => {
+      printFrame.remove();
+    }, 60000);
+  }
+}

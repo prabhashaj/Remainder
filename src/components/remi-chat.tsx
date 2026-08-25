@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Compass,
   Database,
+  Download,
   FileText,
   Loader2,
   Mic,
@@ -31,6 +32,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import remiLogo from "@/assets/remi.png";
+import { exportResearchReportPdf } from "@/lib/pdf-export";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,12 +71,12 @@ import { cn } from "@/lib/utils";
 function getToolLabel(
   part:
     | {
-        type?: string;
-        toolName?: string;
-        toolInvocation?: { toolName?: string; args?: Record<string, unknown> };
-        args?: Record<string, unknown>;
-        input?: Record<string, unknown>;
-      }
+      type?: string;
+      toolName?: string;
+      toolInvocation?: { toolName?: string; args?: Record<string, unknown> };
+      args?: Record<string, unknown>;
+      input?: Record<string, unknown>;
+    }
     | Record<string, unknown>,
   isRunning: boolean,
 ): string {
@@ -396,6 +398,7 @@ function DeepResearchChatCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [timedOut, setTimedOut] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const output = getToolPartOutput(part) as {
     success?: boolean;
@@ -442,6 +445,27 @@ function DeepResearchChatCard({
     }, 1000);
     return () => clearInterval(interval);
   }, [isRunning, output.report, isDone]);
+
+  const verifiedPapersCount =
+    output.verified_papers_count ??
+    (output.worker_reports?.reduce((acc, w) => acc + (w.sources?.length || 0), 0) || 12);
+  const subtasksList = output.subtasks || [];
+  const actionTrail = output.action_trail || [];
+  const subagentsCount = output.subagents_count || (subtasksList.length > 0 ? subtasksList.length : 4);
+
+  const handleDownloadPdf = useCallback(() => {
+    if (!output.report) return;
+    const contentHtml = reportRef.current?.innerHTML || "";
+    exportResearchReportPdf({
+      title: output.plan?.topic || topicQuery,
+      contentHtml,
+      markdownText: output.report,
+      verifiedPapersCount,
+      subagentsCount,
+      temporalConstraints: output.plan?.temporalConstraints,
+    });
+    toast.success("Preparing PDF document...");
+  }, [output.report, output.plan, topicQuery, verifiedPapersCount, subagentsCount]);
 
   // If there was an explicit failure, stream abortion, or timeout without a report
   if ((isError || isInterrupted) && !output.report) {
@@ -511,18 +535,11 @@ function DeepResearchChatCard({
   // Don't render card until we have actual report content
   if (!output.report) return null;
 
-  const subtasksList = output.subtasks || [];
-  const actionTrail = output.action_trail || [];
-  const verifiedPapersCount =
-    output.verified_papers_count ??
-    (output.worker_reports?.reduce((acc, w) => acc + (w.sources?.length || 0), 0) || 12);
-  const subagentsCount = output.subagents_count || (subtasksList.length > 0 ? subtasksList.length : 4);
-
   return (
     <div className="my-2 overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-xs transition-all">
       <div className="p-4 sm:p-5">
-        {/* Clean Header */}
-        <div className="flex items-start justify-between gap-3">
+        {/* Clean Header with Download PDF Button */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <Sparkles className="size-4" />
@@ -540,6 +557,16 @@ function DeepResearchChatCard({
               </h3>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-all hover:bg-primary/20 hover:border-primary/50 cursor-pointer shadow-xs active:scale-95"
+            title="Download formatted PDF research report"
+          >
+            <Download className="size-3.5" />
+            <span>Download PDF</span>
+          </button>
         </div>
 
         {/* Collapsible Agent Actions & Trail */}
@@ -605,14 +632,23 @@ function DeepResearchChatCard({
         {/* Full Synthesized Technical Research Report */}
         {output.report && (
           <div className="mt-4 border-t border-border/50 pt-4">
-            <div className="text-foreground text-sm sm:text-base leading-relaxed">
+            <div ref={reportRef} className="text-foreground text-sm sm:text-base leading-relaxed">
               <MessageResponse>{output.report}</MessageResponse>
             </div>
-            <SpeechAndCopyToolbar
-              text={output.report}
-              id={`deep-research-report-${part.toolInvocation?.toolCallId || "done"}`}
-              className="mt-3"
-            />
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <SpeechAndCopyToolbar
+                text={output.report}
+                id={`deep-research-report-${part.toolInvocation?.toolCallId || "done"}`}
+              />
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+              >
+                <Download className="size-3.5" />
+                <span>Export PDF</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -769,11 +805,11 @@ interface SpeechRecognitionInstance {
   onend: (() => void) | null;
   onerror: ((e: { error: string }) => void) | null;
   onresult:
-    | ((e: {
-        resultIndex: number;
-        results: { isFinal?: boolean; 0: { transcript: string } }[];
-      }) => void)
-    | null;
+  | ((e: {
+    resultIndex: number;
+    results: { isFinal?: boolean; 0: { transcript: string } }[];
+  }) => void)
+  | null;
 }
 
 /** Voice input button using Web Speech API (Chrome / Edge / Safari). */
@@ -1327,7 +1363,7 @@ export function RemiChat({
             className={
               compact
                 ? "w-full"
-                : "mx-auto w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl px-4 sm:px-8"
+                : "mx-auto w-full max-w-4xl xl:max-w-5xl px-4 sm:px-6"
             }
           >
             {messages.length === 0 && (
@@ -1513,7 +1549,7 @@ export function RemiChat({
         className={
           compact
             ? "w-full px-3 pb-3"
-            : "mx-auto w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl px-4 sm:px-8 pb-5"
+            : "mx-auto w-full max-w-4xl xl:max-w-5xl px-4 sm:px-6 pb-5"
         }
       >
         {topic && (
