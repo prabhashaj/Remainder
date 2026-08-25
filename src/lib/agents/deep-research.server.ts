@@ -584,10 +584,14 @@ export async function runDeepResearch(params: {
     `Spawning ${subtasks.length} parallel worker subagents across arXiv, Semantic Scholar, and Web index.`,
   );
 
-  const subagentPromises = subtasks.map((subtask) =>
-    executeSubagentWorker(subtask, gateway, modelName, params.onStepProgress).catch((err) => {
+  const subagentResults: Array<Awaited<ReturnType<typeof executeSubagentWorker>>> = [];
+  for (const subtask of subtasks) {
+    try {
+      const result = await executeSubagentWorker(subtask, gateway, modelName, params.onStepProgress);
+      subagentResults.push(result);
+    } catch (err) {
       log("error", "subagent_worker_failed", { subtaskId: subtask.id, error: String(err) });
-      return {
+      subagentResults.push({
         subtaskId: subtask.id,
         title: subtask.title,
         objective: subtask.objective,
@@ -595,11 +599,9 @@ export async function runDeepResearch(params: {
         keyArchitectures: [],
         papers: [],
         webSources: [],
-      };
-    }),
-  );
-
-  const subagentResults = await Promise.all(subagentPromises);
+      });
+    }
+  }
 
   // 3. Verifier Agent: Academic Fact-Checking & Temporal Verification
   recordStep(
