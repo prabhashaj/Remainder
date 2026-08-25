@@ -90,9 +90,9 @@ Current Year: ${currentYear}.
 
 Your goal:
 1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g., historical context vs. recent advancements), and key analytical pillars (keyDimensions).
-   - Training vs. Runtime Paradigm Distinction: When the topic spans both training-time and inference/runtime-time mechanisms (e.g., distributed training protocols vs. real-time reasoning coordination), make that distinction an explicit keyDimension so subtasks do not blur the two.
+   - Context/Paradigm Distinction: If the topic spans two evidentiary or operational contexts that could be wrongly conflated (e.g., theoretical vs. applied, historical vs. current, correlational vs. causal, lab/controlled vs. real-world/deployed, training-time vs. runtime for ML systems, short-term vs. structural drivers in economics/markets), make that distinction an explicit keyDimension so subtasks and downstream synthesis don't blur the two.
 2. Decompose the topic into 3 to 4 distinct, orthogonal investigation subtasks for parallel research subagents:
-   - Quantitative Engineering Constraints: When the research topic includes a quantitative engineering constraint (a latency budget, a numeric threshold, a performance target, etc.), you MUST include at least one subtask specifically targeting quantitative benchmarks and system parameters for that constraint (e.g., network RTT, processing time per step, throughput figures) — not just a conceptual/survey subtask.
+   - Quantitative Coverage: If the topic names or implies a measurable target, threshold, or magnitude (a latency budget, a percentage, a price level, a rate, a deadline, a cost limit, etc.), you MUST include at least one subtask specifically targeting quantitative data, benchmarks, or figures for that target — not just a conceptual/survey subtask. If no such measurable target exists in the topic, skip this requirement rather than inventing one.
    - For each subtask, classify its objectiveType as either "conceptual/qualitative" or "quantitative/benchmark" so this is traceable downstream.
 3. Provide targeted search queries for each subtask:
    - arxivQuery: Keywords for academic preprint searches.

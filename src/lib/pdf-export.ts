@@ -1,7 +1,7 @@
 /**
  * PDF Export Utility for Deep Research Reports
  * Creates a clean, publication-grade, printable PDF layout with full KaTeX math,
- * tables, and metadata support.
+ * tables, and metadata support — removing all interactive UI buttons and action bars.
  */
 
 export interface ResearchReportPdfOptions {
@@ -13,6 +13,59 @@ export interface ResearchReportPdfOptions {
   temporalConstraints?: string | undefined;
 }
 
+/**
+ * Sanitizes and strips interactive UI buttons, table action bars, copy/download
+ * buttons, and SVG icons from the rendered HTML before printing.
+ */
+function cleanHtmlForPdf(rawHtml: string): string {
+  if (typeof window === "undefined" || !rawHtml) return rawHtml;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div>${rawHtml}</div>`, "text/html");
+    const container = doc.body.firstElementChild || doc.body;
+
+    // 1. Remove all interactive buttons, action bars, toolbars, and svgs
+    const selectorsToRemove = [
+      "button",
+      "svg",
+      "[role='toolbar']",
+      "[role='tooltip']",
+      "[data-radix-popper-content-wrapper]",
+      "[aria-label*='copy' i]",
+      "[aria-label*='download' i]",
+      "[aria-label*='expand' i]",
+      "[aria-label*='fullscreen' i]",
+      "[class*='action' i]",
+      "[class*='toolbar' i]",
+      "[class*='copy' i]",
+      "[class*='download' i]",
+      "[class*='expand' i]",
+      "[class*='fullscreen' i]",
+      "[class*='button' i]",
+      "[class*='btn' i]",
+      "[class*='control' i]",
+      ".no-print",
+    ];
+
+    for (const selector of selectorsToRemove) {
+      const elements = container.querySelectorAll(selector);
+      elements.forEach((el) => el.remove());
+    }
+
+    // 2. Clean up any empty containers or orphaned wrapper divs left by removed buttons
+    const allDivs = container.querySelectorAll("div");
+    allDivs.forEach((div) => {
+      if (!div.textContent?.trim() && !div.querySelector("img, table, pre, code")) {
+        div.remove();
+      }
+    });
+
+    return container.innerHTML;
+  } catch {
+    return rawHtml;
+  }
+}
+
 export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
   const {
     title,
@@ -21,6 +74,8 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
     subagentsCount = 4,
     temporalConstraints = "Recent Literature",
   } = options;
+
+  const sanitizedHtml = cleanHtmlForPdf(contentHtml);
 
   const dateStr = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -61,6 +116,32 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       padding: 0;
+    }
+
+    /* Aggressively hide any leftover UI buttons, toolbars, or SVGs */
+    button,
+    svg,
+    [role='toolbar'],
+    [role='tooltip'],
+    [class*='action'],
+    [class*='toolbar'],
+    [class*='copy'],
+    [class*='download'],
+    [class*='expand'],
+    [class*='fullscreen'],
+    [class*='button'],
+    [class*='btn'],
+    [class*='control'],
+    .no-print {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      height: 0 !important;
+      width: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      overflow: hidden !important;
     }
 
     .report-header {
@@ -179,31 +260,50 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
       color: #92400e;
     }
 
-    .report-body table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 16px 0;
-      font-size: 9.5pt;
-      page-break-inside: avoid;
+    /* Clean Publication-Grade Tables */
+    .report-body table,
+    table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      margin: 16px 0 20px 0 !important;
+      font-size: 9.5pt !important;
+      page-break-inside: avoid !important;
+      background: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 6px !important;
     }
 
-    .report-body th {
-      background: #f1f5f9;
-      color: #0f172a;
-      font-weight: 700;
-      text-align: left;
-      padding: 8px 10px;
-      border: 1px solid #cbd5e1;
+    .report-body thead,
+    thead {
+      background: #f8fafc !important;
+      border-bottom: 2px solid #cbd5e1 !important;
     }
 
-    .report-body td {
-      padding: 7px 10px;
-      border: 1px solid #e2e8f0;
-      vertical-align: top;
+    .report-body th,
+    th {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      font-weight: 700 !important;
+      text-align: left !important;
+      padding: 9px 12px !important;
+      border: 1px solid #cbd5e1 !important;
+      font-size: 9pt !important;
+      letter-spacing: 0.02em !important;
     }
 
-    .report-body tr:nth-child(even) td {
-      background: #f8fafc;
+    .report-body td,
+    td {
+      padding: 8px 12px !important;
+      border: 1px solid #e2e8f0 !important;
+      vertical-align: top !important;
+      line-height: 1.5 !important;
+      color: #334155 !important;
+    }
+
+    .report-body tr:nth-child(even) td,
+    tr:nth-child(even) td {
+      background: #f8fafc !important;
     }
 
     .report-body code {
@@ -271,7 +371,7 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
   </div>
 
   <div class="report-body">
-    ${contentHtml}
+    ${sanitizedHtml}
   </div>
 
   <div class="report-footer">
