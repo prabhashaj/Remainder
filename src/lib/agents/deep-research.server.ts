@@ -18,21 +18,6 @@ import {
 import { tavilySearch, type WebResult } from "@/lib/tavily.server";
 import type { Database } from "@/integrations/supabase/types";
 
-import {
-  type ClaimEvidenceLedgerItem,
-  type ResearchQualityMetrics,
-  type ResearchSource,
-  LedgerExtractionSchema,
-  rankAndFilterSources,
-  verifyNumericalClaim,
-  auditContextMismatch,
-  executeCounterEvidenceSearch,
-  auditAndCalibrateText,
-  auditCitationEntailment,
-  runAdversarialReview,
-  evaluateResearchQualityGate,
-} from "./research-engine";
-
 export interface ResearchPlan {
   topic: string;
   scope: string;
@@ -85,14 +70,12 @@ export interface DeepResearchResult {
     status: "completed" | "in_progress";
     details: string;
   }[];
-  ledger?: ClaimEvidenceLedgerItem[] | undefined;
-  qualityMetrics?: ResearchQualityMetrics | undefined;
 }
 
 type Supabase = SupabaseClient<Database>;
 
 /**
- * Step 1: Generate Research Plan and Split into Orthogonal Subtasks
+ * Step 1 & 2: Generate Research Plan and Split into Orthogonal Subtasks
  */
 async function createPlanAndSubtasks(
   topic: string,
@@ -100,7 +83,6 @@ async function createPlanAndSubtasks(
   modelName: string,
 ): Promise<{ plan: ResearchPlan; subtasks: ResearchSubtask[] }> {
   const currentYear = new Date().getFullYear();
-  const isFreshnessRequested = /\b(latest|recent|current|2025|2026|modern|newest|state of the art)\b/i.test(topic);
 
   const planningPrompt = `You are an expert Research Planner Agent.
 Analyze the user's research topic or question: "${topic}".
@@ -108,15 +90,15 @@ Current Year: ${currentYear}.
 
 Your goal:
 1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g., historical context vs. recent advancements), and key analytical pillars (keyDimensions).
-   - Context/Paradigm Distinction: If the topic spans two evidentiary or operational contexts that could be wrongly conflated (e.g., theoretical vs. applied, historical vs. current, correlational vs. causal, lab/controlled vs. real-world/deployed, training-time vs. runtime for ML systems), make that distinction an explicit keyDimension so subtasks and downstream synthesis don't blur the two.
+   - Context/Paradigm Distinction: If the topic spans two evidentiary or operational contexts that could be wrongly conflated (e.g., theoretical vs. applied, historical vs. current, correlational vs. causal, lab/controlled vs. real-world/deployed, training-time vs. runtime for ML systems, short-term vs. structural drivers in economics/markets), make that distinction an explicit keyDimension so subtasks and downstream synthesis don't blur the two.
 2. Decompose the topic into 3 to 4 distinct, orthogonal investigation subtasks for parallel research subagents:
-   - Quantitative Coverage: If the topic names or implies a measurable target, threshold, or magnitude (a latency budget, a percentage, a price level, a rate, a deadline, a cost limit, etc.), you MUST include at least one subtask specifically targeting quantitative data, benchmarks, or figures for that target.
-   - Mechanistic / Architecture Coverage: When the research topic concerns a system, process, method, or architecture, you MUST ensure at least one subtask targets mechanistic/how-it-works content — concrete execution patterns, architectural walkthroughs, or step-by-step processes.
-   - For each subtask, classify its objectiveType as either "conceptual/qualitative", "quantitative/benchmark", or "mechanistic/how-it-works".
+   - Quantitative Coverage: If the topic names or implies a measurable target, threshold, or magnitude (a latency budget, a percentage, a price level, a rate, a deadline, a cost limit, etc.), you MUST include at least one subtask specifically targeting quantitative data, benchmarks, or figures for that target — not just a conceptual/survey subtask. If no such measurable target exists in the topic, skip this requirement rather than inventing one.
+   - Mechanistic / Process / Architecture Coverage: When the research topic concerns a system, process, method, or architecture (not just a high-level survey of what exists), you MUST ensure at least one subtask targets mechanistic/how-it-works content — concrete execution patterns, architectural walkthroughs, or step-by-step processes — not just conceptual/survey-level descriptions of what the system does.
+   - For each subtask, classify its objectiveType as either "conceptual/qualitative", "quantitative/benchmark", or "mechanistic/how-it-works" so this is traceable downstream.
 3. Provide targeted search queries for each subtask:
    - arxivQuery: Keywords for academic preprint searches.
    - academicQuery: Targeted search query for academic databases.
-   - webQueries: An array of 3 highly diverse search queries for the live web index.`;
+   - webQueries: An array of 3 highly diverse search queries for the live web index. For example, one general query, one targeting news/industry reports, and one targeting forums/discussions (e.g., appending 'reddit' or 'forum').`;
 
   const SubtasksSchema = z.object({
     plan: z.object({
@@ -165,32 +147,32 @@ Your goal:
     return object;
   } catch (err) {
     log("warn", "deep_research_plan_fallback", { error: String(err) });
-    const yearMin = isFreshnessRequested ? currentYear - 2 : currentYear - 5;
+    // Fallback subtask generation
     return {
       plan: {
         topic,
         scope: `Deep technical investigation into ${topic}`,
-        temporalConstraints: isFreshnessRequested ? `Recent advancements (${currentYear - 2}-${currentYear})` : "Foundational and contemporary developments",
+        temporalConstraints: `Recent advancements`,
         keyDimensions: [
           "Core Foundations & Principles",
           "Key Methodologies & Frameworks",
-          "Empirical Evidence & State-of-the-Art Benchmarks",
+          "Empirical Evidence & Current State-of-the-Art",
         ],
       },
       subtasks: [
         {
           id: "subtask_1",
-          title: "Core Foundations & Architecture",
-          objective: "Identify the foundational principles, theoretical mechanics, and core architecture.",
-          objectiveType: "mechanistic/how-it-works",
-          arxivQuery: `${topic} architecture foundations`,
+          title: "Core Foundations & Historical Context",
+          objective: "Identify the foundational principles, historical context, and fundamental mechanisms.",
+          objectiveType: "conceptual/qualitative",
+          arxivQuery: `${topic} overview foundations`,
           academicQuery: `${topic} foundational principles review`,
           webQueries: [
-            `${topic} architecture principles ${currentYear}`,
-            `${topic} technical breakdown explanation`,
-            `${topic} implementation patterns`,
+            `${topic} overview core concepts ${currentYear}`,
+            `${topic} history principles industry reports`,
+            `${topic} foundations explained site:reddit.com`,
           ],
-          targetYearMin: yearMin,
+          targetYearMin: currentYear - 5,
         },
         {
           id: "subtask_2",
@@ -201,10 +183,10 @@ Your goal:
           academicQuery: `${topic} methodology advancement applications`,
           webQueries: [
             `${topic} latest applications methodology ${currentYear}`,
-            `${topic} methodology real-world case studies`,
-            `${topic} practical guide workflow`,
+            `${topic} methodology real-world case studies news`,
+            `${topic} methodology applications discussions forum`,
           ],
-          targetYearMin: yearMin,
+          targetYearMin: currentYear - 3,
         },
         {
           id: "subtask_3",
@@ -215,10 +197,10 @@ Your goal:
           academicQuery: `${topic} benchmark results comparison`,
           webQueries: [
             `${topic} latest benchmark comparison ${currentYear}`,
-            `${topic} performance metrics evaluation`,
-            `${topic} comparative analysis`,
+            `${topic} state-of-the-art benchmarks news analysis`,
+            `${topic} benchmark comparison opinions site:reddit.com`,
           ],
-          targetYearMin: yearMin,
+          targetYearMin: currentYear - 2,
         },
       ],
     };
@@ -226,7 +208,7 @@ Your goal:
 }
 
 /**
- * Step 2: Parallel Subagent Worker Execution
+ * Step 3: Parallel Subagent Worker Execution
  */
 async function executeSubagentWorker(
   subtask: ResearchSubtask,
@@ -282,7 +264,7 @@ async function executeSubagentWorker(
     evidenceLines.push(
       `- Title: "${p.title}" | ID: ${p.id} | Published: ${p.published || "Unknown"} | Authors: ${p.authors.join(", ")}`,
     );
-    evidenceLines.push(`  Summary: ${p.summary.slice(0, 500)}`);
+    evidenceLines.push(`  Summary: ${p.summary.slice(0, 400)}...`);
     evidenceLines.push(`  URL: ${p.arxivUrl || p.pdfUrl}`);
   }
 
@@ -291,12 +273,12 @@ async function executeSubagentWorker(
     evidenceLines.push(
       `- Title: "${ap.title}" | Year: ${ap.year || "Unknown"} | Authors: ${ap.authors.join(", ")} | URL: ${ap.url}`,
     );
-    evidenceLines.push(`  Abstract: ${ap.abstract.slice(0, 400)}`);
+    evidenceLines.push(`  Abstract: ${ap.abstract.slice(0, 300)}...`);
   }
 
   evidenceLines.push(`\n## Web Research Results (${allWebResults.length} retrieved):`);
   for (const wr of allWebResults) {
-    evidenceLines.push(`- [${wr.title}](${wr.url}): ${wr.content.slice(0, 400)}`);
+    evidenceLines.push(`- [${wr.title}](${wr.url}): ${wr.content.slice(0, 350)}...`);
   }
 
   const subagentSynthesisPrompt = `You are a Research Subagent focused on ONE specific investigation objective.
@@ -308,23 +290,29 @@ Raw evidence gathered from arXiv, academic databases, and web search:
 ${evidenceLines.join("\n")}
 
 Your task:
-1. Filter this raw evidence down to only what is actually relevant to the objective above.
-2. Synthesize the relevant evidence into a structured findings summary (500-800 words):
-   - Highlight exact methodologies, architectural mechanics, and models evaluated.
-   - For every numerical result, note the exact baseline, dataset, model, and experimental conditions.
-   - For every claim, explicitly reference the supporting paper/source.
-   - Flag limitations and what the papers did NOT demonstrate.
-   - Flag any conflicting findings across sources.
-3. Do NOT invent or generalize figures beyond the text.`;
+1. Filter this raw evidence down to only what is actually relevant to the
+   objective above. Discard sources that are tangential, off-topic, or don't
+   meaningfully address the objective, even if they were returned by search.
+2. Synthesize the relevant evidence into a concise, structured findings
+   summary — organized by sub-claim, not by source. Do not just re-list
+   abstracts.
+3. For each claim you include, note which source(s) support it, so the
+   Verifier agent downstream can trace it back.
+4. Flag disagreement: if sources conflict on a fact, note both positions
+   rather than silently picking one.
+5. Do NOT add any claim, statistic, or figure that isn't explicitly present
+   in the raw evidence above. Do not fill gaps with general knowledge.
+
+Output a detailed, substantive findings summary (500-800 words) detailing the specific mechanisms, architectures, methodologies, quantitative data, and evidence. This will be handed to a Verifier agent, not shown directly to the user — prioritize concrete factual depth, traceability, and honesty.`;
 
   let findingsSummary = "";
   try {
     const { text } = await withAiRateLimitRetry(
       () =>
         generateText({
-          model: gateway(getAiModelName()),
+          model: gateway(getAiModelName()), // cheaper/faster model for synthesis
           system:
-            "You are a rigorous research subagent. You filter noise and synthesize only well-sourced findings for downstream fact-checking.",
+            "You are a rigorous research subagent. You filter noise and synthesize only well-sourced findings for a downstream fact-checker.",
           prompt: subagentSynthesisPrompt,
         }),
       { label: `Subagent Synthesis (${subtask.id})`, maxRetries: 3 },
@@ -332,8 +320,12 @@ Your task:
     findingsSummary = text;
   } catch (err) {
     log("warn", "subagent_synthesis_failed", { subtaskId: subtask.id, error: String(err) });
-    findingsSummary = evidenceLines.join("\n").slice(0, 2500) + "\n\n[Note: Subagent synthesis fallback used.]";
+    findingsSummary = evidenceLines.join("\n").slice(0, 2000) + "\n\n[Note: Subagent synthesis fallback used.]";
   }
+
+
+
+
 
   if (onStepProgress) {
     onStepProgress(
@@ -364,133 +356,39 @@ Your task:
   };
 }
 
-/**
- * Step 3: Extract Structured Claim-Evidence Ledger from Subagent Findings
- */
-async function extractClaimEvidenceLedger(
+function filterRelevantSources(
+  sources: { title: string; url: string; yearOrId: string; type: string }[],
   topic: string,
-  subagentResults: SubagentFinding[],
-  rankedSources: ResearchSource[],
-  gateway: ReturnType<typeof createAiGatewayProvider>,
-  modelName: string,
-): Promise<ClaimEvidenceLedgerItem[]> {
-  const findingsBlock = subagentResults
-    .map((s, idx) => `### Subtask ${idx + 1}: ${s.title}\nObjective: ${s.objective}\nFindings:\n${s.findingsSummary}`)
-    .join("\n\n");
+): { title: string; url: string; yearOrId: string; type: string }[] {
+  const topicLower = topic.toLowerCase();
 
-  const sourcesBlock = rankedSources
-    .slice(0, 15)
-    .map((s) => `[${s.id}] "${s.title}" (${s.tier}) - URL: ${s.url}\nAbstract: ${s.abstractOrSnippet.slice(0, 300)}`)
-    .join("\n\n");
+  const stopWords = new Set([
+    "about", "what", "when", "which", "where", "tell", "explain", "happens",
+    "next", "months", "years", "research", "recent", "study", "analysis", "few",
+    "with", "from", "into", "over", "under", "after", "before", "their", "this", "that",
+  ]);
+  const topicTokens = topicLower
+    .replace(/[^\w\s]/g, " ")
+    .split(/\s+/)
+    .filter((tok) => tok.length >= 3 && !stopWords.has(tok));
 
-  const extractionPrompt = `You are an expert Research Knowledge Engineer.
-Extract a structured Claim-Evidence Ledger from the synthesized research findings for topic: "${topic}".
+  return sources.filter((src) => {
+    const title = src.title.toLowerCase();
 
-Primary Literature Sources Available:
-${sourcesBlock}
+    // 1. Direct topic token match
+    const hasDirectMatch = topicTokens.some((tok) => title.includes(tok));
 
-Synthesized Findings from Parallel Subagents:
-${findingsBlock}
+    // 2. Web sources ("Technical Literature") are filtered by the search engine (Tavily/Google)
+    if (src.type === "Technical Literature") return true;
 
-Extraction Instructions:
-1. Extract 8 to 15 core and supporting claims across all dimensions (factual, theoretical, empirical, numerical, comparative, research_gap).
-2. For every numerical or empirical claim:
-   - Extract the exact model, dataset, metric, reported result, baseline, and hardware context.
-   - Note what the source showed vs what the source did NOT show (e.g. tested on small models only, not validated in production).
-3. If a claim lacks direct support in the sources, classify verification_status as "UNSUPPORTED" or "PARTIALLY_SUPPORTED".
-4. If an asserted research gap is found (e.g., "no benchmark exists"), classify claim_type as "research_gap".`;
-
-  try {
-    const { object } = await withAiRateLimitRetry(
-      () =>
-        generateObject({
-          model: gateway(modelName),
-          system:
-            "You are a rigorous knowledge engineer that extracts verified, structured claim-evidence records.",
-          prompt: extractionPrompt,
-          schema: LedgerExtractionSchema,
-        }),
-      { label: "Ledger Extraction", maxRetries: 2 },
-    );
-
-    return object.claims.map((rawClaim, idx) => {
-      const matchedSource = rankedSources.find(
-        (s) => s.title.toLowerCase().includes(rawClaim.source_title.slice(0, 20).toLowerCase()) || s.url === rawClaim.source_url,
-      ) || rankedSources[0];
-
-      const item: ClaimEvidenceLedgerItem = {
-        claim_id: `claim_${idx + 1}`,
-        claim: rawClaim.claim,
-        claim_type: rawClaim.claim_type,
-        importance: rawClaim.importance,
-        source_ids: matchedSource ? [matchedSource.id] : ["src_1"],
-        source_quality: matchedSource ? matchedSource.tier : "Tier 2: arXiv Preprint / Official Lab Publication",
-        source_title: matchedSource ? matchedSource.title : rawClaim.source_title,
-        source_url: matchedSource ? matchedSource.url : rawClaim.source_url,
-        source_type: matchedSource ? matchedSource.type : "Academic Paper",
-        publication_year: matchedSource?.year || new Date().getFullYear(),
-        exact_support: rawClaim.exact_support,
-        model: rawClaim.model,
-        dataset: rawClaim.dataset,
-        task: rawClaim.task,
-        metric: rawClaim.metric,
-        reported_result: rawClaim.reported_result,
-        baseline: rawClaim.baseline,
-        hardware: rawClaim.hardware,
-        experimental_context: rawClaim.experimental_context,
-        evidence_level: rawClaim.evidence_level,
-        what_source_showed: rawClaim.what_source_showed,
-        what_source_did_not_show: rawClaim.what_source_did_not_show,
-        limitations: rawClaim.limitations,
-        is_direct_comparison: rawClaim.is_direct_comparison,
-        comparison_notes: rawClaim.comparison_notes,
-        confidence: rawClaim.confidence,
-        verification_status: rawClaim.verification_status,
-      };
-
-      // Run deterministic numerical verification
-      if (item.claim_type === "numerical" || /\d+/.test(item.claim)) {
-        const numCheck = verifyNumericalClaim(item.claim, item.exact_support, matchedSource?.abstractOrSnippet || "");
-        if (numCheck.verificationStatus === "UNSUPPORTED") {
-          item.verification_status = "UNSUPPORTED";
-          item.confidence = "LOW";
-        }
-      }
-
-      // Run deterministic context mismatch audit
-      const contextCheck = auditContextMismatch(item.claim, item);
-      if (contextCheck.hasMismatch) {
-        item.verification_status = "PARTIALLY_SUPPORTED";
-        if (contextCheck.calibratedClaim) {
-          item.claim = contextCheck.calibratedClaim;
-        }
-      }
-
-      return item;
-    });
-  } catch (err) {
-    log("warn", "ledger_extraction_fallback", { error: String(err) });
-    // Fallback basic ledger
-    return subagentResults.map((s, idx) => ({
-      claim_id: `claim_${idx + 1}`,
-      claim: s.findingsSummary.slice(0, 180),
-      claim_type: "empirical" as const,
-      importance: "core" as const,
-      source_ids: ["src_1"],
-      source_quality: rankedSources[0]?.tier || "Tier 2: arXiv Preprint / Official Lab Publication",
-      source_title: s.papers[0]?.title || s.title,
-      source_url: s.papers[0]?.url || rankedSources[0]?.url || "https://arxiv.org",
-      source_type: "arXiv Paper",
-      publication_year: new Date().getFullYear(),
-      exact_support: s.findingsSummary.slice(0, 300),
-      confidence: "MEDIUM" as const,
-      verification_status: "VERIFIED" as const,
-    }));
-  }
+    // 3. For academic/arXiv papers, require at least one topical keyword match to avoid domain crossover noise
+    return hasDirectMatch;
+  });
 }
 
 /**
- * Step 4: Verification, Contradiction Search & Dossier Synthesis
+ * Step 4: Verifier Agent (Academic & Temporal Fact-Checker)
+ * Audits raw subagent findings, checks publication timelines, cross-validates benchmarks, and filters noise.
  */
 async function verifyAndAuditEvidence(
   topic: string,
@@ -500,156 +398,202 @@ async function verifyAndAuditEvidence(
   modelName: string,
 ): Promise<{
   verifiedDossier: string;
-  rankedSources: ResearchSource[];
-  ledger: ClaimEvidenceLedgerItem[];
-  contradictionsFound: Array<{ claim: string; counterEvidence: string; source: string }>;
+  verifiedSources: { title: string; url: string; yearOrId: string; type: string }[];
 }> {
-  // Aggregate all raw sources from subagents
-  const rawSourcesList: Array<{
-    title: string;
-    url: string;
-    authors?: string[];
-    yearOrId?: string;
-    venue?: string;
-    type?: string;
-    content?: string;
-  }> = [];
+  const allRawSources: { title: string; url: string; yearOrId: string; type: string }[] = [];
+  const seenUrls = new Set<string>();
 
+  // Collect all sources from subagents
   for (const sub of subagentResults) {
     for (const p of sub.papers) {
-      rawSourcesList.push({
-        title: p.title,
-        url: p.url || `https://arxiv.org/abs/${p.id}`,
-        authors: p.authors,
-        yearOrId: p.published ? p.published.slice(0, 4) : p.id ? `arXiv:${p.id}` : "arXiv",
-        type: "arXiv Paper",
-        venue: "arXiv",
-        content: p.summary,
-      });
+      const url = p.url || `https://arxiv.org/abs/${p.id}`;
+      if (url && !seenUrls.has(url)) {
+        seenUrls.add(url);
+        allRawSources.push({
+          title: p.title,
+          url,
+          yearOrId: p.published ? p.published.slice(0, 4) : p.id ? `arXiv:${p.id}` : "arXiv",
+          type: "arXiv Paper",
+        });
+      }
     }
     for (const w of sub.webSources) {
-      rawSourcesList.push({
-        title: w.title,
-        url: w.url,
-        yearOrId: "Web",
-        type: "Technical Literature",
-        content: w.content,
-      });
+      if (w.url && !seenUrls.has(w.url)) {
+        seenUrls.add(w.url);
+        allRawSources.push({
+          title: w.title,
+          url: w.url,
+          yearOrId: "Web Source",
+          type: "Technical Literature",
+        });
+      }
     }
   }
 
-  // 1. Source Quality Ranking (Tier 1 - Tier 6)
-  const rankedSources = rankAndFilterSources(rawSourcesList, topic);
+  // Filter sources using domain-aware relevance matching
+  const allVerifiedSources = filterRelevantSources(allRawSources, topic);
 
-  // 2. Extract Claim-Evidence Ledger
-  const rawLedger = await extractClaimEvidenceLedger(topic, subagentResults, rankedSources, gateway, modelName);
+  const subagentDumps: string[] = [];
+  for (const [idx, sub] of subagentResults.entries()) {
+    subagentDumps.push(`### Subtask ${idx + 1}: ${sub.title}`);
+    subagentDumps.push(`Objective: ${sub.objective}`);
+    subagentDumps.push(`Key Architectures: ${sub.keyArchitectures.join(", ")}`);
+    subagentDumps.push(`Findings:\n${sub.findingsSummary}`);
+    subagentDumps.push("");
+  }
 
-  // 3. Counter-Evidence and Contradiction Search
-  const { updatedLedger, contradictionsFound, verifiedGaps } = await executeCounterEvidenceSearch(topic, rawLedger);
+  const verifierPrompt = `You are an expert Fact-Checking and Verification Agent.
+Audit and cross-verify the following synthesized claims gathered by parallel research subagents for the topic: "${topic}".
+These findings have already been pre-filtered for relevance by the subagents. Your job is to audit them for accuracy, temporal validity, paradigm consistency, and hallucination removal.
 
-  // 4. Build Verified Research Dossier
-  const ledgerDumps = updatedLedger.map((item, i) => {
-    return `### Claim ${i + 1} [${item.claim_type.toUpperCase()}] - Status: ${item.verification_status} (Confidence: ${item.confidence})
-- Statement: ${item.claim}
-- Source: [${item.source_title}](${item.source_url}) — *${item.source_quality}* (${item.publication_year})
-- Exact Evidence: "${item.exact_support}"
-- Experimental Setup: Model=${item.model || "N/A"} | Dataset=${item.dataset || "N/A"} | Metric=${item.metric || "N/A"} | Hardware=${item.hardware || "N/A"}
-- Evaluated Reality: Shown="${item.what_source_showed || "N/A"}" | Not Shown="${item.what_source_did_not_show || "N/A"}"
-- Limitations / Caveats: ${item.limitations || "None reported"}
-- Counter-Evidence / Disagreements: ${item.counter_evidence || "No direct contradictions found in literature"}`;
-  }).join("\n\n");
-
-  const verifiedDossier = `## VERIFIED CLAIM-EVIDENCE LEDGER & LITERATURE AUDIT
-Topic: ${topic}
 Scope: ${plan.scope}
+Temporal Bounds: ${plan.temporalConstraints}
 
-${ledgerDumps}
+Synthesized Subagent Findings:
+${subagentDumps.join("\n")}
 
-${contradictionsFound.length > 0 ? `\n### Identified Counter-Evidence & Literature Disagreements:\n` + contradictionsFound.map((c) => `- On claim "${c.claim}": ${c.counterEvidence}`).join("\n") : ""}
+Your Verification Tasks:
+1. TEMPORAL AUDIT: Cross-check dates and identify which findings are recent vs. older baselines.
+2. PARADIGM & CONTEXT AUDIT: For each finding, verify whether the source's actual operational context (e.g. theoretical vs. applied, laboratory/synthetic benchmark vs. live production, historical baseline vs. contemporary system, or training-time vs. runtime mechanism) strictly matches the context required by the claim. Flag and label any category or operational mismatch explicitly (e.g., "[Context Mismatch: laboratory benchmark — not validated in live production]") rather than passing it through as direct evidentiary support.
+3. HALLUCINATION FIREWALL:
+   - REJECT any specific statistic, metric, or figure that was NOT explicitly sourced in the findings above.
+   - REJECT any specific citation identifier (arXiv ID, DOI, paper number, exact publication code) that was NOT explicitly present in the raw findings above. Never construct a plausible-looking ID as a placeholder (e.g., partial digits with X's or similar templated patterns) — if a claim lacks an exact traceable source ID, cite it by source name/title only, or mark it '[Unverified — omit from report]' exactly as already required for statistics.
+   - Do NOT invent or synthesize any figures. If a statistic has no traceable citation, write "[Unverified — omit from report]" next to it.
+   - Ground baseline metrics and statistics in empirical reality for the given topic.
+4. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims and paradigm mismatches clearly.`;
 
-${verifiedGaps.length > 0 ? `\n### Verified Open Research Challenges:\n` + verifiedGaps.map((g) => `- ${g}`).join("\n") : ""}`;
+  let verifiedDossier = "";
+  try {
+    const { text } = await withAiRateLimitRetry(
+      () =>
+        generateText({
+          model: gateway(modelName),
+          system:
+            "You are a rigorous Fact-Checking Agent. You cross-check literature, filter out hallucinations, and ensure the writer receives only verified facts.",
+          prompt: verifierPrompt,
+        }),
+      { label: "Verifier Agent", maxRetries: 3 },
+    );
+    verifiedDossier = text;
+  } catch (err) {
+    log("warn", "verifier_primary_model_failed", { error: String(err) });
+    // Tier 2 Fallback: Attempt verification with fast/secondary model before resorting to raw dump
+    try {
+      const fallbackModel = getAiModelName();
+      const { text } = await withAiRateLimitRetry(
+        () =>
+          generateText({
+            model: gateway(fallbackModel),
+            system:
+              "You are a rigorous Fact-Checking Agent. You cross-check literature, filter out hallucinations, and ensure the writer receives only verified facts.",
+            prompt: verifierPrompt,
+          }),
+        { label: "Verifier Agent Fallback", maxRetries: 2 },
+      );
+      verifiedDossier = text;
+    } catch (fallbackErr) {
+      log("error", "verifier_fallback_failed", { error: String(fallbackErr) });
+      verifiedDossier = subagentDumps.join("\n\n");
+    }
+  }
 
   return {
     verifiedDossier,
-    rankedSources,
-    ledger: updatedLedger,
-    contradictionsFound,
+    verifiedSources: allVerifiedSources,
   };
 }
 
 /**
- * Step 5: Writer Agent with Adversarial Review & Epistemic Calibration
+ * Step 5: Writer Agent
+ * Takes verified evidence and composes a clean, professional report.
  */
 async function writePublicationReport(
   topic: string,
   plan: ResearchPlan,
   verifiedDossier: string,
-  rankedSources: ResearchSource[],
-  ledger: ClaimEvidenceLedgerItem[],
-  contradictionsCount: number,
+  verifiedSources: { title: string; url: string; yearOrId: string; type: string }[],
   gateway: ReturnType<typeof createAiGatewayProvider>,
   modelName: string,
-): Promise<{
-  report: string;
-  sourcesMarkdown: string;
-  qualityMetrics: ResearchQualityMetrics;
-}> {
-  // Format top 10 verified primary sources (Tier 1 & Tier 2 preferred)
-  const topSources = rankedSources.slice(0, 10);
-  const formattedSources = topSources
-    .map((s, i) => `${i + 1}. [**${s.title}**](${s.url}) (${s.yearOrId}) — *${s.tier.split(":")[0]}*`)
+): Promise<{ report: string; sourcesMarkdown: string }> {
+  // Sort sources by relevance/recency
+  const sortedSources = [...verifiedSources].sort((a, b) => {
+    // 1. Prefer academic papers over web sources
+    const aIsAcademic = a.type.includes("arXiv") || a.type.includes("Academic");
+    const bIsAcademic = b.type.includes("arXiv") || b.type.includes("Academic");
+    if (aIsAcademic && !bIsAcademic) return -1;
+    if (!aIsAcademic && bIsAcademic) return 1;
+
+    // 2. Sort by year (descending)
+    const aYear = parseInt(a.yearOrId, 10);
+    const bYear = parseInt(b.yearOrId, 10);
+    if (!isNaN(aYear) && !isNaN(bYear)) {
+      return bYear - aYear;
+    }
+    return 0;
+  });
+
+  const formattedSources = sortedSources
+    .slice(0, 10) // top 10 most relevant/authoritative verified sources
+    .map((s, i) => `${i + 1}. [**${s.title}**](${s.url}) (${s.yearOrId}) — *${s.type}*`)
     .join("\n");
 
   const sourcesMarkdown = `### Sources & Literature References\n\n${formattedSources}`;
 
   const writerPrompt = `You are an expert Technical Synthesis Author and Research Writer.
-Write an extensive, definitive, publication-grade deep research report based strictly on the verified research dossier and claim-evidence ledger.
+Write an extensive, definitive, long-form deep research report based strictly on the verified research dossier.
 
 User Topic: "${topic}"
 Research Scope: ${plan.scope}
 
+Verified Research Dossier (from Verifier Agent):
 ${verifiedDossier}
 
-Verified Primary Sources (Top 10):
+Verified Source List:
 ${formattedSources}
 
-Report Structure & Depth Requirements:
+Target Depth & Length:
+- Write an exhaustive, highly detailed technical publication (1,500 to 3,000+ words).
+- Prioritize deep, continuous narrative prose paragraphs that explain mechanisms, theory, system architecture, engineering decisions, and practical tradeoffs in thorough detail.
+
+Report Structure:
 1. Executive Summary & State-of-the-Art Landscape (2-3 extensive paragraphs):
    - Set the strategic landscape, foundational breakthroughs, core paradigms, and high-level synthesis of findings.
 2. Foundational Architecture & Mechanistic Deep Dives (multiple rich, multi-paragraph sections):
-   - Exhaustively unpack underlying mechanics: explain *how* and *why* systems work, execution flows, mathematical formulations (LaTeX $inline$ or $$block$$), and empirical phenomena.
+   - Exhaustively unpack the underlying mechanics: explain *how* and *why* things work, step-by-step execution flows, protocols, internal representations, and algorithms.
+   - Use standard LaTeX ($inline$ or $$block$$) for mathematical expressions, equations, and formulations where appropriate.
 3. Implementation Patterns, Frameworks & Practical Workflows:
    - Provide concrete, end-to-end operational workflows, engineering patterns, and practical execution details.
 4. Comparative Analysis, Bottlenecks & Tradeoffs:
    - Provide deep analytical narrative examining tradeoffs, failure modes, computational/scaling constraints, and design alternatives.
-   - Distinguish direct comparisons (same model/dataset/hardware) from indirect comparisons across disparate studies.
    - You may include AT MOST ONE concise, high-signal summary comparison table in this section to synthesize key dimensions.
 5. Empirical Evidence & Benchmark Performance:
    - Synthesize verified empirical metrics, evaluation benchmarks, and quantitative performance grounded strictly in the dossier.
-   - Always accompany numbers with model size, dataset, and baseline context.
 6. Strategic Implications, Actionable Takeaways & Research Gaps:
    - Concrete takeaways, architectural recommendations, and explicitly identified open research challenges or unverified performance constraints.
 
 Strict Writing Rules:
 1. PROSE-FIRST EXPANSIVE WRITING:
    - Prioritize rich, exhaustive narrative prose over tables and bulleted lists.
-   - Do NOT substitute tables for explanatory text. Tables should only be used as occasional, concise summary aids (maximum 1-2 tables across the entire report).
+   - Do NOT substitute tables for explanatory text. Tables should only be used as occasional, concise summary aids (maximum 1-2 tables across the entire report). All core concepts, architectures, and findings MUST be thoroughly explained in continuous, well-developed paragraphs.
 2. SEAMLESS INLINE CITATIONS WITHOUT REPETITION:
    - Naturally integrate citations into the prose flow as standard academic in-text references (e.g. *[Author, Year]* or *(Smith et al., 2024)*) matching entries in the verified source list.
    - Do NOT output repetitive source/link dumps at the end of each section. The complete reference bibliography is automatically appended once at the end of the document.
+   - If a claim lacks an exact structured source ID, cite it by author/organization name in plain text rather than creating an identifier-shaped placeholder.
 3. NO EMOJIS: Keep the entire report completely emoji-free, formal, and authoritative.
 4. NO HALLUCINATED STATISTICS OR IDENTIFIERS:
    - Do NOT invent metrics, percentages, benchmark numbers, or citation identifiers.
    - Only quote figures and identifiers explicitly present in the verified dossier above.
+   - If the dossier marks something as "[Unverified — omit]", do NOT include it.
    - If quantitative data is absent for a constrained topic, explicitly state that as a named research gap in the prose.
 5. PROVENANCE & RIGOR DIFFERENTIATION:
-   - Explicitly note differences in evidence tier (e.g. peer-reviewed vs. lab preprint vs. vendor blog) in the analytical text and comparison table.
+   - When the dossier includes multiple comparable items of clearly different provenance or rigor (e.g., peer-reviewed research vs. industry engineering blog vs. vendor marketing vs. academic program vs. for-profit course), you MUST explicitly note that distinction in the analytical prose and comparison table rather than presenting all of them under a single undifferentiated "Verified" status.
+   - The Verification Status column or label must reflect the actual evidentiary tier (e.g., "Verified (Peer-Reviewed Paper)", "Verified (Official Documentation)", "Vendor Claim (Unbenchmarked)", "Industry Survey").
 6. PARADIGM & CONTEXT INTEGRITY:
-   - Never treat disparate operational contexts (e.g. theoretical vs. applied, synthetic benchmarks vs. live production) as interchangeable support for a single claim.
+   - Never treat disparate operational contexts (e.g. theoretical vs. applied, synthetic benchmarks vs. live production, training-time vs. runtime mechanisms) as interchangeable support for a single claim. State distinctions clearly in the text.
 7. TEMPORAL HONESTY:
    - Do NOT present speculative future projections as historical facts.`;
 
-  let draftReport = "";
+  let report = "";
   try {
     const { text } = await withAiRateLimitRetry(
       () =>
@@ -661,9 +605,10 @@ Strict Writing Rules:
         }),
       { label: "Writer Agent", maxRetries: 3 },
     );
-    draftReport = text;
+    report = text;
   } catch (err) {
     log("warn", "writer_primary_model_failed", { error: String(err) });
+    // Tier 2 Fallback: Attempt synthesis with fast/secondary model before resorting to raw verified dossier
     try {
       const fallbackModel = getAiModelName();
       const { text } = await withAiRateLimitRetry(
@@ -676,41 +621,16 @@ Strict Writing Rules:
           }),
         { label: "Writer Agent Fallback", maxRetries: 2 },
       );
-      draftReport = text;
+      report = text;
     } catch (fallbackErr) {
       log("error", "writer_fallback_failed", { error: String(fallbackErr) });
-      draftReport = `# Research Report on ${topic}\n\n${verifiedDossier}\n\n[Note: Final report synthesis used fallback raw dossier format.]`;
+      report = `# Research Report on ${topic}\n\n${verifiedDossier}\n\n[Note: Final report synthesis used fallback raw dossier format.]`;
     }
   }
 
-  // Step 6: Citation Entailment Audit
-  const citationAudit = auditCitationEntailment(draftReport, ledger, rankedSources);
-
-  // Step 7: Adversarial Peer Review & Epistemic Calibration Pass
-  const reviewResult = await runAdversarialReview({
-    topic,
-    draftReport,
-    ledger,
-    sources: rankedSources,
-    gateway,
-    modelName,
-  });
-
-  const finalReportText = reviewResult.revisedReport || draftReport;
-
-  // Step 8: Quality Gate Evaluation
-  const qualityMetrics = evaluateResearchQualityGate({
-    ledger,
-    sources: rankedSources,
-    citationAudit,
-    contradictionsCount,
-    uncalibratedTermsCount: reviewResult.absoluteClaimsToCalibrate.length,
-  });
-
   return {
-    report: `${finalReportText}\n\n${sourcesMarkdown}`,
+    report: `${report}\n\n${sourcesMarkdown}`,
     sourcesMarkdown,
-    qualityMetrics,
   };
 }
 
@@ -747,10 +667,10 @@ export async function runDeepResearch(params: {
     `Decomposed into ${subtasks.length} parallel research subtasks: ${subtasks.map((s) => s.title).join(", ")}`,
   );
 
-  // 2. Research Subagents: Parallel Multi-Query Search & Extraction
+  // 2. Research Subagents: Parallel Worker Execution
   recordStep(
     "Research Subagents",
-    `Executing parallel multi-query search across arXiv API, Semantic Scholar, OpenAlex, and live Web index.`,
+    `Spawning ${subtasks.length} parallel worker subagents across arXiv, Semantic Scholar, and Web index.`,
   );
 
   const subagentResults = await Promise.all(
@@ -772,13 +692,13 @@ export async function runDeepResearch(params: {
     }),
   );
 
-  // 3. Source Ranking, Claim-Evidence Ledger & Contradiction Search
+  // 3. Verifier Agent: Academic Fact-Checking & Temporal Verification
   recordStep(
-    "Evidence Engine",
-    "Classifying source quality hierarchy (Tier 1-6), extracting Claim-Evidence Ledger, and executing contradiction searches.",
+    "Verifier Agent",
+    "Auditing temporal claims, verifying benchmark data, and cross-validating mathematical equations.",
   );
 
-  const { verifiedDossier, rankedSources, ledger, contradictionsFound } = await verifyAndAuditEvidence(
+  const { verifiedDossier, verifiedSources } = await verifyAndAuditEvidence(
     params.topic,
     plan,
     subagentResults,
@@ -786,39 +706,27 @@ export async function runDeepResearch(params: {
     modelName,
   );
 
+  // 4. Writer Agent: Technical Report Composition
   recordStep(
-    "Evidence Ledger",
-    `Constructed ${ledger.length} verified claim-evidence records with experimental context (${contradictionsFound.length} literature caveats identified).`,
+    "Writer Agent",
+    "Composing clean, publication-grade technical report with comparison matrix and LaTeX formulations.",
   );
 
-  // 4. Writer Agent, Citation Audit, Adversarial Review & Quality Gate
-  recordStep(
-    "Synthesis & Review",
-    "Composing technical report, auditing citation entailment, and running adversarial peer-review revision.",
-  );
-
-  const { report, sourcesMarkdown, qualityMetrics } = await writePublicationReport(
+  const { report, sourcesMarkdown } = await writePublicationReport(
     params.topic,
     plan,
     verifiedDossier,
-    rankedSources,
-    ledger,
-    contradictionsFound.length,
+    verifiedSources,
     gateway,
     modelName,
   );
 
-  recordStep(
-    "Quality Gate Passed",
-    `Research Quality Score: ${qualityMetrics.overallScore}/100 (${qualityMetrics.verifiedClaimsCount}/${qualityMetrics.totalClaims} verified claims, ${Math.round(qualityMetrics.tier1And2SourcesRatio * 100)}% Tier 1/2 literature).`,
-  );
+  recordStep("Final Synthesis Complete", "Delivered verified, multi-agent publication report.");
 
   log("info", "deep_research_completed", {
     topic: params.topic,
     subtasksCount: subtasks.length,
-    totalSources: rankedSources.length,
-    ledgerClaimsCount: ledger.length,
-    qualityScore: qualityMetrics.overallScore,
+    totalPapersRetrieved: subagentResults.reduce((acc, s) => acc + s.papers.length, 0),
   });
 
   return {
@@ -829,7 +737,5 @@ export async function runDeepResearch(params: {
     report,
     sourcesMarkdown,
     actionTrail,
-    ledger,
-    qualityMetrics,
   };
 }
