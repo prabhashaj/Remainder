@@ -2,7 +2,12 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createAiGatewayProvider, getResearchModelName, getAiModelName } from "@/lib/ai-gateway.server";
+import {
+  createAiGatewayProvider,
+  getResearchModelName,
+  getAiModelName,
+  withAiRateLimitRetry,
+} from "@/lib/ai-gateway.server";
 import { log } from "@/lib/logger.server";
 import {
   searchArxivServer,
@@ -120,13 +125,17 @@ Your goal:
   });
 
   try {
-    const { object } = await generateObject({
-      model: gateway(modelName),
-      system:
-        "You are an expert research coordinator that plans and decomposes topics into precise, executable subtasks.",
-      prompt: planningPrompt,
-      schema: SubtasksSchema,
-    });
+    const { object } = await withAiRateLimitRetry(
+      () =>
+        generateObject({
+          model: gateway(modelName),
+          system:
+            "You are an expert research coordinator that plans and decomposes topics into precise, executable subtasks.",
+          prompt: planningPrompt,
+          schema: SubtasksSchema,
+        }),
+      { label: "Planner Agent", maxRetries: 3 },
+    );
     return object;
   } catch (err) {
     log("warn", "deep_research_plan_fallback", { error: String(err) });
@@ -289,15 +298,20 @@ and honesty over polish.`;
 
   let findingsSummary = "";
   try {
-    const { text } = await generateText({
-      model: gateway(getAiModelName()), // cheaper/faster model — see point 1 from before
-      system: "You are a rigorous research subagent. You filter noise and synthesize only well-sourced findings for a downstream fact-checker.",
-      prompt: subagentSynthesisPrompt,
-    });
+    const { text } = await withAiRateLimitRetry(
+      () =>
+        generateText({
+          model: gateway(getAiModelName()), // cheaper/faster model for synthesis
+          system:
+            "You are a rigorous research subagent. You filter noise and synthesize only well-sourced findings for a downstream fact-checker.",
+          prompt: subagentSynthesisPrompt,
+        }),
+      { label: `Subagent Synthesis (${subtask.id})`, maxRetries: 3 },
+    );
     findingsSummary = text;
   } catch (err) {
     log("warn", "subagent_synthesis_failed", { subtaskId: subtask.id, error: String(err) });
-    findingsSummary = evidenceLines.join("\n").slice(0, 2000) + "\n\n[Note: Subagent synthesis failed, showing truncated raw findings.]";
+    findingsSummary = evidenceLines.join("\n").slice(0, 2000) + "\n\n[Note: Subagent synthesis fallback used.]";
   }
 
 
@@ -439,12 +453,16 @@ Your Verification Tasks:
 
   let verifiedDossier = "";
   try {
-    const { text } = await generateText({
-      model: gateway(modelName),
-      system:
-        "You are a rigorous Fact-Checking Agent. You cross-check literature, filter out hallucinations, and ensure the writer receives only verified facts.",
-      prompt: verifierPrompt,
-    });
+    const { text } = await withAiRateLimitRetry(
+      () =>
+        generateText({
+          model: gateway(modelName),
+          system:
+            "You are a rigorous Fact-Checking Agent. You cross-check literature, filter out hallucinations, and ensure the writer receives only verified facts.",
+          prompt: verifierPrompt,
+        }),
+      { label: "Verifier Agent", maxRetries: 3 },
+    );
     verifiedDossier = text;
   } catch (err) {
     log("warn", "verifier_agent_failed", { error: String(err) });
@@ -527,12 +545,16 @@ Strict Writing Rules:
 
   let report = "";
   try {
-    const { text } = await generateText({
-      model: gateway(modelName),
-      system:
-        "You are an expert Research Writer Agent. You compose highly structured, thoroughly researched, and professional deep research reports.",
-      prompt: writerPrompt,
-    });
+    const { text } = await withAiRateLimitRetry(
+      () =>
+        generateText({
+          model: gateway(modelName),
+          system:
+            "You are an expert Research Writer Agent. You compose highly structured, thoroughly researched, and professional deep research reports.",
+          prompt: writerPrompt,
+        }),
+      { label: "Writer Agent", maxRetries: 3 },
+    );
     report = text;
   } catch (err) {
     log("warn", "writer_agent_failed", { error: String(err) });
@@ -584,24 +606,24 @@ export async function runDeepResearch(params: {
     `Spawning ${subtasks.length} parallel worker subagents across arXiv, Semantic Scholar, and Web index.`,
   );
 
-  const subagentResults: Array<Awaited<ReturnType<typeof executeSubagentWorker>>> = [];
-  for (const subtask of subtasks) {
-    try {
-      const result = await executeSubagentWorker(subtask, gateway, modelName, params.onStepProgress);
-      subagentResults.push(result);
-    } catch (err) {
-      log("error", "subagent_worker_failed", { subtaskId: subtask.id, error: String(err) });
-      subagentResults.push({
-        subtaskId: subtask.id,
-        title: subtask.title,
-        objective: subtask.objective,
-        findingsSummary: `Investigation encountered an error: ${String(err)}`,
-        keyArchitectures: [],
-        papers: [],
-        webSources: [],
-      });
-    }
-  }
+  const subagentResults = await Promise.all(
+    subtasks.map(async (subtask) => {
+      try {
+        return await executeSubagentWorker(subtask, gateway, modelName, params.onStepProgress);
+      } catch (err) {
+        log("error", "subagent_worker_failed", { subtaskId: subtask.id, error: String(err) });
+        return {
+          subtaskId: subtask.id,
+          title: subtask.title,
+          objective: subtask.objective,
+          findingsSummary: `Investigation encountered an error: ${String(err)}`,
+          keyArchitectures: [],
+          papers: [],
+          webSources: [],
+        };
+      }
+    }),
+  );
 
   // 3. Verifier Agent: Academic Fact-Checking & Temporal Verification
   recordStep(

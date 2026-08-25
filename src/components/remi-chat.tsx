@@ -176,9 +176,11 @@ function isToolPartDone(part: any): boolean {
   if (!part) return false;
   if (part.state === "output-available" || part.state === "result") return true;
   if (part.toolInvocation?.state === "result") return true;
-  // Only trust part.output / part.result if they are non-null objects with at least one key
   const out = part.output ?? part.result ?? part.toolInvocation?.result;
-  if (out !== undefined && out !== null && typeof out === "object" && Object.keys(out).length > 0) return true;
+  if (out !== undefined && out !== null) {
+    if (typeof out === "object") return Object.keys(out).length > 0;
+    return true;
+  }
   return false;
 }
 
@@ -208,7 +210,7 @@ function getToolPartInput(part: any): any {
 function ToolGroup({ parts, isActivelyStreaming = true }: { parts: any[]; isActivelyStreaming?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const allDone = parts.every((p) => isToolPartDone(p));
-  const anyError = parts.some((p) => isToolPartError(p)) || (!isActivelyStreaming && !allDone);
+  const anyError = parts.some((p) => isToolPartError(p));
   const isRunning = isActivelyStreaming && !allDone && !anyError;
 
   // Single-line active indicator: show ONLY the current running action and remove previous ones
@@ -371,8 +373,13 @@ function isDeepResearchTool(part: any): boolean {
   const toolName =
     typeof part.toolName === "string"
       ? part.toolName
-      : typeStr.replace(/^tool-/, "");
-  return toolName === "deepResearch" || typeStr === "tool-deepResearch";
+      : (part.toolInvocation?.toolName || typeStr.replace(/^tool-/, ""));
+  const output = getToolPartOutput(part);
+  return (
+    toolName === "deepResearch" ||
+    typeStr === "tool-deepResearch" ||
+    Boolean(output && typeof output === "object" && (output.report || output.action_trail || output.plan))
+  );
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -405,11 +412,48 @@ function DeepResearchChatCard({ part, isActivelyStreaming = true }: { part: any;
   const isError = isToolPartError(part);
   const isRunning = !isDone && !isError;
 
-  const topicQuery = output.plan?.topic || input.topic || input.query || "Academic & Technical Topic";
-  const temporalConstraint = output.plan?.temporalConstraints || "2024–2026 (Recent Verified)";
+  const topicQuery = output.plan?.topic || input.topic || input.query || "Academic & Technical Investigation";
+  const temporalConstraint = output.plan?.temporalConstraints || "Recent Verified Literature";
+
+  // If there was an explicit failure and no report
+  if (isError && !output.report) {
+    return (
+      <div className="my-2.5 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive">
+        <p className="font-semibold">Deep research investigation could not be completed.</p>
+        <p className="mt-1 text-muted-foreground">Please try asking your query again.</p>
+      </div>
+    );
+  }
+
+  // While running and no report yet: render active progress banner
+  if (isRunning && !output.report) {
+    return (
+      <div className="my-2.5 overflow-hidden rounded-2xl border border-emerald-500/30 bg-card/95 p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+            <Microscope className="size-5 animate-pulse" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-ping" />
+                DEEP RESEARCH IN PROGRESS
+              </span>
+            </div>
+            <h3 className="font-display text-sm font-semibold text-foreground mt-0.5 truncate">
+              {topicQuery}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Coordinating parallel arXiv searches, academic databases, fact-checking verifier, and report writer...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Don't render card until we have actual report content
-  if (isRunning || !isDone || !output.report) return null;
+  if (!output.report) return null;
 
   const subtasksList = output.subtasks || [];
   const actionTrail = output.action_trail || [];
