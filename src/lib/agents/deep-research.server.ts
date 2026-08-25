@@ -34,7 +34,7 @@ export interface ResearchSubtask {
   webQueries: string[];
   category?: string | undefined;
   targetYearMin?: number | undefined;
-  objectiveType?: "conceptual/qualitative" | "quantitative/benchmark" | undefined;
+  objectiveType?: "conceptual/qualitative" | "quantitative/benchmark" | "mechanistic/how-it-works" | undefined;
 }
 
 export interface SubagentFinding {
@@ -93,7 +93,8 @@ Your goal:
    - Context/Paradigm Distinction: If the topic spans two evidentiary or operational contexts that could be wrongly conflated (e.g., theoretical vs. applied, historical vs. current, correlational vs. causal, lab/controlled vs. real-world/deployed, training-time vs. runtime for ML systems, short-term vs. structural drivers in economics/markets), make that distinction an explicit keyDimension so subtasks and downstream synthesis don't blur the two.
 2. Decompose the topic into 3 to 4 distinct, orthogonal investigation subtasks for parallel research subagents:
    - Quantitative Coverage: If the topic names or implies a measurable target, threshold, or magnitude (a latency budget, a percentage, a price level, a rate, a deadline, a cost limit, etc.), you MUST include at least one subtask specifically targeting quantitative data, benchmarks, or figures for that target — not just a conceptual/survey subtask. If no such measurable target exists in the topic, skip this requirement rather than inventing one.
-   - For each subtask, classify its objectiveType as either "conceptual/qualitative" or "quantitative/benchmark" so this is traceable downstream.
+   - Mechanistic / Process / Architecture Coverage: When the research topic concerns a system, process, method, or architecture (not just a high-level survey of what exists), you MUST ensure at least one subtask targets mechanistic/how-it-works content — concrete execution patterns, architectural walkthroughs, or step-by-step processes — not just conceptual/survey-level descriptions of what the system does.
+   - For each subtask, classify its objectiveType as either "conceptual/qualitative", "quantitative/benchmark", or "mechanistic/how-it-works" so this is traceable downstream.
 3. Provide targeted search queries for each subtask:
    - arxivQuery: Keywords for academic preprint searches.
    - academicQuery: Targeted search query for academic databases.
@@ -114,8 +115,8 @@ Your goal:
         title: z.string().describe("Short descriptive title of the subtask"),
         objective: z.string().describe("Specific technical question to resolve"),
         objectiveType: z
-          .enum(["conceptual/qualitative", "quantitative/benchmark"])
-          .describe("Whether the subtask objective is conceptual/qualitative or quantitative/benchmark"),
+          .enum(["conceptual/qualitative", "quantitative/benchmark", "mechanistic/how-it-works"])
+          .describe("Whether the subtask objective is conceptual/qualitative, quantitative/benchmark, or mechanistic/how-it-works"),
         arxivQuery: z.string().describe("Optimized search query for arXiv API"),
         academicQuery: z.string().describe("Optimized query for Semantic Scholar / OpenAlex"),
         webQueries: z.array(z.string()).describe("3 diverse Tavily search queries (general, news, forums)"),
@@ -458,6 +459,7 @@ Your Verification Tasks:
 2. PARADIGM & CONTEXT AUDIT: For each finding, verify whether the source's actual operational context (e.g. theoretical vs. applied, laboratory/synthetic benchmark vs. live production, historical baseline vs. contemporary system, or training-time vs. runtime mechanism) strictly matches the context required by the claim. Flag and label any category or operational mismatch explicitly (e.g., "[Context Mismatch: laboratory benchmark — not validated in live production]") rather than passing it through as direct evidentiary support.
 3. HALLUCINATION FIREWALL:
    - REJECT any specific statistic, metric, or figure that was NOT explicitly sourced in the findings above.
+   - REJECT any specific citation identifier (arXiv ID, DOI, paper number, exact publication code) that was NOT explicitly present in the raw findings above. Never construct a plausible-looking ID as a placeholder (e.g., partial digits with X's or similar templated patterns) — if a claim lacks an exact traceable source ID, cite it by source name/title only, or mark it '[Unverified — omit from report]' exactly as already required for statistics.
    - Do NOT invent or synthesize any figures. If a statistic has no traceable citation, write "[Unverified — omit from report]" next to it.
    - Ground baseline metrics and statistics in empirical reality for the given topic.
 4. OUTPUT: Produce a clean, verified research dossier containing only substantiated facts, properly sourced claims, and clearly labeled qualitative assessments. Mark all unverified claims and paradigm mismatches clearly.`;
@@ -548,6 +550,9 @@ Research Scope: ${plan.scope}
 Verified Research Dossier (from Verifier Agent):
 ${verifiedDossier}
 
+Verified Source List:
+${formattedSources}
+
 Report Structure:
 1. Executive Summary:
    High-level breakthrough context, core principles, and foundational shifts.
@@ -568,9 +573,14 @@ Strict Writing Rules:
    - Never treat disparate operational contexts (e.g. theoretical vs. applied, synthetic benchmarks vs. live production, training-time vs. runtime mechanisms) as interchangeable support for a single claim. Where the dossier's audit flags an operational or category mismatch, state the distinction explicitly in the report rather than citing it as if it directly transfers.
 4. TEMPORAL HONESTY:
    - Do NOT present speculative future projections as historical facts.
-5. CITATION QUALITY:
-   - Do NOT cite papers that are completely unrelated to the core topic.
-6. TABLE CONSOLIDATION & FORMATTING:
+5. CITATION GROUNDING & INTEGRITY:
+   - Every inline citation in the body of the report MUST correspond to an entry in the supplied verified sources list (formattedSources / verified dossier) — cited by title or short reference — rather than being freely generated as prose text disconnected from that list.
+   - If a claim does not have a matching structured source in the verified list, cite it by source name in plain text or omit the citation rather than inventing an identifier-shaped placeholder.
+   - Do NOT cite papers or sources that are completely unrelated to the core topic.
+6. PROVENANCE & RIGOR DIFFERENTIATION IN COMPARISONS:
+   - When the dossier includes multiple comparable items of clearly different provenance or rigor (e.g., peer-reviewed research vs. industry engineering blog vs. commercial/vendor marketing vs. academic curriculum vs. for-profit program/promotional content), you MUST explicitly note that distinction in comparison tables and text rather than presenting all of them under a single undifferentiated "Verified" status.
+   - The Verification Status column or label must reflect the actual evidentiary tier (e.g., "Verified (Peer-Reviewed Paper)", "Verified (Official Documentation)", "Vendor Claim (Unbenchmarked)", "Industry Survey") and never imply equal rigor across fundamentally disparate source types.
+7. TABLE CONSOLIDATION & FORMATTING:
    - Consolidate findings into fewer, larger comparison tables when multiple small tables would otherwise share the same columns (e.g., "Verified Source", "Temporal Validity", "Verification Status") — merge them into one unified matrix per major section instead of fragmenting into many 2-3 row tables.
    - Use clean, structured, highly readable Markdown formatting.
    - All markdown tables (if any) must be properly formatted with | separators.`;
