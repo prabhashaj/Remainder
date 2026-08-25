@@ -1323,7 +1323,13 @@ export function RemiChat({
     <div className="flex h-full min-h-0 flex-col text-base">
       {showTranscript && (
         <Conversation className="min-h-0 flex-1">
-          <ConversationContent className={compact ? "w-full" : "mx-auto w-full max-w-3xl"}>
+          <ConversationContent
+            className={
+              compact
+                ? "w-full"
+                : "mx-auto w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl px-4 sm:px-8"
+            }
+          >
             {messages.length === 0 && (
               <div className={compact ? "py-6 text-center" : "py-16 text-center"}>
                 <img
@@ -1503,7 +1509,13 @@ export function RemiChat({
         </Conversation>
       )}
 
-      <div className={compact ? "w-full px-3 pb-3" : "mx-auto w-full max-w-3xl px-3 pb-5"}>
+      <div
+        className={
+          compact
+            ? "w-full px-3 pb-3"
+            : "mx-auto w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl px-4 sm:px-8 pb-5"
+        }
+      >
         {topic && (
           <p className="mb-2 flex items-center gap-2 px-1 text-sm text-muted-foreground">
             <BookOpen className="size-4 text-primary" />
