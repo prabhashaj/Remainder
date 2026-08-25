@@ -1,7 +1,7 @@
 /**
  * PDF Export Utility for Deep Research Reports
- * Creates a clean, publication-grade, printable PDF layout with full KaTeX math,
- * tables, and metadata support — removing all interactive UI buttons and action bars.
+ * Produces a clean, elegant, publication-ready printable PDF report without
+ * internal pipeline metadata, badges, or interactive UI clutter.
  */
 
 export interface ResearchReportPdfOptions {
@@ -11,6 +11,17 @@ export interface ResearchReportPdfOptions {
   verifiedPapersCount?: number | undefined;
   subagentsCount?: number | undefined;
   temporalConstraints?: string | undefined;
+}
+
+function formatReportTitle(str: string): string {
+  if (!str) return "Research Report";
+  if (str === str.toLowerCase()) {
+    return str
+      .split(" ")
+      .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ""))
+      .join(" ");
+  }
+  return str;
 }
 
 /**
@@ -67,15 +78,10 @@ function cleanHtmlForPdf(rawHtml: string): string {
 }
 
 export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
-  const {
-    title,
-    contentHtml = "",
-    verifiedPapersCount = 0,
-    subagentsCount = 4,
-    temporalConstraints = "Recent Literature",
-  } = options;
+  const { title, contentHtml = "" } = options;
 
   const sanitizedHtml = cleanHtmlForPdf(contentHtml);
+  const cleanTitle = formatReportTitle(title);
 
   const dateStr = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -87,7 +93,7 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${title} — Deep Research Report</title>
+  <title></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -95,7 +101,7 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
   <style>
     @page {
       size: A4;
-      margin: 18mm 16mm;
+      margin: 20mm 18mm;
       @bottom-right {
         content: counter(page);
       }
@@ -145,54 +151,24 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
     }
 
     .report-header {
-      border-bottom: 2px solid #e5e7eb;
-      padding-bottom: 18px;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 16px;
       margin-bottom: 24px;
-    }
-
-    .brand-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 9pt;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #d97706;
-      background: #fef3c7;
-      padding: 4px 10px;
-      border-radius: 6px;
-      margin-bottom: 12px;
     }
 
     .report-title {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 20pt;
+      font-size: 22pt;
       font-weight: 800;
       line-height: 1.25;
       color: #0f172a;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
 
-    .metadata-bar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 16px;
-      font-size: 9pt;
+    .report-date {
+      font-size: 9.5pt;
       color: #64748b;
       font-weight: 500;
-    }
-
-    .metadata-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .metadata-item strong {
-      color: #334155;
     }
 
     .report-body {
@@ -201,7 +177,7 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
 
     .report-body h1 {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 16pt;
+      font-size: 15pt;
       font-weight: 700;
       color: #0f172a;
       margin-top: 24px;
@@ -336,18 +312,6 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
       text-decoration: underline;
     }
 
-    .report-footer {
-      margin-top: 32px;
-      padding-top: 14px;
-      border-top: 1px solid #e2e8f0;
-      font-size: 8.5pt;
-      color: #94a3b8;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      page-break-inside: avoid;
-    }
-
     @media print {
       body {
         width: 100%;
@@ -360,23 +324,12 @@ export function exportResearchReportPdf(options: ResearchReportPdfOptions) {
 </head>
 <body>
   <div class="report-header">
-    <div class="brand-badge">Remispace Deep Research Dossier</div>
-    <h1 class="report-title">${title}</h1>
-    <div class="metadata-bar">
-      <span class="metadata-item"><strong>Date:</strong> ${dateStr}</span>
-      <span class="metadata-item"><strong>Verified Sources:</strong> ${verifiedPapersCount}</span>
-      <span class="metadata-item"><strong>Workers:</strong> ${subagentsCount} Parallel Subagents</span>
-      <span class="metadata-item"><strong>Scope Window:</strong> ${temporalConstraints}</span>
-    </div>
+    <h1 class="report-title">${cleanTitle}</h1>
+    <div class="report-date">${dateStr}</div>
   </div>
 
   <div class="report-body">
     ${sanitizedHtml}
-  </div>
-
-  <div class="report-footer">
-    <span>Generated by Remispace Multi-Agent Deep Research Pipeline</span>
-    <span>Page <span class="page-number"></span></span>
   </div>
 
   <script>

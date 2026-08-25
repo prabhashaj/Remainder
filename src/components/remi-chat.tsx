@@ -538,21 +538,17 @@ function DeepResearchChatCard({
   return (
     <div className="my-2 overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-xs transition-all">
       <div className="p-4 sm:p-5">
-        {/* Clean Header with Download PDF Button */}
+        {/* Clean, Elegant Header with Download PDF Button */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <Sparkles className="size-4" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">Deep Research Report</span>
-                <span>•</span>
-                <span>{verifiedPapersCount} sources</span>
-                <span>•</span>
-                <span>{subagentsCount} subagents</span>
+              <div className="text-xs font-medium text-muted-foreground">
+                Deep Research Report
               </div>
-              <h3 className="font-display text-base font-bold text-foreground mt-0.5 truncate">
+              <h3 className="font-display text-base font-bold text-foreground mt-0.5 capitalize truncate">
                 {output.plan?.topic || topicQuery}
               </h3>
             </div>
