@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./source-ranking";
+export * from "./source-registry";
 export * from "./ledger";
 export * from "./counter-evidence";
 export * from "./epistemic-calibration";

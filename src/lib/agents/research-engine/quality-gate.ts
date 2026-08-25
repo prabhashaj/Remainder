@@ -1,62 +1,95 @@
 /**
- * Research Quality Gate & Observability Scoring
+ * Research Quality Gate & Weighted Scoring
  * Remispace Deep Research Agent
  */
 
 import type {
+  CanonicalSource,
   CitationAuditResult,
   ClaimEvidenceLedgerItem,
   ResearchQualityMetrics,
-  ResearchSource,
 } from "./types";
 import { log } from "@/lib/logger.server";
 
 export function evaluateResearchQualityGate(params: {
   ledger: ClaimEvidenceLedgerItem[];
-  sources: ResearchSource[];
+  sources: CanonicalSource[];
   citationAudit: CitationAuditResult;
   contradictionsCount: number;
   uncalibratedTermsCount: number;
+  inventedContextsCount: number;
 }): ResearchQualityMetrics {
-  const { ledger, sources, citationAudit, contradictionsCount, uncalibratedTermsCount } = params;
+  const { ledger, sources, citationAudit, contradictionsCount, uncalibratedTermsCount, inventedContextsCount } = params;
 
   const totalClaims = ledger.length;
-  const verifiedClaims = ledger.filter((l) => l.verification_status === "VERIFIED" || l.verification_status === "PARTIALLY_SUPPORTED");
+  const verifiedClaims = ledger.filter(
+    (l) => l.verification_status === "VERIFIED" || l.support_level === "DIRECTLY_SUPPORTED" || l.support_level === "PARTIALLY_SUPPORTED",
+  );
   const verifiedClaimsRatio = totalClaims > 0 ? verifiedClaims.length / totalClaims : 1.0;
 
   const tier1And2Sources = sources.filter((s) => s.tierRank === 1 || s.tierRank === 2);
   const tier1And2SourcesRatio = sources.length > 0 ? tier1And2Sources.length / sources.length : 1.0;
 
-  // Numerical claims grounding score
-  const numericalClaims = ledger.filter((l) => l.claim_type === "numerical");
-  const groundedNumericalClaims = numericalClaims.filter((l) => l.verification_status === "VERIFIED" && l.model && l.dataset);
-  const numericalGroundingScore = numericalClaims.length > 0 ? groundedNumericalClaims.length / numericalClaims.length : 1.0;
+  // 1. Citation Correctness Score (20%)
+  const citationCorrectnessScore = Math.max(
+    0,
+    citationAudit.citationEntailmentRatio - citationAudit.wrongPaperAttributionCount * 0.15,
+  );
 
-  // Contradiction and counter-evidence coverage score
-  const contradictionCoverageScore = contradictionsCount > 0 ? 1.0 : 0.75;
+  // 2. Claim-Evidence Support Score (20%)
+  const directlySupportedClaims = ledger.filter((l) => l.support_level === "DIRECTLY_SUPPORTED");
+  const claimEvidenceSupportScore = totalClaims > 0 ? directlySupportedClaims.length / totalClaims : 1.0;
 
-  // Calibration score (penalizes uncalibrated absolute terms)
-  const calibrationScore = Math.max(0, 1.0 - uncalibratedTermsCount * 0.1);
+  // 3. Source Identity & Metadata Accuracy (15%)
+  const uncertainSources = sources.filter((s) => s.verification_status === "SOURCE_IDENTITY_UNCERTAIN");
+  const sourceIdentityMetadataScore = sources.length > 0 ? Math.max(0, 1.0 - (uncertainSources.length / sources.length)) : 1.0;
 
-  // Citation entailment score
-  const citationEntailmentScore = citationAudit.citationEntailmentRatio;
+  // 4. Numerical & Metric Accuracy (10%)
+  const numericalClaims = ledger.filter((l) => l.claim_type === "numerical" || /\d+/.test(l.claim));
+  const groundedNumerical = numericalClaims.filter(
+    (l) => l.verification_status === "VERIFIED" && l.model && l.dataset && !l.original_metric_wording?.includes("drift"),
+  );
+  const numericalMetricAccuracyScore = numericalClaims.length > 0 ? groundedNumerical.length / numericalClaims.length : 1.0;
+
+  // 5. Research-Gap Validity (10%)
+  const gapClaims = ledger.filter((l) => l.claim_type === "research_gap");
+  const validGaps = gapClaims.filter((g) => g.verification_status !== "CONTRADICTED");
+  const researchGapValidityScore = gapClaims.length > 0 ? validGaps.length / gapClaims.length : 1.0;
+
+  // 6. Comparative Validity (10%)
+  const comparativeClaims = ledger.filter((l) => l.claim_type === "comparative");
+  const validComparisons = comparativeClaims.filter((c) => c.is_direct_comparison !== undefined);
+  const comparativeValidityScore = comparativeClaims.length > 0 ? validComparisons.length / comparativeClaims.length : 1.0;
+
+  // 7. Source Quality (5%)
+  const sourceQualityScore = tier1And2SourcesRatio;
+
+  // 8. Contradiction Coverage (5%)
+  const contradictionCoverageScore = contradictionsCount > 0 ? 1.0 : 0.8;
+
+  // 9. Uncertainty Calibration & Anti-Invented Details (5%)
+  const calibrationPenalty = (uncalibratedTermsCount * 0.05) + (inventedContextsCount * 0.1);
+  const uncertaintyCalibrationScore = Math.max(0, 1.0 - calibrationPenalty);
 
   // Calculate Weighted Overall Quality Score (0 to 100)
-  // Evidence Coverage: 25%, Source Quality: 20%, Numerical Grounding: 15%, Citation Entailment: 15%, Contradiction Coverage: 10%, Calibration: 15%
   const overallScore = Math.round(
-    verifiedClaimsRatio * 25 +
-    tier1And2SourcesRatio * 20 +
-    numericalGroundingScore * 15 +
-    citationEntailmentScore * 15 +
-    contradictionCoverageScore * 10 +
-    calibrationScore * 15
+    citationCorrectnessScore * 20 +
+    claimEvidenceSupportScore * 20 +
+    sourceIdentityMetadataScore * 15 +
+    numericalMetricAccuracyScore * 10 +
+    researchGapValidityScore * 10 +
+    comparativeValidityScore * 10 +
+    sourceQualityScore * 5 +
+    contradictionCoverageScore * 5 +
+    uncertaintyCalibrationScore * 5,
   );
 
   const gateFailures: string[] = [];
-  if (verifiedClaimsRatio < 0.7) gateFailures.push("Low verified claims ratio (<70%)");
-  if (tier1And2SourcesRatio < 0.3) gateFailures.push("Insufficient Tier 1/2 primary literature (<30%)");
-  if (citationEntailmentScore < 0.7) gateFailures.push("Citation-to-claim entailment mismatch (<70%)");
-  if (calibrationScore < 0.7) gateFailures.push("Uncalibrated absolute claims present");
+  if (citationCorrectnessScore < 0.7) gateFailures.push("Citation correctness below threshold (<70%)");
+  if (claimEvidenceSupportScore < 0.7) gateFailures.push("Direct claim-evidence support below threshold (<70%)");
+  if (sourceIdentityMetadataScore < 0.7) gateFailures.push("Source identity/metadata resolution uncertain (<70%)");
+  if (citationAudit.wrongPaperAttributionCount > 0) gateFailures.push("Wrong paper attribution detected");
+  if (inventedContextsCount > 0) gateFailures.push("Invented hardware/experimental context detected");
 
   const passedQualityGate = overallScore >= 75 && gateFailures.length === 0;
 
@@ -72,10 +105,15 @@ export function evaluateResearchQualityGate(params: {
     verifiedClaimsCount: verifiedClaims.length,
     verifiedClaimsRatio,
     tier1And2SourcesRatio,
-    numericalGroundingScore,
-    contradictionCoverageScore,
-    calibrationScore,
-    citationEntailmentScore,
+    citationCorrectnessScore: Number(citationCorrectnessScore.toFixed(2)),
+    claimEvidenceSupportScore: Number(claimEvidenceSupportScore.toFixed(2)),
+    sourceIdentityMetadataScore: Number(sourceIdentityMetadataScore.toFixed(2)),
+    numericalMetricAccuracyScore: Number(numericalMetricAccuracyScore.toFixed(2)),
+    researchGapValidityScore: Number(researchGapValidityScore.toFixed(2)),
+    comparativeValidityScore: Number(comparativeValidityScore.toFixed(2)),
+    sourceQualityScore: Number(sourceQualityScore.toFixed(2)),
+    contradictionCoverageScore: Number(contradictionCoverageScore.toFixed(2)),
+    uncertaintyCalibrationScore: Number(uncertaintyCalibrationScore.toFixed(2)),
     overallScore,
     passedQualityGate,
     gateFailures,
@@ -85,10 +123,9 @@ export function evaluateResearchQualityGate(params: {
   log("info", "deep_research_quality_gate_evaluated", {
     overallScore,
     passedQualityGate,
-    totalClaims,
-    verifiedClaimsCount: verifiedClaims.length,
-    tier1And2SourcesRatio: Number(tier1And2SourcesRatio.toFixed(2)),
-    citationEntailmentScore: Number(citationEntailmentScore.toFixed(2)),
+    citationCorrectnessScore: metrics.citationCorrectnessScore,
+    claimEvidenceSupportScore: metrics.claimEvidenceSupportScore,
+    sourceIdentityMetadataScore: metrics.sourceIdentityMetadataScore,
     gateFailures,
   });
 
