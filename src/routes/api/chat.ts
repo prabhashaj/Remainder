@@ -8,6 +8,8 @@ import {
   streamText,
   tool,
   generateId,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
   type UIMessage,
 } from "ai";
 import { nanoid } from "nanoid";
@@ -817,74 +819,78 @@ Title: "${curPage.title}"
         // For deep research, stop after 2 steps (1 tool call + optional 1 short text turn)
         // to avoid the model timing out while trying to re-generate the full report.
         const stopCondition = body.deepResearch ? stepCountIs(2) : stepCountIs(50);
-        const result = streamText({
-          model: gateway(chatModelName),
-          system: finalSystemPrompt,
-          messages: await convertToModelMessages(sanitizedUiMessages),
-          tools,
-          maxRetries: 5,
-          stopWhen: stopCondition,
-          onFinish: async ({ text, steps }) => {
-            if (!assistantPersisted) {
-              const parts: Array<{ type: string; text?: string; toolName?: string; input?: unknown; output?: unknown; state?: string }> = [];
-              if (Array.isArray(steps)) {
-                for (const step of steps) {
-                  if (Array.isArray(step.toolCalls)) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    for (const tc of step.toolCalls as any[]) {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      const res = (step.toolResults as any[])?.find((tr: any) => tr.toolCallId === tc.toolCallId);
-                      parts.push({
-                        type: `tool-${tc.toolName}`,
-                        toolName: tc.toolName,
-                        input: tc.args ?? tc.input,
-                        output: res?.result ?? res?.output,
-                        state: res ? "output-available" : "output-error",
-                      });
+        const modelMessages = await convertToModelMessages(sanitizedUiMessages);
+
+        // createUIMessageStream keeps the HTTP response alive via writer.merge().
+        // Without this wrapper, the connection goes idle while deepResearch tool
+        // (60-90s) is executing and the server drops it, causing "Completed with warnings".
+        const uiStream = createUIMessageStream({
+          execute: async ({ writer }) => {
+            const result = streamText({
+              model: gateway(chatModelName),
+              system: finalSystemPrompt,
+              messages: modelMessages,
+              tools,
+              maxRetries: 5,
+              stopWhen: stopCondition,
+              onFinish: async ({ text, steps }) => {
+                if (!assistantPersisted) {
+                  const parts: Array<{ type: string; text?: string; toolName?: string; input?: unknown; output?: unknown; state?: string }> = [];
+                  if (Array.isArray(steps)) {
+                    for (const step of steps) {
+                      if (Array.isArray(step.toolCalls)) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        for (const tc of step.toolCalls as any[]) {
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          const res = (step.toolResults as any[])?.find((tr: any) => tr.toolCallId === tc.toolCallId);
+                          parts.push({
+                            type: `tool-${tc.toolName}`,
+                            toolName: tc.toolName,
+                            input: tc.args ?? tc.input,
+                            output: res?.result ?? res?.output,
+                            state: res ? "output-available" : "output-error",
+                          });
+                        }
+                      }
                     }
                   }
+                  if (text) {
+                    parts.push({ type: "text", text });
+                  }
+                  if (parts.length === 0) {
+                    parts.push({ type: "text", text: text || "" });
+                  }
+                  const fallbackMsg = {
+                    id: nanoid(),
+                    role: "assistant",
+                    parts,
+                  };
+                  await persistAssistant(fallbackMsg, fallbackMsg.id);
                 }
-              }
-              if (text) {
-                parts.push({ type: "text", text });
-              }
-              if (parts.length === 0) {
-                parts.push({ type: "text", text: text || "" });
-              }
-              const fallbackMsg = {
-                id: nanoid(),
-                role: "assistant",
-                parts,
-              };
-              await persistAssistant(fallbackMsg, fallbackMsg.id);
-            }
+              },
+            });
+
+            // Merge the streamText output into the outer UI stream.
+            // writer.merge() consumes the inner stream without closing the outer one,
+            // keeping bytes flowing to the client during long tool calls.
+            writer.merge(
+              result.toUIMessageStream({
+                originalMessages: uiMessages,
+                onFinish: async ({ responseMessage }) => {
+                  if (responseMessage) {
+                    await persistAssistant(responseMessage, responseMessage.id);
+                  }
+                },
+              }),
+            );
           },
-          onError: async ({ error }) => {
+          onError: (error) => {
             log("error", "chat_stream_error", { error: String(error) }, { userId, traceId });
-            if (!assistantPersisted) {
-              const fallbackMsg = {
-                id: nanoid(),
-                role: "assistant",
-                parts: [
-                  {
-                    type: "text",
-                    text: "Research execution was interrupted. Please retry your query.",
-                  },
-                ],
-              };
-              await persistAssistant(fallbackMsg, fallbackMsg.id);
-            }
+            return "An error occurred. Please retry.";
           },
         });
 
-        const streamResponse = result.toUIMessageStreamResponse({
-          originalMessages: uiMessages,
-          onFinish: async ({ responseMessage }) => {
-            if (responseMessage) {
-              await persistAssistant(responseMessage, responseMessage.id);
-            }
-          },
-        });
+        const streamResponse = createUIMessageStreamResponse({ stream: uiStream });
 
         streamResponse.headers.set("X-Accel-Buffering", "no");
         streamResponse.headers.set("Cache-Control", "no-cache");
