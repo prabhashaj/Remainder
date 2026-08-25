@@ -20,6 +20,7 @@ import {
   Microscope,
   Network,
   Paperclip,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
   Wrench,
@@ -383,10 +384,22 @@ function isDeepResearchTool(part: any): boolean {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function DeepResearchChatCard({ part, isActivelyStreaming = true }: { part: any; isActivelyStreaming?: boolean }) {
+function DeepResearchChatCard({
+  part,
+  isActivelyStreaming = true,
+  onRetry,
+}: {
+  part: any;
+  isActivelyStreaming?: boolean;
+  onRetry?: (topic: string) => void;
+}) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [timedOut, setTimedOut] = useState(false);
+
   const output = getToolPartOutput(part) as {
     success?: boolean;
+    error?: string;
     report?: string;
     sources_markdown?: string;
     plan?: { topic?: string; scope?: string; temporalConstraints?: string };
@@ -409,23 +422,62 @@ function DeepResearchChatCard({ part, isActivelyStreaming = true }: { part: any;
   };
 
   const isDone = isToolPartDone(part) && output.success !== false;
-  const isError = isToolPartError(part);
-  const isRunning = !isDone && !isError;
+  const isError = isToolPartError(part) || output.success === false;
+  const isRunning = !isDone && !isError && isActivelyStreaming && !timedOut;
+  const isInterrupted = (!isActivelyStreaming && !isDone && !output.report) || timedOut;
 
   const topicQuery = output.plan?.topic || input.topic || input.query || "Academic & Technical Investigation";
   const temporalConstraint = output.plan?.temporalConstraints || "Recent Verified Literature";
 
-  // If there was an explicit failure and no report
-  if (isError && !output.report) {
+  // Client-side execution timer: triggers timeout error if exceeding 280s (under the 300s server maxDuration)
+  useEffect(() => {
+    if (!isRunning || output.report || isDone) return;
+    const interval = setInterval(() => {
+      setElapsedSeconds((prev) => {
+        if (prev >= 280) {
+          setTimedOut(true);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning, output.report, isDone]);
+
+  // If there was an explicit failure, stream abortion, or timeout without a report
+  if ((isError || isInterrupted) && !output.report) {
+    const errorMsg =
+      output.error ||
+      (timedOut
+        ? "Investigation exceeded maximum execution timeout limit (280s)."
+        : !isActivelyStreaming
+          ? "The server connection closed or timed out before research report generation could complete."
+          : "Deep research investigation encountered an error.");
+
     return (
       <div className="my-2.5 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive">
-        <p className="font-semibold">Deep research investigation could not be completed.</p>
-        <p className="mt-1 text-muted-foreground">Please try asking your query again.</p>
+        <div className="flex items-start gap-2.5">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">Deep Research Interrupted</p>
+            <p className="mt-1 text-muted-foreground leading-relaxed">{errorMsg}</p>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={() => onRetry(topicQuery)}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-destructive/15 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/25 transition-colors cursor-pointer"
+              >
+                <RotateCcw className="size-3.5" />
+                <span>Retry Deep Research</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
 
-  // While running and no report yet: render active progress banner
+  // While running and no report yet: render active progress banner with timer
   if (isRunning && !output.report) {
     return (
       <div className="my-2.5 overflow-hidden rounded-2xl border border-emerald-500/30 bg-card/95 p-4 shadow-sm">
@@ -434,11 +486,16 @@ function DeepResearchChatCard({ part, isActivelyStreaming = true }: { part: any;
             <Microscope className="size-5 animate-pulse" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                 <span className="size-1.5 rounded-full bg-emerald-500 animate-ping" />
                 DEEP RESEARCH IN PROGRESS
               </span>
+              {elapsedSeconds > 0 && (
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {elapsedSeconds}s elapsed
+                </span>
+              )}
             </div>
             <h3 className="font-display text-sm font-semibold text-foreground mt-0.5 truncate">
               {topicQuery}
@@ -1435,7 +1492,12 @@ export function RemiChat({
                                 <RoadmapChatCard key={rpIdx} part={rp} isActivelyStreaming={isActivelyStreaming} />
                               ))}
                               {researchParts.map((dp, dpIdx) => (
-                                <DeepResearchChatCard key={dpIdx} part={dp} isActivelyStreaming={isActivelyStreaming} />
+                                <DeepResearchChatCard
+                                  key={dpIdx}
+                                  part={dp}
+                                  isActivelyStreaming={isActivelyStreaming}
+                                  onRetry={(topic) => void submit(`Research ${topic}`)}
+                                />
                               ))}
                               {notebookParts.map((np, npIdx) => (
                                 <NotebookChatCard key={npIdx} part={np} />

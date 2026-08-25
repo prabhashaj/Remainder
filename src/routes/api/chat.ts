@@ -836,6 +836,9 @@ Title: "${curPage.title}"
               tools,
               maxRetries: 5,
               stopWhen: stopCondition,
+              onError: ({ error }) => {
+                log("error", "stream_text_error", { error: String(error) }, { userId, traceId });
+              },
             });
 
             writer.merge(
@@ -846,12 +849,16 @@ Title: "${curPage.title}"
                     await persistAssistant(responseMessage, responseMessage.id);
                   }
                 },
+                onError: (error) => {
+                  log("error", "to_ui_stream_error", { error: String(error) }, { userId, traceId });
+                  return error instanceof Error ? error.message : "Stream connection interrupted.";
+                },
               }),
             );
           },
           onError: (error) => {
             log("error", "chat_stream_error", { error: String(error) }, { userId, traceId });
-            return "An error occurred. Please retry.";
+            return error instanceof Error ? error.message : "An error occurred. Please retry.";
           },
         });
 
