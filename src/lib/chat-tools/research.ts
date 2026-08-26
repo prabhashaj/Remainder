@@ -20,58 +20,10 @@ export function getResearchTools(
   traceId: string,
   threadId: string | null,
   key: string,
+  enableDeepResearch = false,
 ) {
-  return {
-    deepResearch: tool({
-      description:
-        "Execute an in-depth multi-agent technical research investigation. Use ALWAYS when the user asks to 'research', perform literature reviews, investigate arXiv papers, explore emerging AI/scientific architectures, or conduct thorough multi-perspective technical studies. Coordinates parallel worker subagents across arXiv, Semantic Scholar, and Web index, and returns a verified, mathematically rigorous synthesis.",
-      inputSchema: z.object({
-        topic: z
-          .string()
-          .describe(
-            "The specific technical, scientific, or architectural topic to research thoroughly",
-          ),
-      }),
-      execute: async ({ topic }: { topic: string }) =>
-        wrapTool(
-          "deepResearch",
-          async () => {
-            const res = await runDeepResearch({
-              topic,
-              apiKey: key,
-              supabase,
-              userId,
-              traceId,
-            });
-
-            return {
-              topic: res.topic,
-              plan: res.plan,
-              subtasks: res.subtasks.map((s) => ({
-                id: s.id,
-                title: s.title,
-                objective: s.objective,
-              })),
-              action_trail: res.actionTrail,
-              subagents_count: res.subagentResults.length,
-              verified_papers_count: res.subagentResults.reduce(
-                (acc, s) => acc + s.papers.length,
-                0,
-              ),
-              report: res.report,
-              sources_markdown: res.sourcesMarkdown,
-              citation_instruction:
-                "Deliver the synthesized comprehensive report with mathematical LaTeX expressions ($$inline$$ / $$$$block$$$$), clear structured comparisons, and verified clickable citations. Keep completely emoji-free.",
-            };
-          },
-          supabase,
-          userId,
-          traceId,
-          threadId,
-          { topic },
-        ),
-    }),
-
+  // Base general research tools available for all standard queries
+  const baseTools = {
     researchResources: tool({
       description:
         "Find tutorials, videos, and courses for a learning topic using web search. Saves results to the user's roadmap.",
@@ -202,92 +154,107 @@ export function getResearchTools(
           "searchArxiv",
           async () => {
             const papers = await searchArxivServer(query, {
-              sortBy: sortBy ?? "relevance",
+              sortBy,
               yearMin,
               category,
-              maxResults: 8,
+              maxResults: 6,
             });
             const formattedSources = papers.map(
               (p, i) =>
-                `${i + 1}. [**${p.title}**](${p.arxivUrl || p.pdfUrl}) (${p.published?.slice(0, 4) || "arXiv"}) — *arXiv:${p.id}*`,
+                `${i + 1}. [**${p.title}**](${p.arxivUrl}) (${p.published || "N/A"}) — *${p.authors.slice(0, 2).join(", ")}${p.authors.length > 2 ? " et al." : ""}*`,
             );
+
             return {
-              query,
-              papers,
+              papers: papers.map((p) => ({
+                title: p.title,
+                url: p.arxivUrl,
+                pdfUrl: p.pdfUrl,
+                authors: p.authors,
+                published: p.published,
+                summary: p.summary,
+              })),
               sources_markdown: formattedSources.join("\n"),
               citation_instruction:
-                "Include inline citations and append a '### Sources' section at the end of your response with paper links. Note the exact publication year for each paper.",
+                "Cite paper titles as clickable markdown links to their arXiv abstract URLs, and append them to '### Sources'.",
             };
           },
           supabase,
           userId,
           traceId,
           threadId,
-          { query, sortBy, yearMin, category },
+          { query },
         ),
     }),
 
     searchPapers: tool({
       description:
-        "Search academic databases (Semantic Scholar / OpenAlex) across all scientific disciplines for research papers.",
+        "Search peer-reviewed academic literature and scientific papers via Semantic Scholar across all disciplines (medicine, biology, CS, social sciences, physics). Returns citation counts, open-access PDFs, and TLDR summaries.",
       inputSchema: z.object({
-        query: z.string().describe("Paper title, subject, or research topic"),
-        yearMin: z.number().optional().describe("Minimum publication year to filter"),
+        query: z.string().describe("Research topic, keywords, or paper title"),
+        yearMin: z.number().optional().describe("Optional minimum publication year"),
       }),
       execute: async ({ query, yearMin }) =>
         wrapTool(
           "searchPapers",
           async () => {
-            const papers = await searchPapersServer(query, { yearMin, maxResults: 6 });
+            const papers = await searchPapersServer(query, {
+              yearMin,
+              maxResults: 6,
+            });
             const formattedSources = papers.map(
               (p, i) =>
-                `${i + 1}. [**${p.title}**](${p.url}) (${p.year || "Academic Paper"}) — *${p.authors?.slice(0, 2).join(", ") || "Research"}*`,
+                `${i + 1}. [**${p.title}**](${p.url}) (${p.year ?? "N/A"}) — *${p.authors.slice(0, 2).join(", ")}${p.authors.length > 2 ? " et al." : ""}* (Citations: ${p.citationCount ?? 0})`,
             );
+
             return {
-              query,
-              papers,
+              papers: papers.map((p) => ({
+                title: p.title,
+                url: p.url,
+                authors: p.authors,
+                year: p.year,
+                citationCount: p.citationCount,
+                abstract: p.abstract,
+              })),
               sources_markdown: formattedSources.join("\n"),
               citation_instruction:
-                "Include inline citations and append a '### Sources' section at the end of your response with paper links.",
+                "Cite paper titles with clickable links to their Semantic Scholar pages, and append them to '### Sources'.",
             };
           },
           supabase,
           userId,
           traceId,
           threadId,
-          { query, yearMin },
+          { query },
         ),
     }),
 
     searchDocs: tool({
       description:
-        "Search technical documentation, framework guides, and API reference pages for software libraries.",
+        "Search official documentation for popular open-source libraries and frameworks (React, Next.js, TanStack, Tailwind, Supabase, PyTorch, LangChain, etc.).",
       inputSchema: z.object({
-        library: z.string().describe("Library or framework name (e.g. React, PyTorch, Tailwind)"),
-        topic: z.string().describe("Specific feature, hook, or API method to look up"),
+        library: z
+          .string()
+          .describe(
+            "Library name (e.g. 'react', 'nextjs', 'tanstack-router', 'supabase', 'pytorch')",
+          ),
+        query: z.string().describe("Specific feature, API, hook, or function to look up"),
       }),
-      execute: async ({ library, topic }: { library: string; topic: string }) =>
+      execute: async ({ library, query }) =>
         wrapTool(
           "searchDocs",
           async () => {
-            const docs = await searchDocsServer(library, topic);
-            const formattedSources = docs.map(
-              (d, i) => `${i + 1}. [**${d.title}**](${d.url}) — *${library} Documentation*`,
-            );
+            const res = await searchDocsServer(library, query);
             return {
-              library,
-              topic,
-              docs,
-              sources_markdown: formattedSources.join("\n"),
+              results: res,
               citation_instruction:
-                "Include inline citations and append a '### Sources' section at the end of your response with documentation links.",
+                "Cite official documentation URLs in markdown and provide accurate API signatures and examples.",
             };
           },
           supabase,
           userId,
           traceId,
           threadId,
-          { library, topic },
+          { library, query },
         ),
     }),
 
@@ -317,6 +284,64 @@ export function getResearchTools(
           traceId,
           threadId,
           { query },
+        ),
+    }),
+  };
+
+  // Only include the heavy multi-agent Deep Research workflow when explicitly requested by user toggle
+  if (!enableDeepResearch) {
+    return baseTools;
+  }
+
+  return {
+    ...baseTools,
+    deepResearch: tool({
+      description:
+        "Execute an in-depth multi-agent technical research investigation. Only invoked when the user has explicitly enabled Deep Research Mode. Coordinates parallel worker subagents across arXiv, Semantic Scholar, and Web index, and returns a verified, mathematically rigorous synthesis.",
+      inputSchema: z.object({
+        topic: z
+          .string()
+          .describe(
+            "The specific technical, scientific, or architectural topic to research thoroughly",
+          ),
+      }),
+      execute: async ({ topic }: { topic: string }) =>
+        wrapTool(
+          "deepResearch",
+          async () => {
+            const res = await runDeepResearch({
+              topic,
+              apiKey: key,
+              supabase,
+              userId,
+              traceId,
+            });
+
+            return {
+              topic: res.topic,
+              plan: res.plan,
+              subtasks: res.subtasks.map((s) => ({
+                id: s.id,
+                title: s.title,
+                objective: s.objective,
+              })),
+              action_trail: res.actionTrail,
+              subagents_count: res.subagentResults.length,
+              verified_papers_count: res.subagentResults.reduce(
+                (acc, s) => acc + s.papers.length,
+                0,
+              ),
+              report: res.report,
+              sources_markdown: res.sourcesMarkdown,
+              citation_instruction:
+                "Deliver the synthesized comprehensive report with mathematical LaTeX expressions ($$inline$$ / $$$$block$$$$), clear structured comparisons, and verified clickable citations. Keep completely emoji-free.",
+            };
+          },
+          supabase,
+          userId,
+          traceId,
+          threadId,
+          { topic },
         ),
     }),
   };

@@ -1363,6 +1363,10 @@ export function RemiChat({
       },
     );
 
+    if (deepResearchActive) {
+      setDeepResearchActive(false);
+    }
+
     if (inlineAttachments.length > 0 || uploadedRefs.length > 0) {
       void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
     }
