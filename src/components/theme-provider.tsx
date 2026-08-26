@@ -34,14 +34,14 @@ function readStoredTheme(): ThemeId {
 }
 
 function readStoredFont(): FontId {
-  if (typeof window === "undefined") return "sans";
+  if (typeof window === "undefined") return "roboto";
   const stored = window.localStorage.getItem(FONT_STORAGE_KEY);
-  return isFontId(stored) ? stored : "sans";
+  return isFontId(stored) ? stored : "roboto";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeId>("blush");
-  const [font, setFontState] = useState<FontId>("sans");
+  const [font, setFontState] = useState<FontId>("roboto");
 
   // Hydrate from this browser first (instant), then reconcile with the profile.
   useEffect(() => {

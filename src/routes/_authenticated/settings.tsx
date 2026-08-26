@@ -209,7 +209,7 @@ function SettingsPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Click to choose an iconic font aesthetic for your notes and workspace.
         </p>
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {FONTS.map((f) => (
             <button
               key={f.id}

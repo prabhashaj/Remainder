@@ -136,8 +136,8 @@ function SharedConversationPage() {
   }
 
   function toggleTheme() {
-    const isDark = theme === "midnight" || theme === "obsidian";
-    setTheme(isDark ? "blush" : "midnight");
+    const isDark = theme === "obsidian" || theme === "emerald" || theme === "velvet" || theme === "sapphire";
+    setTheme(isDark ? "blush" : "obsidian");
   }
 
   if (isLoading) {
@@ -219,7 +219,7 @@ function SharedConversationPage() {
             aria-label="Toggle theme"
             className="rounded-xl text-muted-foreground"
           >
-            {theme === "midnight" || theme === "obsidian" ? (
+            {theme === "obsidian" || theme === "emerald" || theme === "velvet" || theme === "sapphire" ? (
               <Sun className="size-4" />
             ) : (
               <Moon className="size-4" />
