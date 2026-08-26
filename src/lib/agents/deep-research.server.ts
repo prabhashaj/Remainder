@@ -228,10 +228,10 @@ async function executeSubagentWorker(
       yearMin: subtask.targetYearMin,
     }),
     ...subtask.webQueries.map((q) =>
-      tavilySearch(q, { maxResults: 4, depth: "basic" }).catch(() => ({
+      tavilySearch(q, { maxResults: 5, depth: "advanced" }).catch(() => ({
         results: [] as WebResult[],
         answer: "",
-      }))
+      })),
     ),
   ]);
 

@@ -67,14 +67,19 @@ export function getResearchTools(
           .enum(["day", "week", "month", "year", "d", "w", "m", "y", ""])
           .optional()
           .describe("Optional time range for the search (e.g. 'day' for yesterday/today, 'week' for recent events)"),
+        depth: z
+          .enum(["basic", "advanced"])
+          .optional()
+          .describe("Search depth. Use 'advanced' when conducting deep research, in-depth analysis, or literature reviews; defaults to 'basic' for standard fast lookups."),
       }),
-      execute: async ({ query, time_range }) =>
+      execute: async ({ query, time_range, depth }) =>
         wrapTool(
           "webSearch",
           async () => {
+            const searchDepth = depth ?? "basic";
             const res = await tavilySearch(query, {
-              maxResults: 5,
-              depth: "basic",
+              maxResults: searchDepth === "advanced" ? 8 : 5,
+              depth: searchDepth,
               ...(time_range ? { timeRange: time_range } : {}),
             });
             const formattedSources = res.results.map(

@@ -59,15 +59,15 @@ export async function runResearch(params: {
       }),
       execute: async ({ query, time_range }) => {
         const res = await tavilySearch(query, {
-          maxResults: 5,
-          depth: "basic",
+          maxResults: 6,
+          depth: "advanced",
           ...(time_range ? { timeRange: time_range } : {}),
         });
         return {
           results: res.results.map((r) => ({
             title: r.title,
             url: r.url,
-            content: r.content.slice(0, 500),
+            content: r.content.slice(0, 1000),
           })),
           answer: res.answer,
         };
