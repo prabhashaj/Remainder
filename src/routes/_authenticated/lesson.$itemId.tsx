@@ -447,17 +447,6 @@ function LessonPage() {
               </Button>
             </>
           )}
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsFullscreen(true)}
-            className="press rounded-2xl gap-1.5"
-            title="Read in full screen"
-          >
-            <Maximize2 className="size-3.5 text-primary" />
-            Full screen
-          </Button>
         </div>
 
         {articleContent}
