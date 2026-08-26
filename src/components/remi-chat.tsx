@@ -62,11 +62,15 @@ import { SpeechAndCopyToolbar } from "@/components/speech-and-copy";
 import { ChatVideoEmbeds } from "@/components/chat-video-embeds";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { renameThread } from "@/lib/db";
 import { getPlanUsage } from "@/lib/billing.functions";
 import { isSubscriptionPremium } from "@/lib/limits";
 import { cn } from "@/lib/utils";
+import { createStudyResource } from "@/lib/study";
+import { getYouTubeMetadataFn, fetchTranscript } from "@/lib/study.functions";
+import { getYouTubeWatchUrl } from "@/lib/youtube";
 
 function getToolLabel(
   part:
@@ -989,6 +993,31 @@ export function RemiChat({
   const [lastCheckedMessageId, setLastCheckedMessageId] = useState<string | null>(null);
   const [deepResearchActive, setDeepResearchActive] = useState(false);
 
+  const runGetMetadata = useServerFn(getYouTubeMetadataFn);
+  const runFetchTranscript = useServerFn(fetchTranscript);
+
+  const handleAddVideoToLibrary = useCallback(async (videoId: string) => {
+    const url = getYouTubeWatchUrl(videoId);
+    let title = "YouTube Video";
+    try {
+      const metaRes = await runGetMetadata({ data: { urlOrId: videoId } });
+      if (metaRes.success && metaRes.metadata?.title) {
+        title = metaRes.metadata.title;
+      }
+    } catch {
+      // ignore — fallback title is fine
+    }
+    const created = await createStudyResource({ title, kind: "video", url });
+    void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
+    toast.success("Video added to your library!");
+    // Trigger transcript extraction in the background
+    if (created?.id) {
+      void runFetchTranscript({ data: { videoId, resourceId: created.id } }).then(() => {
+        void queryClient.invalidateQueries({ queryKey: ["study-resources"] });
+      });
+    }
+  }, [runGetMetadata, runFetchTranscript, queryClient]);
+
   const { data: usageData } = useQuery({
     queryKey: ["planUsage"],
     queryFn: () => getPlanUsage(),
@@ -1487,7 +1516,7 @@ export function RemiChat({
                                 <MessageResponse>{group.text}</MessageResponse>
                                 {message.role === "assistant" && !isActivelyStreaming && (
                                   <>
-                                    <ChatVideoEmbeds text={group.text} />
+                                    <ChatVideoEmbeds text={group.text} onAddToLibrary={handleAddVideoToLibrary} />
                                     <SpeechAndCopyToolbar
                                       text={group.text}
                                       id={`${message.id}-${gIdx}`}
