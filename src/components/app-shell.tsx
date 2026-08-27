@@ -28,6 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import remiLogo from "@/assets/remi.png";
+import { RemispaceBrand } from "@/components/brand";
 import {
   FocusTimerButton,
   FocusTimerChip,
@@ -237,10 +238,12 @@ function WorkspaceSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-border/70">
       <SidebarHeader>
-        <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1.5">
-          <img src={remiLogo} alt="" width={36} height={36} className="size-9 shrink-0" />
+        <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1.5 hover:opacity-90 transition-opacity">
+          <div className="hidden group-data-[collapsible=icon]:block">
+            <img src={remiLogo} alt="Remi" width={32} height={32} className="size-8 shrink-0 object-contain" />
+          </div>
           <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-            <span className="font-display text-xl font-bold">Remispace</span>
+            <RemispaceBrand size="md" />
             {isPremium ? (
               <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-sm">
                 Pro

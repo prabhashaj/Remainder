@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import remiLogo from "@/assets/remi.png";
+import { RemispaceBrand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
@@ -195,20 +195,11 @@ function SharedConversationPage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary/20">
       {/* Top Sticky Bar */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 px-4 sm:px-8 backdrop-blur-md">
-        <a href="/" className="flex items-center gap-2.5 group">
-          <img
-            src={remiLogo}
-            alt="Remispace"
-            className="size-7 rounded-lg transition-transform group-hover:scale-105"
-          />
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-sm sm:text-base tracking-tight text-foreground">
-              Remispace
-            </span>
-            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-              <Globe className="size-2.5" /> Shared Chat
-            </span>
-          </div>
+        <a href="/" className="flex items-center gap-2 group hover:opacity-90 transition-opacity">
+          <RemispaceBrand size="sm" />
+          <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+            <Globe className="size-2.5" /> Shared Chat
+          </span>
         </a>
 
         <div className="flex items-center gap-2 sm:gap-3">

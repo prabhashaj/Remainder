@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check, Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import remiLogo from "@/assets/remi.png";
+import { RemispaceBrand } from "@/components/brand";
 import studyspaceImg from "@/assets/Studyspace.png";
 import roadmapsImg from "@/assets/roadmaps.png";
 import tasksImg from "@/assets/tasks.png";
@@ -151,18 +151,9 @@ export default function Landing() {
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-[#0d402e]/80 bg-[#021810]/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-2.5">
-            <img
-              src={remiLogo}
-              alt="Remispace logo"
-              width={34}
-              height={34}
-              className="size-8.5 rounded-xl object-cover shadow-xs"
-            />
-            <span className="font-display text-xl font-bold tracking-tight text-white">
-              Remispace
-            </span>
-          </div>
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+            <RemispaceBrand size="md" className="text-white" />
+          </Link>
 
           <nav className="hidden items-center gap-7 text-sm font-medium text-emerald-100/70 md:flex">
             <a href="#features" className="transition-colors hover:text-white">
@@ -764,10 +755,9 @@ export default function Landing() {
       <footer className="border-t border-[#0d402e] bg-[#021810] px-6 py-12">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col justify-between gap-8 md:flex-row md:items-center">
-            <div className="flex items-center gap-3">
-              <img src={remiLogo} alt="Remispace" className="size-7 rounded-xl object-cover" />
-              <span className="font-display font-bold text-white text-lg">Remispace</span>
-            </div>
+            <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+              <RemispaceBrand size="md" className="text-white" />
+            </Link>
 
             <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
               <a href="#features" className="hover:text-white transition-colors">

@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Us
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import remiLogo from "@/assets/remi.png";
+import { RemispaceBrand } from "@/components/brand";
 import { supabase } from "@/integrations/supabase/client";
 
 type AuthMode = "signin" | "signup" | "forgot";
@@ -160,18 +160,9 @@ function AuthPage() {
         <div className="mb-6 flex items-center justify-center">
           <Link
             to="/"
-            className="inline-flex items-center justify-center gap-3 transition-transform hover:opacity-90"
+            className="inline-flex items-center justify-center transition-transform hover:opacity-90 group"
           >
-            <img
-              src={remiLogo}
-              alt="Remispace Logo"
-              width={38}
-              height={38}
-              className="size-9.5 object-contain"
-            />
-            <span className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              Remispace
-            </span>
+            <RemispaceBrand size="lg" className="text-white" iconClassName="group-hover:scale-110" />
           </Link>
         </div>
 
