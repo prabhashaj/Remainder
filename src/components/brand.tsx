@@ -24,7 +24,7 @@ export function RemispaceBrand({ className, iconClassName, size = "md" }: Remisp
       )}
     >
       <span className="leading-none">Remispa</span>
-      <span className="inline-flex items-baseline -mx-[0.05em] relative">
+      <span className="inline-flex items-baseline -mx-[0.00em] relative">
         <img
           src={remiLogo}
           alt="c"
