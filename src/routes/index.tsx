@@ -227,56 +227,50 @@ function LandingPage() {
 
       {/* ── Hero Section ── */}
       <section className="relative pt-32 sm:pt-40 pb-16 overflow-hidden">
-        {/* Ambient orbs */}
-        <div className="orb orb-primary w-[750px] h-[750px] -top-60 -right-60 animate-float" />
+        {/* Background Grid Pattern & Ambient orbs */}
+        <div className="absolute inset-0 hero-grid-pattern opacity-60 pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_35%,#000_70%,transparent_100%)]" />
+        <div className="orb orb-primary w-[800px] h-[800px] -top-60 -right-60 animate-float" />
         <div
-          className="orb orb-secondary w-[550px] h-[550px] bottom-0 -left-40 animate-float"
+          className="orb orb-secondary w-[600px] h-[600px] bottom-0 -left-40 animate-float"
           style={{ animationDelay: "2s" }}
         />
         <div
-          className="orb w-[350px] h-[350px] top-1/3 left-1/2 animate-float"
+          className="orb w-[500px] h-[500px] top-10 left-1/2 -translate-x-1/2 animate-float pointer-events-none"
           style={{
-            background: "radial-gradient(circle, rgba(167, 139, 250, 0.15) 0%, transparent 70%)",
-            animationDelay: "3.5s",
+            background: "radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, rgba(20, 184, 166, 0.08) 50%, transparent 75%)",
+            animationDelay: "1s",
           }}
         />
 
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-          {/* Main heading */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-8 leading-[1.08] font-display">
-            Master anything <br className="hidden sm:block" />
-            <span className="text-gradient">10x deeper</span> with{" "}
-            <span className="relative inline-block text-white">
-              Remispace
-              <svg
-                className="absolute -bottom-2.5 left-0 w-full h-3.5"
-                viewBox="0 0 200 12"
-                fill="none"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M2 8 C40 2, 80 10, 120 6 C150 3, 175 8, 198 5"
-                  stroke="#34d399"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  className="landing-underline-draw"
-                />
-              </svg>
+          {/* Top Pill Badge */}
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs sm:text-sm font-medium mb-8 backdrop-blur-xl shadow-lg shadow-emerald-950/40 hover:bg-emerald-500/15 hover:border-emerald-500/40 transition-all duration-300">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Next-Generation AI Study Companion</span>
+            <span className="text-emerald-500/50">•</span>
+            <span className="text-emerald-300 font-semibold flex items-center gap-1">
+              Deep Synthesis <ArrowRight className="size-3 text-emerald-400" />
             </span>
+          </div>
+
+          {/* Main heading */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-bold tracking-tight mb-7 leading-[1.06] font-display text-white">
+            Master complex subjects <br className="hidden sm:block" />
+            <span className="text-gradient">10x deeper</span> with Remispace
           </h1>
 
           {/* Subtitle */}
-          <p className="text-base sm:text-xl text-emerald-100/75 max-w-2xl mx-auto mb-10 leading-relaxed font-sans">
-            Research complex topics, generate structured mastery roadmaps, write mathematical notebooks,
-            and study with Remi—your dedicated Socratic AI companion.
+          <p className="text-base sm:text-xl text-emerald-100/80 max-w-2xl mx-auto mb-10 leading-relaxed font-sans font-normal">
+            Transform intimidating topics, research papers, and lectures into structured mastery roadmaps,
+            clean mathematical notebooks, and interactive active-recall sessions with Remi.
           </p>
 
           {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="group flex items-center gap-2.5 px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-2xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02] text-base"
+              className="group flex items-center gap-2.5 px-8 sm:px-9 py-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-2xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] text-base"
             >
               Start learning free
               <ArrowRight className="size-4.5 group-hover:translate-x-1.5 transition-transform" />
@@ -284,28 +278,44 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signin" }}
-              className="flex items-center gap-2 px-8 py-4 border border-emerald-500/30 rounded-2xl bg-[#072418]/60 hover:bg-[#0b3323] transition-all duration-300 text-sm font-semibold text-emerald-200 hover:text-white"
+              className="flex items-center gap-2 px-8 sm:px-9 py-4 border border-emerald-500/30 rounded-2xl bg-[#072418]/60 hover:bg-[#0b3323] hover:border-emerald-400/50 transition-all duration-300 text-base font-semibold text-emerald-200 hover:text-white backdrop-blur-xl hover:scale-[1.02] active:scale-[0.98]"
             >
               Sign in to your workspace
             </Link>
           </div>
+
+          {/* Trust Highlights */}
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs sm:text-sm text-emerald-200/70 mb-12">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+              <span>Free to start</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+              <span>No credit card required</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+              <span>LaTeX formulas & clean exports</span>
+            </div>
+          </div>
         </div>
 
         {/* Scroll indicator */}
-        <div className="flex justify-center mt-10 mb-8">
+        <div className="flex justify-center mb-8">
           <a
             href="#demo-video"
-            className="flex flex-col items-center gap-2 text-emerald-400/50 hover:text-emerald-300 transition-colors"
+            className="group inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/20 bg-[#061e14]/60 hover:bg-[#082a1c] text-emerald-300/80 hover:text-emerald-200 transition-all text-xs font-medium backdrop-blur-md hover:border-emerald-500/40 hover:scale-105"
           >
-            <span className="text-[10px] font-bold tracking-[0.25em] uppercase">Discover more</span>
-            <ChevronDown className="size-4 animate-bounce" />
+            <span>Discover more</span>
+            <ChevronDown className="size-3.5 group-hover:translate-y-0.5 transition-transform text-emerald-400" />
           </a>
         </div>
 
         {/* ── Demo Video (Plays on Hover, Resets on Unhover) ── */}
         <div id="demo-video" className="relative z-10 max-w-5xl mx-auto px-6 mb-8">
           <div
-            className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/25 hover:border-emerald-400/50 transition-colors duration-500 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl shadow-emerald-950/60 cursor-pointer"
+            className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/30 hover:border-emerald-400/60 transition-all duration-500 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl shadow-emerald-950/80 hover:shadow-emerald-900/60 cursor-pointer group"
             onMouseEnter={handleVideoMouseEnter}
             onMouseLeave={handleVideoMouseLeave}
           >

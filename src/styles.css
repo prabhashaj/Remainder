@@ -537,9 +537,14 @@ body.sidebar-resizing * {
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
+  background: linear-gradient(135deg, #a7f3d0 0%, #34d399 35%, #10b981 70%, #059669 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.hero-grid-pattern {
+  background-image: radial-gradient(rgba(16, 185, 129, 0.09) 1px, transparent 1px);
+  background-size: 36px 36px;
 }
 
 .landing-hero-glow {
