@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Sparkles, User } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -157,32 +157,22 @@ function AuthPage() {
 
       <div className="relative w-full max-w-[440px] z-10 my-auto">
         {/* Brand Header */}
-        <div className="mb-6 flex flex-col items-center justify-center text-center">
+        <div className="mb-6 flex items-center justify-center">
           <Link
             to="/"
-            className="group relative mb-3 inline-flex items-center justify-center rounded-2xl p-1 transition-transform hover:scale-105"
+            className="inline-flex items-center justify-center gap-3 transition-transform hover:opacity-90"
           >
-            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-emerald-500/30 to-teal-500/30 blur-sm group-hover:blur-md transition-all" />
             <img
               src={remiLogo}
               alt="Remispace Logo"
-              width={52}
-              height={52}
-              className="relative size-13 rounded-2xl object-cover ring-2 ring-emerald-500/40 shadow-xl shadow-emerald-950/60"
+              width={38}
+              height={38}
+              className="size-9.5 object-contain"
             />
+            <span className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white">
+              Remispace
+            </span>
           </Link>
-
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-            Remispace
-          </h1>
-          <p className="text-xs sm:text-sm text-emerald-300/80 mt-1 max-w-[280px]">
-            Your calm sanctuary for deep, structured learning
-          </p>
-
-          <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-950/50 px-3 py-1 text-[11px] font-medium text-emerald-300 backdrop-blur-sm">
-            <Sparkles className="size-3 text-emerald-400" />
-            <span>AI-Powered Companion & Workspace</span>
-          </div>
         </div>
 
         {/* Auth Card */}
@@ -540,31 +530,6 @@ function AuthPage() {
               )}
             </>
           )}
-        </div>
-
-        {/* Reassurance & Terms Footer */}
-        <div className="mt-6 text-center space-y-2">
-          <p className="text-xs text-zinc-400">
-            By signing in, you agree to Remispace's{" "}
-            <span className="text-emerald-400/90 hover:underline cursor-pointer">Terms</span> and{" "}
-            <span className="text-emerald-400/90 hover:underline cursor-pointer">Privacy Policy</span>.
-          </p>
-          <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-500 pt-1">
-            <span className="inline-flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
-              Private & Encrypted
-            </span>
-            <span>•</span>
-            <span className="inline-flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
-              Instant Sync
-            </span>
-            <span>•</span>
-            <span className="inline-flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
-              Deep Learning
-            </span>
-          </div>
         </div>
       </div>
     </main>
