@@ -26,6 +26,7 @@ import {
   Mic,
   Play,
   Volume2,
+  VolumeX,
   Camera,
   Compass,
   Code2,
@@ -76,6 +77,40 @@ function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  // Demo video hover-to-play state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isHoveringVideo, setIsHoveringVideo] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const handleVideoMouseEnter = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      void videoRef.current.play().catch(() => {});
+      setIsHoveringVideo(true);
+    }
+  };
+
+  const handleVideoMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+      setIsHoveringVideo(false);
+    }
+  };
+
+  const handleVideoToggle = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        void videoRef.current.play().catch(() => {});
+        setIsHoveringVideo(true);
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+        setIsHoveringVideo(false);
+      }
+    }
+  };
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -272,14 +307,104 @@ function LandingPage() {
         </div>
 
         {/* Scroll indicator */}
-        <div className="flex justify-center mt-10">
+        <div className="flex justify-center mt-10 mb-8">
           <a
-            href="#studyspace"
+            href="#demo-video"
             className="flex flex-col items-center gap-2 text-emerald-400/50 hover:text-emerald-300 transition-colors"
           >
             <span className="text-[10px] font-bold tracking-[0.25em] uppercase">Discover more</span>
             <ChevronDown className="size-4 animate-bounce" />
           </a>
+        </div>
+
+        {/* ── Interactive Demo Video (Plays on Hover, Restarts on Unhover) ── */}
+        <div id="demo-video" className="relative z-10 max-w-5xl mx-auto px-6 mb-8">
+          <div
+            className={`group relative rounded-2xl sm:rounded-3xl border transition-all duration-700 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl cursor-pointer ${
+              isHoveringVideo
+                ? "border-emerald-400/80 shadow-emerald-950/90 shadow-2xl scale-[1.01]"
+                : "border-emerald-500/25 hover:border-emerald-400/50"
+            }`}
+            onMouseEnter={handleVideoMouseEnter}
+            onMouseLeave={handleVideoMouseLeave}
+            onClick={handleVideoToggle}
+          >
+            {/* Window Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-500/20 bg-[#04170e]/90 backdrop-blur-md">
+              <div className="flex gap-2">
+                <div className="size-3 rounded-full bg-red-500/70" />
+                <div className="size-3 rounded-full bg-yellow-500/70" />
+                <div className="size-3 rounded-full bg-emerald-500/70" />
+              </div>
+              <div className="px-4 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/20 text-xs text-emerald-300/90 flex items-center gap-2 font-mono">
+                <Shield className="size-3 text-emerald-400" />
+                remispace.app/preview
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
+                    isHoveringVideo
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                      : "bg-emerald-950/40 text-emerald-400/70"
+                  }`}
+                >
+                  <span
+                    className={`size-2 rounded-full ${
+                      isHoveringVideo ? "bg-emerald-400 animate-ping" : "bg-emerald-600"
+                    }`}
+                  />
+                  <span>{isHoveringVideo ? "Playing Preview" : "Hover to Play"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Video Container */}
+            <div className="relative aspect-video w-full bg-[#020b08] overflow-hidden flex items-center justify-center">
+              <video
+                ref={videoRef}
+                src="/demo-preview.mp4"
+                muted={isMuted}
+                loop
+                playsInline
+                preload="auto"
+                className="w-full h-full object-cover"
+              />
+
+              {/* Hover overlay with glowing play button when paused */}
+              <div
+                className={`absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] transition-all duration-500 pointer-events-none ${
+                  isHoveringVideo ? "opacity-0 scale-95" : "opacity-100 scale-100"
+                }`}
+              >
+                <div className="size-16 sm:size-20 rounded-2xl bg-emerald-500/90 text-zinc-950 flex items-center justify-center shadow-2xl shadow-emerald-500/50 border border-emerald-300/40 mb-3 group-hover:scale-110 transition-transform">
+                  <Play className="size-7 sm:size-8 fill-zinc-950 translate-x-0.5" />
+                </div>
+                <p className="text-sm sm:text-base font-semibold text-white tracking-wide">
+                  Hover to watch Remispace in action
+                </p>
+                <p className="text-xs text-emerald-200/70 mt-1">
+                  Plays continuously on hover &bull; Restarts on unhover
+                </p>
+              </div>
+
+              {/* Sound control button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMuted(!isMuted);
+                }}
+                className="absolute bottom-4 right-4 z-20 p-2.5 rounded-xl bg-black/60 hover:bg-black/80 text-emerald-300 border border-emerald-500/30 backdrop-blur-md transition-all hover:scale-110"
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+              </button>
+            </div>
+          </div>
+          <p className="text-center text-xs text-emerald-300/60 mt-3 flex items-center justify-center gap-1.5">
+            <MousePointerClick className="size-3" />
+            Hover over preview to play continuously &bull; Restarts when cursor leaves
+          </p>
         </div>
       </section>
 
