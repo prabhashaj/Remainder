@@ -14,6 +14,7 @@ import {
 import { saveDocumentTextAndEmbed } from "@/lib/document-processor.server";
 import { checkRateLimit } from "@/lib/rate-limit.server";
 import { getRemainingLimitsServer } from "@/lib/limits";
+import { log } from "@/lib/logger.server";
 
 export const getUploadTokenFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -504,16 +505,29 @@ export const triggerDocumentExtractionFn = createServerFn({ method: "POST" })
           pageCount,
           context.userId,
         );
-        console.log(
-          `[DocumentExtraction] Successfully extracted ${text.length} chars (${pageCount ?? 1} pages) for ${data.resourceId}`,
+        log(
+          "info",
+          "document_text_extracted",
+          { resourceId: data.resourceId, textLength: text.length, pageCount: pageCount ?? 1 },
+          { userId: context.userId },
         );
         return { success: true, textLength: text.length, pageCount: pageCount ?? null };
       }
 
-      console.warn(`[DocumentExtraction] No extractable text found for ${data.resourceId}`);
+      log(
+        "warn",
+        "document_text_empty",
+        { resourceId: data.resourceId },
+        { userId: context.userId },
+      );
       return { success: true, textLength: 0, warning: "No text extracted from file." };
     } catch (e) {
-      console.error("Failed document extraction:", e);
+      log(
+        "error",
+        "document_extraction_failed",
+        { resourceId: data.resourceId, error: e instanceof Error ? e.message : String(e) },
+        { userId: context.userId },
+      );
       return { success: false, error: e instanceof Error ? e.message : String(e) };
     }
   });

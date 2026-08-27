@@ -85,6 +85,20 @@ function loadYouTubeApi(): Promise<void> {
 
 type NoteMode = "auto" | "manual";
 
+function parseSecondsFromString(str: string, fallback: number): number {
+  const clean = str.trim();
+  if (!clean) return fallback;
+  const parts = clean.split(":").map((p) => parseInt(p, 10));
+  if (parts.length === 2 && !isNaN(parts[0]!) && !isNaN(parts[1]!)) {
+    return parts[0]! * 60 + parts[1]!;
+  }
+  if (parts.length === 3 && !isNaN(parts[0]!) && !isNaN(parts[1]!) && !isNaN(parts[2]!)) {
+    return parts[0]! * 3600 + parts[1]! * 60 + parts[2]!;
+  }
+  const num = parseInt(clean, 10);
+  return isNaN(num) ? fallback : num;
+}
+
 /**
  * A robust YouTube study player that always renders immediately,
  * syncs playback timestamps live, and generates pinpoint notes.
@@ -219,23 +233,9 @@ export function VideoNotes({
     };
   }, [videoId]);
 
-  const parseSecondsFromString = (str: string): number => {
-    const clean = str.trim();
-    if (!clean) return liveSeconds;
-    const parts = clean.split(":").map((p) => parseInt(p, 10));
-    if (parts.length === 2 && !isNaN(parts[0]!) && !isNaN(parts[1]!)) {
-      return parts[0]! * 60 + parts[1]!;
-    }
-    if (parts.length === 3 && !isNaN(parts[0]!) && !isNaN(parts[1]!) && !isNaN(parts[2]!)) {
-      return parts[0]! * 3600 + parts[1]! * 60 + parts[2]!;
-    }
-    const num = parseInt(clean, 10);
-    return isNaN(num) ? liveSeconds : num;
-  };
-
   const getEffectiveSeconds = useCallback((): number => {
     if (manualTimeStr) {
-      return parseSecondsFromString(manualTimeStr);
+      return parseSecondsFromString(manualTimeStr, liveSeconds);
     }
     if (playerRef.current?.getCurrentTime) {
       try {

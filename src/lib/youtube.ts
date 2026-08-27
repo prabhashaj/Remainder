@@ -143,3 +143,24 @@ export function formatVideoTimestamp(seconds: number): string {
   }
   return `${String(m).padStart(2, "0")}:${String(remSec).padStart(2, "0")}`;
 }
+
+const YT_URL_SCANNER =
+  /https?:\/\/(?:[a-zA-Z0-9-]+\.)?(?:youtube\.com|youtu\.be)\/[^\s)>\]"]+/gi;
+
+/** Pulls unique YouTube video ids out of a markdown/plain text answer. */
+export function youtubeIdsIn(text: string): string[] {
+  if (!text) return [];
+  const ids: string[] = [];
+  const matches = text.match(YT_URL_SCANNER);
+
+  if (matches) {
+    for (const url of matches) {
+      const id = extractYouTubeId(url);
+      if (id && !ids.includes(id)) {
+        ids.push(id);
+      }
+    }
+  }
+
+  return ids.slice(0, 4);
+}

@@ -391,13 +391,12 @@ function isDeepResearchTool(part: any): boolean {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DeepResearchChatCard({
   part,
   isActivelyStreaming = true,
   onRetry,
 }: {
-  part: any;
+  part: Record<string, unknown>;
   isActivelyStreaming?: boolean;
   onRetry?: (topic: string) => void;
 }) {
@@ -640,7 +639,7 @@ function DeepResearchChatCard({
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <SpeechAndCopyToolbar
                 text={output.report}
-                id={`deep-research-report-${part.toolInvocation?.toolCallId || "done"}`}
+                id={`deep-research-report-${(part as { toolInvocation?: { toolCallId?: string } })?.toolInvocation?.toolCallId || "done"}`}
               />
               <button
                 type="button"

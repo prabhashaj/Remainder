@@ -1,29 +1,7 @@
 import { useState } from "react";
 import { BookmarkPlus, CheckCircle2, Loader2, Play } from "lucide-react";
 
-import { extractYouTubeId, getYouTubeEmbedUrl, getYouTubeWatchUrl } from "@/lib/youtube";
-
-// Matches any URL or markdown link containing youtube or youtu.be
-const YT_URL_SCANNER =
-  /https?:\/\/(?:[a-zA-Z0-9-]+\.)?(?:youtube\.com|youtu\.be)\/[^\s)>\]"]+/gi;
-
-/** Pulls unique YouTube video ids out of a markdown/plain text answer. */
-export function youtubeIdsIn(text: string): string[] {
-  if (!text) return [];
-  const ids: string[] = [];
-  const matches = text.match(YT_URL_SCANNER);
-
-  if (matches) {
-    for (const url of matches) {
-      const id = extractYouTubeId(url);
-      if (id && !ids.includes(id)) {
-        ids.push(id);
-      }
-    }
-  }
-
-  return ids.slice(0, 4);
-}
+import { youtubeIdsIn, getYouTubeEmbedUrl, getYouTubeWatchUrl } from "@/lib/youtube";
 
 /**
  * Renders inline YouTube players for any video Remi mentions, so a learner can

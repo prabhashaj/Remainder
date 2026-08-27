@@ -36,7 +36,7 @@ export function BillingSection() {
   };
 
   const cancelMut = useMutation({
-    mutationFn: cancelSubscription,
+    mutationFn: () => cancelSubscription(),
     onSuccess: () => {
       toast.success(
         "Subscription cancelled successfully. It will remain active until the billing period ends.",
@@ -91,7 +91,7 @@ export function BillingSection() {
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => cancelMut.mutate(undefined as any)}
+              onClick={() => cancelMut.mutate()}
               disabled={cancelMut.isPending}
             >
               {cancelMut.isPending ? "Canceling..." : "Cancel Subscription"}
