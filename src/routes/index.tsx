@@ -432,26 +432,8 @@ function LandingPage() {
             </div>
             <p className="text-center text-xs text-emerald-300/60 mt-4 flex items-center justify-center gap-1.5">
               <MousePointerClick className="size-3" />
-              Scroll inside preview to explore full deep research synthesis
+              Scroll inside the preview to explore a full Remi-synthesized lesson
             </p>
-          </div>
-
-          {/* Feature highlights below screenshot */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-4xl mx-auto">
-            {[
-              { icon: Zap, label: "TL;DR Syntheses", desc: "Fast core concept overviews" },
-              { icon: BookOpen, label: "Deep Section Explanations", desc: "Structured hierarchical learning" },
-              { icon: Lightbulb, label: "Real-World Analogies", desc: "Make abstract ideas stick" },
-              { icon: Globe, label: "Citations & Sources", desc: "Verified literature references" },
-            ].map((item, i) => (
-              <div key={i} className="text-center group">
-                <div className="size-12 rounded-xl bg-[#062418] border border-emerald-500/20 flex items-center justify-center mx-auto mb-3 group-hover:border-emerald-400/50 group-hover:bg-emerald-950/40 transition-all duration-300 group-hover:scale-110">
-                  <item.icon className="size-5 text-emerald-400 group-hover:scale-110 transition-transform" />
-                </div>
-                <p className="text-sm font-semibold mb-1 text-white">{item.label}</p>
-                <p className="text-xs text-zinc-400">{item.desc}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -485,19 +467,19 @@ function LandingPage() {
               </div>
             </div>
 
-            {/* Video Notes & Transcripts */}
+            {/* Focus & Study Space */}
             <div>
               <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
-                Turn any video into <span className="text-gradient">actionable notes</span>
+                Deep focus with <span className="text-gradient">Study Space</span>
               </h3>
               <p className="text-zinc-300 mb-8 leading-relaxed text-sm sm:text-base">
-                Paste YouTube lecture links or lecture recordings to extract timestamped summaries, interactive
-                transcripts, and auto-generated review quizzes.
+                Your personal study cockpit — see your upcoming lesson, track your roadmap progress, run a
+                Pomodoro focus timer, and manage daily tasks all from a single distraction-free workspace.
               </p>
               <div className="rounded-2xl border border-emerald-500/25 overflow-hidden shadow-2xl group/img hover:border-emerald-400/50 transition-all duration-500 bg-[#061e14]">
                 <img
-                  src={tasksImg}
-                  alt="Video lecture notes, milestones and task tracking"
+                  src={studyspaceImg}
+                  alt="Remispace Study Space — focus timer, tasks and roadmap overview"
                   className="w-full h-auto block transition-transform duration-700 group-hover/img:scale-[1.02]"
                   loading="lazy"
                 />
@@ -548,7 +530,7 @@ function LandingPage() {
                 </div>
                 <div style={{ maxHeight: "500px", overflowY: "scroll" }} className="screenshot-scroll-container">
                   <img
-                    src={roadmapsImg}
+                    src={roadmapScrollImg}
                     alt="Remispace Structured Learning Roadmap"
                     className="w-full h-auto block"
                     loading="lazy"
