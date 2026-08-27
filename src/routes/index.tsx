@@ -276,13 +276,13 @@ function LandingPage() {
         </div>
 
         {/* Scroll indicator */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mt-10 mb-8">
           <a
             href="#demo-video"
-            className="group inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/20 bg-[#061e14]/60 hover:bg-[#082a1c] text-emerald-300/80 hover:text-emerald-200 transition-all text-xs font-medium backdrop-blur-md hover:border-emerald-500/40 hover:scale-105"
+            className="flex flex-col items-center gap-2 text-emerald-400/50 hover:text-emerald-300 transition-colors"
           >
-            <span>Discover more</span>
-            <ChevronDown className="size-3.5 group-hover:translate-y-0.5 transition-transform text-emerald-400" />
+            <span className="text-[10px] font-bold tracking-[0.25em] uppercase">Discover more</span>
+            <ChevronDown className="size-4 animate-bounce" />
           </a>
         </div>
 
