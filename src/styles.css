@@ -521,3 +521,65 @@ body.sidebar-resizing {
 body.sidebar-resizing * {
   transition: none !important;
 }
+
+/* Landing Page Visual Styles & Animations ------------------------------- */
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(120px);
+}
+.orb-primary {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+}
+.orb-secondary {
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.12) 0%, transparent 70%);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.landing-hero-glow {
+  box-shadow: 0 0 60px -15px rgba(16, 185, 129, 0.15), 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.screenshot-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
+}
+.screenshot-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+.screenshot-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.3);
+  border-radius: 9999px;
+}
+
+@keyframes floatOrb {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}
+
+.animate-float {
+  animation: floatOrb 8s ease-in-out infinite;
+}
+
+.landing-underline-draw {
+  stroke-dasharray: 220;
+  stroke-dashoffset: 220;
+  animation: drawUnderline 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.6s;
+}
+
+@keyframes drawUnderline {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
