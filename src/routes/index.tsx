@@ -266,113 +266,17 @@ function LandingPage() {
               Sign in to your workspace
             </Link>
           </div>
-
-          {/* Feature pills row */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-16">
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md transition-all duration-300 hover:scale-105 cursor-default"
-                style={{
-                  borderColor: `${f.color}30`,
-                  background: `${f.colorBg}12`,
-                }}
-              >
-                <f.icon className="size-3.5" style={{ color: f.color }} />
-                <span className="text-xs font-semibold" style={{ color: f.color }}>
-                  {f.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Hero Screenshot Window */}
-        <div className="relative z-10 max-w-6xl mx-auto px-6">
-          <div className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/25 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl shadow-black/60 landing-hero-glow">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-500/20 bg-[#04170e]/80">
-              <div className="flex gap-2">
-                <div className="size-3 rounded-full bg-red-500/70" />
-                <div className="size-3 rounded-full bg-yellow-500/70" />
-                <div className="size-3 rounded-full bg-emerald-500/70" />
-              </div>
-              <div className="px-4 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/20 text-xs text-emerald-300/80 flex items-center gap-2">
-                <Shield className="size-3 text-emerald-400" />
-                remispace.app/dashboard
-              </div>
-              <div className="w-12" />
-            </div>
-            <img
-              src={remispaceDashboardImg || heroStudyImg}
-              alt="Remispace Deep Learning Dashboard"
-              className="w-full h-auto block object-cover"
-              loading="eager"
-            />
-          </div>
         </div>
 
         {/* Scroll indicator */}
-        <div className="flex justify-center mt-16">
+        <div className="flex justify-center mt-10">
           <a
-            href="#features"
+            href="#studyspace"
             className="flex flex-col items-center gap-2 text-emerald-400/50 hover:text-emerald-300 transition-colors"
           >
             <span className="text-[10px] font-bold tracking-[0.25em] uppercase">Discover more</span>
             <ChevronDown className="size-4 animate-bounce" />
           </a>
-        </div>
-      </section>
-
-      {/* ── Features Overview ── */}
-      <section
-        id="features"
-        ref={addRef("features")}
-        className={`py-28 relative transition-all duration-1000 ${
-          isVisible("features") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        }`}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/[0.03] to-transparent pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display">
-              Five powerful ways to <span className="text-gradient">master knowledge</span>
-            </h2>
-            <p className="text-emerald-100/70 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-              From structured roadmaps and deep multi-source research to mathematical notebooks and 24/7 AI
-              coaching—everything is crafted for deep focus.
-            </p>
-          </div>
-
-          {/* 5 Feature Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 max-w-7xl mx-auto">
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className="group relative p-6 rounded-2xl border border-emerald-500/20 bg-[#072418]/60 backdrop-blur-md hover:border-emerald-400/40 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-emerald-950/60 cursor-default flex flex-col justify-between"
-              >
-                {/* Glow on hover */}
-                <div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                  style={{
-                    background: `radial-gradient(ellipse at center, ${f.colorBg}15 0%, transparent 70%)`,
-                  }}
-                />
-                <div className="relative z-10">
-                  <div
-                    className="size-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
-                    style={{
-                      background: `${f.colorBg}18`,
-                      border: `1px solid ${f.color}30`,
-                    }}
-                  >
-                    <f.icon className="size-5.5" style={{ color: f.color }} />
-                  </div>
-                  <h3 className="text-lg font-bold mb-2 tracking-tight text-white">{f.label}</h3>
-                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">{f.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -438,56 +342,59 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* ── Document Intelligence & Visual Explanations ── */}
+      {/* ── Features Overview ── */}
       <section
-        id="visuals"
-        ref={addRef("visuals")}
-        className={`py-28 transition-all duration-1000 ${
-          isVisible("visuals") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        id="features"
+        ref={addRef("features")}
+        className={`py-28 relative transition-all duration-1000 ${
+          isVisible("features") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            {/* Visual Explanations */}
-            <div>
-              <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
-                Learn with <span className="text-gradient">diagrams & visuals</span>
-              </h3>
-              <p className="text-zinc-300 mb-8 leading-relaxed text-sm sm:text-base">
-                Remispace automatically synthesizes visual flowcharts, architectural diagrams, and document
-                insights to make complex relationships crystal clear.
-              </p>
-              <div className="rounded-2xl border border-emerald-500/25 overflow-hidden shadow-2xl group/img hover:border-emerald-400/50 transition-all duration-500 bg-[#061e14]">
-                <img
-                  src={incontextImg}
-                  alt="In-context learning and document diagrams"
-                  className="w-full h-auto block transition-transform duration-700 group-hover/img:scale-[1.02]"
-                  loading="lazy"
-                />
-              </div>
-            </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/[0.03] to-transparent pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display">
+              Five powerful ways to <span className="text-gradient">master knowledge</span>
+            </h2>
+            <p className="text-emerald-100/70 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+              From structured roadmaps and deep multi-source research to mathematical notebooks and 24/7 AI
+              coaching—everything is crafted for deep focus.
+            </p>
+          </div>
 
-            {/* Focus & Study Space */}
-            <div>
-              <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
-                Deep focus with <span className="text-gradient">Study Space</span>
-              </h3>
-              <p className="text-zinc-300 mb-8 leading-relaxed text-sm sm:text-base">
-                Your personal study cockpit — see your upcoming lesson, track your roadmap progress, run a
-                Pomodoro focus timer, and manage daily tasks all from a single distraction-free workspace.
-              </p>
-              <div className="rounded-2xl border border-emerald-500/25 overflow-hidden shadow-2xl group/img hover:border-emerald-400/50 transition-all duration-500 bg-[#061e14]">
-                <img
-                  src={studyspaceImg}
-                  alt="Remispace Study Space — focus timer, tasks and roadmap overview"
-                  className="w-full h-auto block transition-transform duration-700 group-hover/img:scale-[1.02]"
-                  loading="lazy"
+          {/* 5 Feature Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 max-w-7xl mx-auto">
+            {features.map((f, i) => (
+              <div
+                key={i}
+                className="group relative p-6 rounded-2xl border border-emerald-500/20 bg-[#072418]/60 backdrop-blur-md hover:border-emerald-400/40 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-emerald-950/60 cursor-default flex flex-col justify-between"
+              >
+                {/* Glow on hover */}
+                <div
+                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{
+                    background: `radial-gradient(ellipse at center, ${f.colorBg}15 0%, transparent 70%)`,
+                  }}
                 />
+                <div className="relative z-10">
+                  <div
+                    className="size-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
+                    style={{
+                      background: `${f.colorBg}18`,
+                      border: `1px solid ${f.color}30`,
+                    }}
+                  >
+                    <f.icon className="size-5.5" style={{ color: f.color }} />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2 tracking-tight text-white">{f.label}</h3>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">{f.desc}</p>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
+
 
       {/* ── Learning Modes: Roadmaps & Notebooks ── */}
       <section
@@ -617,6 +524,57 @@ function LandingPage() {
                     loading="lazy"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Document Intelligence & Visual Explanations ── */}
+      <section
+        id="visuals"
+        ref={addRef("visuals")}
+        className={`py-28 transition-all duration-1000 ${
+          isVisible("visuals") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            {/* Visual Explanations */}
+            <div>
+              <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
+                Learn with <span className="text-gradient">diagrams & visuals</span>
+              </h3>
+              <p className="text-zinc-300 mb-8 leading-relaxed text-sm sm:text-base">
+                Remispace automatically synthesizes visual flowcharts, architectural diagrams, and document
+                insights to make complex relationships crystal clear.
+              </p>
+              <div className="rounded-2xl border border-emerald-500/25 overflow-hidden shadow-2xl group/img hover:border-emerald-400/50 transition-all duration-500 bg-[#061e14]">
+                <img
+                  src={incontextImg}
+                  alt="In-context learning and document diagrams"
+                  className="w-full h-auto block transition-transform duration-700 group-hover/img:scale-[1.02]"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+
+            {/* Focus & Study Space */}
+            <div>
+              <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
+                Deep focus with <span className="text-gradient">Study Space</span>
+              </h3>
+              <p className="text-zinc-300 mb-8 leading-relaxed text-sm sm:text-base">
+                Your personal study cockpit — see your upcoming lesson, track your roadmap progress, run a
+                Pomodoro focus timer, and manage daily tasks all from a single distraction-free workspace.
+              </p>
+              <div className="rounded-2xl border border-emerald-500/25 overflow-hidden shadow-2xl group/img hover:border-emerald-400/50 transition-all duration-500 bg-[#061e14]">
+                <img
+                  src={studyspaceImg}
+                  alt="Remispace Study Space — focus timer, tasks and roadmap overview"
+                  className="w-full h-auto block transition-transform duration-700 group-hover/img:scale-[1.02]"
+                  loading="lazy"
+                />
               </div>
             </div>
           </div>
