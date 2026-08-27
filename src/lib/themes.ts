@@ -12,14 +12,14 @@ export type ThemeId =
 export type FontId =
   | "merienda"
   | "inter"
-  | "outfit";
+  | "roboto";
 
 export const FONT_STORAGE_KEY = "remispace-font";
 
 export const FONTS: { id: FontId; name: string; blurb: string; fontClass: string }[] = [
   { id: "merienda", name: "Flow (Default)", blurb: "Playful, organic cursive handwriting.", fontClass: "font-merienda" },
   { id: "inter", name: "Minimalist (Inter)", blurb: "Clean, neutral, and hyper-legible sans.", fontClass: "font-inter" },
-  { id: "outfit", name: "Geometric (Outfit)", blurb: "Sleek, modern, and futuristic geometric sans.", fontClass: "font-outfit" },
+  { id: "roboto", name: "Clean (Roboto)", blurb: "Crisp, modern, and versatile neo-grotesque sans.", fontClass: "font-roboto" },
 ];
 
 export const FONT_IDS = FONTS.map((f) => f.id);

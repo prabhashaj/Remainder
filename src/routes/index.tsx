@@ -923,10 +923,6 @@ function LandingPage() {
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
                     <span>15MB Document upload limit</span>
                   </li>
-                  <li className="flex items-center gap-2.5 text-zinc-500">
-                    <CheckCircle2 className="size-4 text-zinc-600 shrink-0" />
-                    <span>Standard response speed</span>
-                  </li>
                 </ul>
               </div>
               <Link
@@ -971,10 +967,6 @@ function LandingPage() {
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
                     <span>50MB Document & paper uploads</span>
                   </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>Instant Flashcards & SRS Reviews</span>
-                  </li>
                 </ul>
               </div>
               <Link
@@ -990,7 +982,7 @@ function LandingPage() {
             <div className="group relative rounded-3xl border border-emerald-500/20 bg-[#061e14]/70 p-7 sm:p-8 flex flex-col justify-between backdrop-blur-xl shadow-xl transition-all duration-500 hover:border-emerald-400/50 hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-950/80">
               <div>
                 <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 uppercase tracking-wider mb-2">
-                  Best Value — Save 10%
+                  Monthly Plan
                 </div>
                 <h3 className="text-xl font-bold text-white mb-1 font-display">Monthly Pro</h3>
                 <p className="text-xs text-zinc-400 mb-6">For continuous semester mastery & deep thinkers.</p>
@@ -1001,23 +993,23 @@ function LandingPage() {
                 <ul className="space-y-3.5 text-sm text-zinc-300 mb-8">
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>All Weekly Pro capabilities</span>
+                    <span className="font-semibold text-white">Unlimited messages with Remi AI</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>~10% Savings over weekly renewal</span>
+                    <span>10 Structured Roadmaps per week</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>Priority multi-model AI synthesis</span>
+                    <span>15 Clean Notebooks per week</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>Export to PDF, LaTeX, & Markdown</span>
+                    <span className="font-semibold text-emerald-300">5 Deep Research per week</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>Priority dedicated support</span>
+                    <span>50MB Document & paper uploads</span>
                   </li>
                 </ul>
               </div>

@@ -155,7 +155,7 @@ export function BillingSection() {
                   <span className="text-primary">•</span> 5 Deep Research per week
                 </li>
                 <li className="text-sm flex items-center gap-2">
-                  <span className="text-primary">•</span> Priority support
+                  <span className="text-primary">•</span> 50MB file uploads
                 </li>
               </ul>
             </div>

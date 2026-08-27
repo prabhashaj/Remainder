@@ -216,13 +216,19 @@ function PricingPage() {
             </div>
             <ul className="mt-8 space-y-3 text-sm">
               <li className="flex items-center">
-                <span className="mr-2 text-primary">✓</span> All Weekly Features
+                <span className="mr-2 text-primary">✓</span> Unlimited messages with Remi
               </li>
               <li className="flex items-center">
-                <span className="mr-2 text-primary">✓</span> Save ~10% over weekly
+                <span className="mr-2 text-primary">✓</span> 10 Roadmaps per week
               </li>
               <li className="flex items-center">
-                <span className="mr-2 text-primary">✓</span> Priority Support
+                <span className="mr-2 text-primary">✓</span> 15 Notebooks per week
+              </li>
+              <li className="flex items-center">
+                <span className="mr-2 text-primary font-semibold">✓</span> <strong className="font-semibold text-foreground">5 Deep Research per week</strong>
+              </li>
+              <li className="flex items-center">
+                <span className="mr-2 text-primary">✓</span> 50MB file upload limit
               </li>
             </ul>
             <button

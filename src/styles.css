@@ -79,9 +79,9 @@ html.font-inter {
   --font-display: var(--font-inter);
 }
 
-html.font-outfit {
-  --font-sans: var(--font-outfit);
-  --font-display: var(--font-outfit);
+html.font-roboto {
+  --font-sans: var(--font-roboto);
+  --font-display: var(--font-roboto);
 }
 
 /* Landing Page & Auth Page Font Isolation (Roboto) ---------------------- */
