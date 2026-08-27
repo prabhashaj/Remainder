@@ -77,6 +77,21 @@ function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleVideoMouseEnter = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      void videoRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleVideoMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -283,9 +298,13 @@ function LandingPage() {
           </a>
         </div>
 
-        {/* ── Demo Video ── */}
+        {/* ── Demo Video (Plays on Hover, Resets on Unhover) ── */}
         <div id="demo-video" className="relative z-10 max-w-5xl mx-auto px-6 mb-8">
-          <div className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/25 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl shadow-emerald-950/60">
+          <div
+            className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/25 hover:border-emerald-400/50 transition-colors duration-500 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl shadow-emerald-950/60 cursor-pointer"
+            onMouseEnter={handleVideoMouseEnter}
+            onMouseLeave={handleVideoMouseLeave}
+          >
             {/* Window Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-500/20 bg-[#04170e]/90 backdrop-blur-md">
               <div className="flex gap-2">
@@ -303,8 +322,8 @@ function LandingPage() {
             {/* Video Container */}
             <div className="relative aspect-video w-full bg-[#020b08] overflow-hidden flex items-center justify-center">
               <video
+                ref={videoRef}
                 src="/demo-preview.mp4"
-                autoPlay
                 muted
                 loop
                 playsInline
