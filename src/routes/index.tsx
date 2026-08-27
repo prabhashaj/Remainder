@@ -300,9 +300,9 @@ function LandingPage() {
                 <div className="size-3 rounded-full bg-yellow-500/70" />
                 <div className="size-3 rounded-full bg-emerald-500/70" />
               </div>
-              <div className="px-4 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/20 text-xs text-emerald-300/90 flex items-center gap-2 font-mono">
-                <Shield className="size-3 text-emerald-400" />
-                remispace.app
+              <div className="px-3 py-1 rounded-lg bg-emerald-500/10 text-xs text-emerald-300 font-semibold flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-emerald-400" />
+                Interactive Workspace
               </div>
               <div className="w-12" />
             </div>
@@ -356,13 +356,13 @@ function LandingPage() {
                   <div className="size-3 rounded-full bg-yellow-500/70" />
                   <div className="size-3 rounded-full bg-emerald-500/70" />
                 </div>
-                <div className="px-4 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/20 text-xs text-emerald-300/80 flex items-center gap-2">
-                  <Shield className="size-3 text-emerald-400" />
-                  remispace.app/study
+                <div className="px-3 py-1 rounded-lg bg-emerald-500/10 text-xs text-emerald-300 font-semibold flex items-center gap-1.5">
+                  <Brain className="size-3.5 text-emerald-400" />
+                  AI Lesson Synthesizer
                 </div>
                 <div className="flex items-center gap-1.5 text-emerald-400/60">
                   <MousePointerClick className="size-3.5" />
-                  <span className="text-[10px] font-semibold">Scroll to explore</span>
+                  <span className="text-[10px] font-semibold">Scroll</span>
                 </div>
               </div>
               <div
