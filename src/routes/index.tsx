@@ -217,14 +217,6 @@ function LandingPage() {
         />
 
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 mb-8 backdrop-blur-md">
-            <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-semibold text-emerald-300">
-              A Quiet Sanctuary for Deep Learning & Roadmaps
-            </span>
-          </div>
-
           {/* Main heading */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-8 leading-[1.08] font-display">
             Master anything <br className="hidden sm:block" />
@@ -340,12 +332,6 @@ function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/[0.03] to-transparent pointer-events-none" />
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 mb-5">
-              <Sparkles className="size-3.5 text-emerald-400" />
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                Why Remispace
-              </span>
-            </div>
             <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display">
               Five powerful ways to <span className="text-gradient">master knowledge</span>
             </h2>
@@ -403,12 +389,6 @@ function LandingPage() {
         />
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 mb-5">
-              <Zap className="size-3.5 text-emerald-400" />
-              <span className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">
-                Study Space & Deep Research
-              </span>
-            </div>
             <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display">
               Ask anything, get <span className="text-gradient">complete structured clarity</span>
             </h2>
@@ -483,10 +463,6 @@ function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             {/* Visual Explanations */}
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-teal-500/25 bg-teal-500/10 mb-6">
-                <ImageIcon className="size-3.5 text-teal-400" />
-                <span className="text-xs font-semibold text-teal-300">In-Context Intelligence</span>
-              </div>
               <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
                 Learn with <span className="text-gradient">diagrams & visuals</span>
               </h3>
@@ -506,10 +482,6 @@ function LandingPage() {
 
             {/* Video Notes & Transcripts */}
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-sky-500/25 bg-sky-500/10 mb-6">
-                <Globe className="size-3.5 text-sky-400" />
-                <span className="text-xs font-semibold text-sky-300">Video Notes & Timestamps</span>
-              </div>
               <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
                 Turn any video into <span className="text-gradient">actionable notes</span>
               </h3>
@@ -581,10 +553,6 @@ function LandingPage() {
             </div>
 
             <div className="order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-purple-500/20 bg-purple-500/10 mb-6">
-                <GraduationCap className="size-3.5 text-purple-400" />
-                <span className="text-xs font-semibold text-purple-300">Structured Roadmaps</span>
-              </div>
               <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-5 font-display text-white">
                 Step-by-step paths for <span className="text-gradient">subject mastery</span>
               </h3>
@@ -613,10 +581,6 @@ function LandingPage() {
           {/* Mode 2: Mathematical Notebooks */}
           <div id="notebooks" className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 mb-6">
-                <Code2 className="size-3.5 text-amber-400" />
-                <span className="text-xs font-semibold text-amber-300">Mathematical Notebooks</span>
-              </div>
               <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-5 font-display text-white">
                 Live computation & <span className="text-gradient">LaTeX equations</span>
               </h3>
@@ -688,12 +652,6 @@ function LandingPage() {
 
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-rose-500/20 bg-rose-500/10 mb-5">
-              <MessageSquare className="size-3.5 text-rose-400" />
-              <span className="text-xs font-semibold text-rose-300 uppercase tracking-wider">
-                Socratic AI Partner
-              </span>
-            </div>
             <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display">
               Meet Remi, your <span className="text-gradient">calm AI study companion</span>
             </h2>
@@ -780,12 +738,6 @@ function LandingPage() {
 
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 mb-5">
-              <Sparkles className="size-3.5 text-emerald-400" />
-              <span className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">
-                Transparent Pricing
-              </span>
-            </div>
             <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display text-white">
               Invest in your <span className="text-gradient">deep mastery</span>
             </h2>
@@ -796,7 +748,7 @@ function LandingPage() {
           </div>
 
           {/* Pricing Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
             {/* Free Tier */}
             <div className="rounded-3xl border border-emerald-500/20 bg-[#061e14]/70 p-7 sm:p-8 flex flex-col justify-between backdrop-blur-xl shadow-xl transition-all duration-300 hover:border-emerald-500/40">
               <div>
@@ -926,26 +878,6 @@ function LandingPage() {
               </Link>
             </div>
           </div>
-
-          {/* Secure Payment Reassurance Bar */}
-          <div className="rounded-2xl border border-emerald-500/20 bg-[#051c13]/80 p-6 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                <Shield className="size-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Bank-Grade Secure Checkout</p>
-                <p className="text-xs text-zinc-400">
-                  Powered by Razorpay. Supports UPI, Google Pay, NetBanking, Credit & Debit cards.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300/80">
-              <span>✓ Instant Activation</span>
-              <span>•</span>
-              <span>✓ Cancel Anytime</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -958,10 +890,6 @@ function LandingPage() {
         />
 
         <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 mb-8">
-            <Sparkles className="size-3.5 text-emerald-400" />
-            <span className="text-xs font-semibold text-emerald-300">Free to get started</span>
-          </div>
           <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 font-display text-white">
             Build lasting mastery with <span className="text-gradient">Remispace</span>
           </h2>
