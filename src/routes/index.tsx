@@ -27,10 +27,14 @@ import {
   Play,
   Volume2,
   VolumeX,
-  Camera,
   Compass,
   Code2,
   HelpCircle,
+  Timer,
+  Flame,
+  ListTodo,
+  TrendingUp,
+  Calendar,
 } from "lucide-react";
 
 import { RemispaceBrand } from "@/components/brand";
@@ -196,6 +200,9 @@ function LandingPage() {
             </a>
             <a href="#doc-intelligence" className="hover:text-emerald-300 transition-colors">
               Doc Intelligence
+            </a>
+            <a href="#tasks-goals" className="hover:text-emerald-300 transition-colors">
+              Tasks & Goals
             </a>
             <a href="#pricing" className="hover:text-emerald-300 transition-colors">
               Pricing
@@ -729,6 +736,199 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* ── Study Space, Tasks & Goals ── */}
+      <section
+        id="tasks-goals"
+        ref={addRef("tasks-goals")}
+        className={`py-28 relative transition-all duration-1000 ${
+          isVisible("tasks-goals") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/[0.035] to-transparent pointer-events-none" />
+        <div className="orb orb-primary w-[550px] h-[550px] top-10 -left-40 animate-float" />
+        <div
+          className="orb orb-secondary w-[450px] h-[450px] bottom-10 -right-32 animate-float"
+          style={{ animationDelay: "2.5s" }}
+        />
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          {/* Header */}
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-4">
+              <Sparkles className="size-3.5 text-emerald-400" />
+              Focus & Momentum Engine
+            </div>
+            <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display">
+              A focused sanctuary for <span className="text-gradient">study, tasks & goals</span>
+            </h2>
+            <p className="text-emerald-100/70 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+              Zero clutter, maximum momentum. Structure your roadmap milestones into actionable daily tasks, launch
+              focused study sessions with built-in timers, and build unbreakable mastery streaks.
+            </p>
+          </div>
+
+          {/* 3 Feature Pillars */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+            <div className="relative p-7 sm:p-8 rounded-3xl border border-emerald-500/20 bg-[#072418]/60 backdrop-blur-xl hover:border-emerald-400/40 transition-all duration-300 group hover:-translate-y-1.5 shadow-xl hover:shadow-emerald-950/70 flex flex-col justify-between">
+              <div>
+                <div className="size-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mb-6 text-emerald-400 group-hover:scale-110 transition-transform">
+                  <Timer className="size-6" />
+                </div>
+                <div className="text-[11px] font-bold text-emerald-400/80 uppercase tracking-widest mb-1.5">
+                  Deep Focus Cockpit
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 font-display">
+                  Dedicated Study Space
+                </h3>
+                <p className="text-zinc-300 text-sm leading-relaxed mb-6">
+                  Eliminate 20 open browser tabs. Access your current lesson notes, active roadmap milestones, live
+                  scratchpad, and Pomodoro flow timers in one distraction-free canvas.
+                </p>
+              </div>
+              <ul className="space-y-2.5 text-xs text-emerald-200/80 pt-4 border-t border-emerald-500/15">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
+                  <span>15m, 25m & 45m Pomodoro & flow timers</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
+                  <span>Next milestone launcher with auto-context</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
+                  <span>Integrated notebook and active recall drawer</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="relative p-7 sm:p-8 rounded-3xl border border-emerald-500/20 bg-[#072418]/60 backdrop-blur-xl hover:border-emerald-400/40 transition-all duration-300 group hover:-translate-y-1.5 shadow-xl hover:shadow-emerald-950/70 flex flex-col justify-between">
+              <div>
+                <div className="size-12 rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center mb-6 text-teal-400 group-hover:scale-110 transition-transform">
+                  <ListTodo className="size-6" />
+                </div>
+                <div className="text-[11px] font-bold text-teal-400/80 uppercase tracking-widest mb-1.5">
+                  Actionable Milestones
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 font-display">
+                  Intelligent Task Manager
+                </h3>
+                <p className="text-zinc-300 text-sm leading-relaxed mb-6">
+                  Turn intimidating subjects into bite-sized daily achievements. Remi auto-generates sequential tasks
+                  from your roadmaps, assigns priority levels, and lets you start a session in 1 click.
+                </p>
+              </div>
+              <ul className="space-y-2.5 text-xs text-emerald-200/80 pt-4 border-t border-emerald-500/15">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-teal-400 shrink-0" />
+                  <span>Auto-task creation from roadmap milestones</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-teal-400 shrink-0" />
+                  <span>Priority tags with due dates & schedule view</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-teal-400 shrink-0" />
+                  <span>One-click jump directly to lesson notes</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="relative p-7 sm:p-8 rounded-3xl border border-emerald-500/20 bg-[#072418]/60 backdrop-blur-xl hover:border-emerald-400/40 transition-all duration-300 group hover:-translate-y-1.5 shadow-xl hover:shadow-emerald-950/70 flex flex-col justify-between">
+              <div>
+                <div className="size-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-6 text-amber-400 group-hover:scale-110 transition-transform">
+                  <Flame className="size-6" />
+                </div>
+                <div className="text-[11px] font-bold text-amber-400/80 uppercase tracking-widest mb-1.5">
+                  Consistency & Habits
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 font-display">
+                  Goals & Streak Momentum
+                </h3>
+                <p className="text-zinc-300 text-sm leading-relaxed mb-6">
+                  Build unstoppable study habits. Set daily study hours, track topic completion rates, earn streak
+                  protection shields, and maintain deep accountability with Remi.
+                </p>
+              </div>
+              <ul className="space-y-2.5 text-xs text-emerald-200/80 pt-4 border-t border-emerald-500/15">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
+                  <span>Daily & weekly study time targets</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
+                  <span>Streak multipliers and habit consistency</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
+                  <span>Visual subject mastery & progress charts</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Visual Showcase (Dual Window Layout) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Left: Study Space Window (7 cols) */}
+            <div className="lg:col-span-7">
+              <div className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/25 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl shadow-emerald-950/80 group">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-500/20 bg-[#04170e]/90">
+                  <div className="flex gap-2">
+                    <div className="size-3 rounded-full bg-red-500/70" />
+                    <div className="size-3 rounded-full bg-yellow-500/70" />
+                    <div className="size-3 rounded-full bg-emerald-500/70" />
+                  </div>
+                  <div className="px-4 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/20 text-xs text-emerald-300/90 flex items-center gap-2 font-mono">
+                    <Shield className="size-3 text-emerald-400" />
+                    remispace.app/study-space
+                  </div>
+                  <div className="flex items-center gap-1.5 text-emerald-400/70 text-xs font-medium">
+                    <Timer className="size-3.5 animate-pulse" />
+                    <span>89:56 Active</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-[#03140e]">
+                  <img
+                    src={studyspaceImg}
+                    alt="Remispace Study Space Dashboard and Focus Workspace"
+                    className="w-full h-auto rounded-xl block border border-emerald-500/15"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Tasks & Goals Window (5 cols) */}
+            <div className="lg:col-span-5">
+              <div className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/25 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl shadow-emerald-950/80 group">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-500/20 bg-[#04170e]/90">
+                  <div className="flex gap-2">
+                    <div className="size-3 rounded-full bg-red-500/70" />
+                    <div className="size-3 rounded-full bg-yellow-500/70" />
+                    <div className="size-3 rounded-full bg-emerald-500/70" />
+                  </div>
+                  <div className="px-4 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/20 text-xs text-emerald-300/90 flex items-center gap-2 font-mono">
+                    <Shield className="size-3 text-emerald-400" />
+                    remispace.app/tasks
+                  </div>
+                  <div className="flex items-center gap-1.5 text-emerald-400/70 text-xs font-medium">
+                    <CheckCircle2 className="size-3.5" />
+                    <span>Tasks & Goals</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-[#03140e]">
+                  <img
+                    src={tasksImg}
+                    alt="Remispace Tasks and Due Dates linked with Roadmaps"
+                    className="w-full h-auto rounded-xl block border border-emerald-500/15"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Pricing & Payments Section ── */}
       <section
         id="pricing"
@@ -945,6 +1145,12 @@ function LandingPage() {
               </a>
               <a href="#roadmaps" className="hover:text-white transition-colors">
                 Roadmaps
+              </a>
+              <a href="#doc-intelligence" className="hover:text-white transition-colors">
+                Doc Intelligence
+              </a>
+              <a href="#tasks-goals" className="hover:text-white transition-colors">
+                Tasks & Goals
               </a>
               <a href="#pricing" className="hover:text-white transition-colors">
                 Pricing
