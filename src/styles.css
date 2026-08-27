@@ -563,6 +563,57 @@ body.sidebar-resizing * {
   border-radius: 9999px;
 }
 
+/* Premium Angled Sheen Sweep Button Effects */
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shimmer::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: rotate(25deg);
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.btn-shimmer:hover::after {
+  transform: rotate(25deg) translate(400%, 0);
+}
+
+.btn-shimmer-dark {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shimmer-dark::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.18),
+    transparent
+  );
+  transform: rotate(25deg);
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.btn-shimmer-dark:hover::after {
+  transform: rotate(25deg) translate(400%, 0);
+}
+
 @keyframes floatOrb {
   0%, 100% {
     transform: translateY(0px) scale(1);
