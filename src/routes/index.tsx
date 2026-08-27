@@ -41,6 +41,7 @@ import roadmapsImg from "@/assets/roadmaps.png";
 import tasksImg from "@/assets/tasks.png";
 import remichatImg from "@/assets/remichat.png";
 import notebookImg from "@/assets/Notebbok.png";
+import notebookScrollImg from "@/assets/notebook-scroll.png";
 import incontextImg from "@/assets/Incontextlearning.png";
 import heroStudyImg from "@/assets/hero-study.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -518,7 +519,7 @@ function LandingPage() {
                 </div>
                 <div style={{ maxHeight: "500px", overflowY: "scroll" }} className="screenshot-scroll-container">
                   <img
-                    src={notebookImg}
+                    src={notebookScrollImg}
                     alt="Remispace Mathematical Notebook with LaTeX and live equations"
                     className="w-full h-auto block"
                     loading="lazy"
