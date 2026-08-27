@@ -42,6 +42,8 @@ import tasksImg from "@/assets/tasks.png";
 import remichatImg from "@/assets/remichat.png";
 import notebookImg from "@/assets/Notebbok.png";
 import notebookScrollImg from "@/assets/notebook-scroll.png";
+import videoIntelScrollImg from "@/assets/video-intel-scroll.png";
+import docIntelScrollImg from "@/assets/doc-intel-scroll.png";
 import incontextImg from "@/assets/Incontextlearning.png";
 import heroStudyImg from "@/assets/hero-study.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -176,8 +178,8 @@ function LandingPage() {
             <a href="#notebooks" className="hover:text-emerald-300 transition-colors">
               Notebooks
             </a>
-            <a href="#remi-chat" className="hover:text-emerald-300 transition-colors">
-              Remi AI
+            <a href="#doc-intelligence" className="hover:text-emerald-300 transition-colors">
+              Doc Intelligence
             </a>
             <a href="#pricing" className="hover:text-emerald-300 transition-colors">
               Pricing
@@ -531,139 +533,146 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* ── Document Intelligence & Visual Explanations ── */}
+      {/* ── Document & Video Intelligence ── */}
       <section
-        id="visuals"
-        ref={addRef("visuals")}
-        className={`py-28 transition-all duration-1000 ${
-          isVisible("visuals") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            {/* Visual Explanations */}
-            <div>
-              <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
-                Learn with <span className="text-gradient">diagrams & visuals</span>
-              </h3>
-              <p className="text-zinc-300 mb-8 leading-relaxed text-sm sm:text-base">
-                Remispace automatically synthesizes visual flowcharts, architectural diagrams, and document
-                insights to make complex relationships crystal clear.
-              </p>
-              <div className="rounded-2xl border border-emerald-500/25 overflow-hidden shadow-2xl group/img hover:border-emerald-400/50 transition-all duration-500 bg-[#061e14]">
-                <img
-                  src={incontextImg}
-                  alt="In-context learning and document diagrams"
-                  className="w-full h-auto block transition-transform duration-700 group-hover/img:scale-[1.02]"
-                  loading="lazy"
-                />
-              </div>
-            </div>
-
-            {/* Focus & Study Space */}
-            <div>
-              <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-4 font-display text-white">
-                Deep focus with <span className="text-gradient">Study Space</span>
-              </h3>
-              <p className="text-zinc-300 mb-8 leading-relaxed text-sm sm:text-base">
-                Your personal study cockpit — see your upcoming lesson, track your roadmap progress, run a
-                Pomodoro focus timer, and manage daily tasks all from a single distraction-free workspace.
-              </p>
-              <div className="rounded-2xl border border-emerald-500/25 overflow-hidden shadow-2xl group/img hover:border-emerald-400/50 transition-all duration-500 bg-[#061e14]">
-                <img
-                  src={studyspaceImg}
-                  alt="Remispace Study Space — focus timer, tasks and roadmap overview"
-                  className="w-full h-auto block transition-transform duration-700 group-hover/img:scale-[1.02]"
-                  loading="lazy"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Remi AI Companion Spotlight ── */}
-      <section
-        id="remi-chat"
-        ref={addRef("remi-chat")}
+        id="doc-intelligence"
+        ref={addRef("doc-intelligence")}
         className={`py-28 relative transition-all duration-1000 ${
-          isVisible("remi-chat") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          isVisible("doc-intelligence") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-rose-500/[0.03] to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-sky-500/[0.03] to-transparent pointer-events-none" />
         <div
-          className="orb w-[500px] h-[500px] top-20 -right-40 animate-float"
-          style={{ background: "radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, transparent 70%)" }}
+          className="orb w-[500px] h-[500px] top-1/4 -right-40 animate-float"
+          style={{ background: "radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%)" }}
+        />
+        <div
+          className="orb w-[450px] h-[450px] bottom-10 -left-32 animate-float"
+          style={{ background: "radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%)", animationDelay: "2s" }}
         />
 
-        <div className="max-w-6xl mx-auto px-6 relative z-10">
-          <div className="text-center mb-16">
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-20">
             <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display">
-              Meet Remi, your <span className="text-gradient">calm AI study companion</span>
+              Turn documents & videos into <span className="text-gradient">deep knowledge</span>
             </h2>
             <p className="text-emerald-100/70 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-              Unlike generic chatbots, Remi retains context of your current roadmap, quizzes you using Socratic
-              dialogue, and explains concepts using analogies and clear mathematics.
+              Upload research papers, technical PDFs, or paste YouTube lecture links. Get instant executive summaries,
+              timestamped transcripts, in-line highlights, and interactive Socratic dialogue with Remi.
             </p>
           </div>
 
-          {/* Full-width Chat Screenshot */}
-          <div className="relative mb-16">
-            <div className="relative rounded-2xl sm:rounded-3xl border border-rose-500/30 overflow-hidden bg-[#061914] shadow-2xl hover:border-rose-400/50 transition-all duration-500">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-rose-500/20 bg-[#051410]">
-                <div className="flex gap-2">
-                  <div className="size-3 rounded-full bg-red-500/70" />
-                  <div className="size-3 rounded-full bg-yellow-500/70" />
-                  <div className="size-3 rounded-full bg-green-500/70" />
+          {/* Mode 1: Technical Papers & PDFs */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-28">
+            <div>
+              <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-5 font-display text-white">
+                Synthesize <span className="text-gradient">research papers & PDFs</span>
+              </h3>
+              <p className="text-zinc-300 leading-relaxed mb-8 text-sm sm:text-base">
+                Upload complex whitepapers, textbooks, and technical documents. Remispace extracts an executive
+                &ldquo;Before You Commit&rdquo; synthesis, enables multi-page reading with highlights, and lets you ask
+                context-aware questions with instant citations.
+              </p>
+              <div className="space-y-4">
+                {[
+                  { icon: FileText, text: 'Instant "Before You Commit" executive briefs & key takeaways' },
+                  { icon: Search, text: "In-line highlighting, formula capture, and literature citations" },
+                  { icon: MessageSquare, text: "Ask Remi deep questions directly grounded in the paper's contents" },
+                  { icon: Sparkles, text: "Auto-generate flashcards and review quizzes from your highlights" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="size-8 rounded-lg bg-sky-500/15 flex items-center justify-center shrink-0 mt-0.5 border border-sky-500/30">
+                      <item.icon className="size-4 text-sky-300" />
+                    </div>
+                    <span className="text-zinc-300 text-sm leading-relaxed">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="relative rounded-2xl sm:rounded-3xl border border-sky-500/30 overflow-hidden bg-[#061914] shadow-2xl">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-sky-500/20 bg-[#051410]">
+                  <div className="flex gap-2">
+                    <div className="size-3 rounded-full bg-red-500/70" />
+                    <div className="size-3 rounded-full bg-yellow-500/70" />
+                    <div className="size-3 rounded-full bg-green-500/70" />
+                  </div>
+                  <div className="px-3 py-1 rounded-lg bg-sky-500/10 text-xs text-sky-300 font-semibold flex items-center gap-1.5">
+                    <FileText className="size-3.5" />
+                    Document Intelligence
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sky-300/60">
+                    <MousePointerClick className="size-3.5" />
+                    <span className="text-[10px]">Scroll</span>
+                  </div>
                 </div>
-                <div className="px-3 py-1 rounded-lg bg-rose-500/10 text-xs text-rose-300 font-semibold flex items-center gap-1.5">
-                  <MessageSquare className="size-3.5" />
-                  Remi Socratic Chat
-                </div>
-                <div className="flex items-center gap-1.5 text-rose-300/60">
-                  <Volume2 className="size-3.5" />
-                  <span className="text-[10px]">Speech & Audio</span>
+                <div style={{ maxHeight: "540px", overflowY: "scroll" }} className="screenshot-scroll-container">
+                  <img
+                    src={docIntelScrollImg}
+                    alt="Remispace Document Intelligence with paper synthesis and highlights"
+                    className="w-full h-auto block"
+                    loading="lazy"
+                  />
                 </div>
               </div>
-              <img
-                src={remichatImg}
-                alt="Remi AI study assistant chat interface with mathematical derivations"
-                className="w-full h-auto block"
-                loading="lazy"
-              />
             </div>
           </div>
 
-          {/* Feature bullets — grid below the image */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 max-w-5xl mx-auto mb-12">
-            {[
-              { icon: MessageSquare, text: "Socratic questioning that reinforces real understanding" },
-              { icon: Code2, text: "Complete LaTeX mathematical rendering and formulas" },
-              { icon: Mic, text: "Natural text-to-speech voice narration" },
-              { icon: Layers, text: "Persistent context across roadmaps and study spaces" },
-              { icon: Sparkles, text: "One-click generation of flashcards & checkpoint quizzes" },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="flex flex-col items-center text-center gap-3 p-5 rounded-2xl border border-emerald-500/15 bg-[#072418]/40 backdrop-blur-md hover:border-rose-500/30 hover:bg-rose-500/[0.04] transition-all duration-300"
-              >
-                <div className="size-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center">
-                  <item.icon className="size-4.5 text-rose-300" />
+          {/* Mode 2: YouTube Video Intelligence */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="order-2 lg:order-1">
+              <div className="relative rounded-2xl sm:rounded-3xl border border-rose-500/30 overflow-hidden bg-[#061914] shadow-2xl">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-rose-500/20 bg-[#051410]">
+                  <div className="flex gap-2">
+                    <div className="size-3 rounded-full bg-red-500/70" />
+                    <div className="size-3 rounded-full bg-yellow-500/70" />
+                    <div className="size-3 rounded-full bg-green-500/70" />
+                  </div>
+                  <div className="px-3 py-1 rounded-lg bg-rose-500/10 text-xs text-rose-300 font-semibold flex items-center gap-1.5">
+                    <Play className="size-3.5" />
+                    YouTube Video Intelligence
+                  </div>
+                  <div className="flex items-center gap-1.5 text-rose-300/60">
+                    <MousePointerClick className="size-3.5" />
+                    <span className="text-[10px]">Scroll</span>
+                  </div>
                 </div>
-                <span className="text-zinc-300 text-xs leading-relaxed">{item.text}</span>
+                <div style={{ maxHeight: "540px", overflowY: "scroll" }} className="screenshot-scroll-container">
+                  <img
+                    src={videoIntelScrollImg}
+                    alt="Remispace Video Intelligence with timestamped transcripts and notes"
+                    className="w-full h-auto block"
+                    loading="lazy"
+                  />
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="text-center">
-            <Link
-              to="/auth"
-              search={{ mode: "signup" }}
-              className="group inline-flex items-center gap-2.5 px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-2xl shadow-xl shadow-emerald-500/25 transition-all duration-300 hover:scale-[1.02] text-base"
-            >
-              Start Chatting with Remi
-              <ArrowRight className="size-4.5 group-hover:translate-x-1.5 transition-transform" />
-            </Link>
+            <div className="order-1 lg:order-2">
+              <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-5 font-display text-white">
+                Timestamped <span className="text-gradient">video notes & transcripts</span>
+              </h3>
+              <p className="text-zinc-300 leading-relaxed mb-8 text-sm sm:text-base">
+                Paste any YouTube lecture, conference talk, or tutorial. Remispace extracts timestamped transcripts,
+                generates conceptual summaries, lets you pin notes at specific seconds, and answers your questions with Remi.
+              </p>
+              <div className="space-y-4">
+                {[
+                  { icon: Play, text: "Automatic speech-to-text transcript sync with precise timestamps" },
+                  { icon: Zap, text: "One-click 'Generate note' for any key lecture moment" },
+                  { icon: MessageSquare, text: "Ask Remi to deconstruct abstract concepts using real-world analogies" },
+                  { icon: BookOpen, text: "Export takeaways directly to your study roadmaps or math notebooks" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="size-8 rounded-lg bg-rose-500/15 flex items-center justify-center shrink-0 mt-0.5 border border-rose-500/30">
+                      <item.icon className="size-4 text-rose-300" />
+                    </div>
+                    <span className="text-zinc-300 text-sm leading-relaxed">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
