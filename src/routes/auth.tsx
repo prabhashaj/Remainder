@@ -226,22 +226,20 @@ function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setTab("signin")}
-                    className={`rounded-xl py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                      tab === "signin"
+                    className={`rounded-xl py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${tab === "signin"
                         ? "bg-emerald-400 text-zinc-950 font-bold shadow-md"
                         : "text-zinc-400 hover:text-zinc-200"
-                    }`}
+                      }`}
                   >
                     Sign In
                   </button>
                   <button
                     type="button"
                     onClick={() => setTab("signup")}
-                    className={`rounded-xl py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                      tab === "signup"
+                    className={`rounded-xl py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${tab === "signup"
                         ? "bg-emerald-400 text-zinc-950 font-bold shadow-md"
                         : "text-zinc-400 hover:text-zinc-200"
-                    }`}
+                      }`}
                   >
                     Create Account
                   </button>
@@ -499,7 +497,7 @@ function AuthPage() {
                     type="button"
                     onClick={google}
                     disabled={busy}
-                    className="btn-shimmer-dark w-full h-11.5 rounded-xl border border-emerald-500/30 bg-[#092218] hover:bg-[#0f3325] hover:border-emerald-400/70 text-zinc-100 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-3 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer shadow-md"
+                    className="w-full h-11.5 rounded-xl border border-emerald-500/30 bg-[#092218] hover:bg-[#0f3325] hover:border-emerald-400/70 text-zinc-100 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-3 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer shadow-md"
                   >
                     <svg className="size-4.5" viewBox="0 0 24 24">
                       <path

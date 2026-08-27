@@ -457,6 +457,7 @@ html.font-cormorant {
 @utility scrollbar-none {
   scrollbar-width: none;
   -ms-overflow-style: none;
+
   &::-webkit-scrollbar {
     display: none;
   }
@@ -465,17 +466,21 @@ html.font-cormorant {
 @utility scrollbar-thin {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--color-foreground, currentColor) 18%, transparent) transparent;
+
   &::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
+
   &::-webkit-scrollbar-track {
     background: transparent;
   }
+
   &::-webkit-scrollbar-thumb {
     background-color: color-mix(in srgb, var(--color-foreground, #888) 18%, transparent);
     border-radius: 9999px;
   }
+
   &::-webkit-scrollbar-thumb:hover {
     background-color: color-mix(in srgb, var(--color-foreground, #888) 36%, transparent);
   }
@@ -518,6 +523,7 @@ body.sidebar-resizing {
   cursor: col-resize;
   user-select: none;
 }
+
 body.sidebar-resizing * {
   transition: none !important;
 }
@@ -529,9 +535,11 @@ body.sidebar-resizing * {
   pointer-events: none;
   filter: blur(120px);
 }
+
 .orb-primary {
   background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
 }
+
 .orb-secondary {
   background: radial-gradient(circle, rgba(20, 184, 166, 0.12) 0%, transparent 70%);
 }
@@ -555,67 +563,25 @@ body.sidebar-resizing * {
   scrollbar-width: thin;
   scrollbar-color: rgba(245, 158, 11, 0.35) transparent;
 }
+
 .screenshot-scroll-container::-webkit-scrollbar {
   width: 6px;
 }
+
 .screenshot-scroll-container::-webkit-scrollbar-thumb {
   background: rgba(245, 158, 11, 0.35);
   border-radius: 9999px;
 }
 
-/* Premium Angled Sheen Sweep Button Effects */
-.btn-shimmer {
-  overflow: hidden;
-}
-.btn-shimmer::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -75%;
-  width: 50%;
-  height: 200%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
-  transform: rotate(25deg);
-  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-}
-.btn-shimmer:hover::after {
-  transform: rotate(25deg) translate(400%, 0);
-}
 
-.btn-shimmer-dark {
-  overflow: hidden;
-}
-.btn-shimmer-dark::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -75%;
-  width: 50%;
-  height: 200%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.18),
-    transparent
-  );
-  transform: rotate(25deg);
-  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-}
-.btn-shimmer-dark:hover::after {
-  transform: rotate(25deg) translate(400%, 0);
-}
 
 @keyframes floatOrb {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) scale(1);
   }
+
   50% {
     transform: translateY(-20px) scale(1.05);
   }
@@ -636,4 +602,3 @@ body.sidebar-resizing * {
     stroke-dashoffset: 0;
   }
 }
-

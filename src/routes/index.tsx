@@ -217,7 +217,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="btn-shimmer text-xs sm:text-sm font-bold bg-emerald-400 hover:bg-emerald-300 text-zinc-950 px-4 sm:px-5 py-2.5 rounded-xl shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+              className="text-xs sm:text-sm font-bold bg-emerald-400 hover:bg-emerald-300 text-zinc-950 px-4 sm:px-5 py-2.5 rounded-xl shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
             >
               Get Started Free
             </Link>
@@ -260,7 +260,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="btn-shimmer group flex items-center gap-2.5 px-8 sm:px-9 py-4 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold rounded-2xl shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 text-base"
+              className="group flex items-center gap-2.5 px-8 sm:px-9 py-4 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold rounded-2xl shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 text-base"
             >
               Start learning free
               <ArrowRight className="size-4.5 group-hover:translate-x-1 transition-transform duration-200" />
@@ -268,7 +268,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signin" }}
-              className="btn-shimmer-dark flex items-center gap-2 px-8 sm:px-9 py-4 border border-emerald-500/40 hover:border-emerald-400/80 rounded-2xl bg-[#092218] hover:bg-[#0f3325] transition-all duration-200 text-base font-semibold text-emerald-100 hover:text-white shadow-md hover:-translate-y-0.5 active:translate-y-0.5"
+              className="flex items-center gap-2 px-8 sm:px-9 py-4 border border-emerald-500/40 hover:border-emerald-400/80 rounded-2xl bg-[#092218] hover:bg-[#0f3325] transition-all duration-200 text-base font-semibold text-emerald-100 hover:text-white shadow-md hover:-translate-y-0.5 active:translate-y-0.5"
             >
               Sign in to your workspace
             </Link>
@@ -928,7 +928,7 @@ function LandingPage() {
               <Link
                 to="/auth"
                 search={{ mode: "signup" }}
-                className="btn-shimmer-dark w-full py-3.5 px-4 rounded-xl border border-emerald-500/30 bg-[#092218] hover:bg-[#0f3325] text-emerald-200 hover:text-white font-bold text-sm text-center shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+                className="w-full py-3.5 px-4 rounded-xl border border-emerald-500/30 bg-[#092218] hover:bg-[#0f3325] text-emerald-200 hover:text-white font-bold text-sm text-center shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
               >
                 Get Started Free
               </Link>
@@ -972,7 +972,7 @@ function LandingPage() {
               <Link
                 to="/auth"
                 search={{ mode: "signup" }}
-                className="btn-shimmer w-full py-3.5 px-4 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-zinc-950 text-sm font-extrabold text-center shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+                className="w-full py-3.5 px-4 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-zinc-950 text-sm font-extrabold text-center shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
               >
                 Upgrade to Weekly Pro
               </Link>
@@ -1016,7 +1016,7 @@ function LandingPage() {
               <Link
                 to="/auth"
                 search={{ mode: "signup" }}
-                className="btn-shimmer-dark w-full py-3.5 px-4 rounded-xl border border-emerald-500/40 bg-[#0c2a1e] hover:bg-[#123829] text-white font-bold text-sm text-center shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+                className="w-full py-3.5 px-4 rounded-xl border border-emerald-500/40 bg-[#0c2a1e] hover:bg-[#123829] text-white font-bold text-sm text-center shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
               >
                 Upgrade to Monthly Pro
               </Link>
@@ -1045,7 +1045,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="btn-shimmer group flex items-center gap-2.5 px-8 sm:px-10 py-4 sm:py-5 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold rounded-2xl shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 text-base sm:text-lg"
+              className="group flex items-center gap-2.5 px-8 sm:px-10 py-4 sm:py-5 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold rounded-2xl shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 text-base sm:text-lg"
             >
               Get started free
               <ArrowRight className="size-5 group-hover:translate-x-1 transition-transform duration-200" />
@@ -1053,7 +1053,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signin" }}
-              className="btn-shimmer-dark flex items-center gap-2 px-8 py-4 sm:py-5 border border-emerald-500/40 hover:border-emerald-400/80 rounded-2xl bg-[#092218] hover:bg-[#0f3325] transition-all duration-200 text-sm sm:text-base font-semibold text-emerald-100 hover:text-white shadow-md hover:-translate-y-0.5 active:translate-y-0.5"
+              className="flex items-center gap-2 px-8 py-4 sm:py-5 border border-emerald-500/40 hover:border-emerald-400/80 rounded-2xl bg-[#092218] hover:bg-[#0f3325] transition-all duration-200 text-sm sm:text-base font-semibold text-emerald-100 hover:text-white shadow-md hover:-translate-y-0.5 active:translate-y-0.5"
             >
               Sign in to your account
             </Link>
