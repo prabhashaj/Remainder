@@ -150,7 +150,7 @@ function AuthPage() {
       {/* Back to Home Button - Fixed to Top-Left of Viewport */}
       <Link
         to="/"
-        className="btn-shimmer-dark group fixed top-5 left-5 sm:top-7 sm:left-7 flex items-center gap-2 rounded-full border border-emerald-500/30 bg-[#061914]/90 px-4 py-2 text-xs sm:text-sm font-medium text-zinc-300 shadow-md backdrop-blur-xl transition-all duration-200 hover:border-emerald-400/60 hover:text-white hover:-translate-y-0.5 active:translate-y-0.5 z-30"
+        className="fixed top-6 left-6 sm:top-8 sm:left-8 z-50 flex items-center gap-2 rounded-full border border-emerald-500/30 bg-[#061914]/90 px-4 py-2 text-xs sm:text-sm font-medium text-zinc-300 shadow-xl backdrop-blur-xl transition-all duration-200 hover:border-emerald-400/60 hover:text-white hover:-translate-y-0.5 active:translate-y-0.5 group"
       >
         <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5 text-emerald-400" />
         <span>Back to home</span>

@@ -565,7 +565,6 @@ body.sidebar-resizing * {
 
 /* Premium Angled Sheen Sweep Button Effects */
 .btn-shimmer {
-  position: relative;
   overflow: hidden;
 }
 .btn-shimmer::after {
@@ -590,7 +589,6 @@ body.sidebar-resizing * {
 }
 
 .btn-shimmer-dark {
-  position: relative;
   overflow: hidden;
 }
 .btn-shimmer-dark::after {
