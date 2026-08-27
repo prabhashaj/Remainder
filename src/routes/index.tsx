@@ -717,7 +717,7 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* ── Tasks, Habits & Study Goals ── */}
+      {/* ── Study Space, Tasks & Goals ── */}
       <section
         id="tasks-goals"
         ref={addRef("tasks-goals")}
@@ -740,7 +740,7 @@ function LandingPage() {
             </h2>
             <p className="text-emerald-100/70 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
               Zero clutter, maximum momentum. Structure your roadmap milestones into actionable daily tasks, launch
-              focused study sessions with built-in timers, and build unbreakable mastery streaks.
+              focused study sessions with built-in timers, and achieve ambitious learning goals.
             </p>
           </div>
 
@@ -824,7 +824,7 @@ function LandingPage() {
               </ul>
             </div>
 
-            {/* Card 3 */}
+            {/* Card 3 - Goals & Milestones */}
             <div className="group relative p-8 rounded-3xl border border-amber-500/20 bg-[#072418]/60 backdrop-blur-xl hover:border-amber-400/50 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-950/80 flex flex-col justify-between overflow-hidden">
               <div
                 className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
@@ -834,31 +834,31 @@ function LandingPage() {
               />
               <div className="relative z-10">
                 <div className="size-13 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-6 text-amber-400 group-hover:scale-110 group-hover:bg-amber-500/20 transition-all duration-300 shadow-lg shadow-emerald-950/50">
-                  <Flame className="size-6 text-amber-300" />
+                  <Target className="size-6 text-amber-300" />
                 </div>
                 <div className="text-[11px] font-bold text-amber-400/80 uppercase tracking-widest mb-2">
-                  Consistency & Mastery
+                  Ambitions & Milestones
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-white mb-3.5 font-display tracking-tight leading-snug">
-                  Habit & <span className="text-gradient">Streak momentum</span>
+                  Goals & <span className="text-gradient">Milestone tracking</span>
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed mb-6">
-                  Build unstoppable study habits. Set daily study hours, track topic completion rates, earn streak
-                  protection shields, and maintain deep accountability with Remi.
+                  Define big learning ambitions and break them down into trackable milestones. Set target deadlines,
+                  visualize completion progress, and let Remi keep you accountable toward mastery.
                 </p>
               </div>
               <ul className="relative z-10 space-y-3 text-xs text-emerald-200/80 pt-5 border-t border-emerald-500/15">
                 <li className="flex items-center gap-2.5">
                   <CheckCircle2 className="size-4 text-amber-400 shrink-0" />
-                  <span>Daily & weekly study time targets</span>
+                  <span>Long-term academic & skill mastery goals</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <CheckCircle2 className="size-4 text-amber-400 shrink-0" />
-                  <span>Streak multipliers and habit consistency</span>
+                  <span>Hierarchical milestone breakdown & deadlines</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <CheckCircle2 className="size-4 text-amber-400 shrink-0" />
-                  <span>Visual subject mastery & progress charts</span>
+                  <span>Visual progress bars & completion celebrations</span>
                 </li>
               </ul>
             </div>
