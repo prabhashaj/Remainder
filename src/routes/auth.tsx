@@ -131,7 +131,7 @@ function AuthPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-[#020b08] text-zinc-100 px-4 py-12 selection:bg-emerald-500/30 font-sans overflow-hidden">
+    <main className="landing-root relative flex min-h-screen items-center justify-center bg-[#020b08] text-zinc-100 px-4 py-12 selection:bg-emerald-500/30 font-sans overflow-hidden">
       {/* Background Mesh Grid & Ambient Glows */}
       <div className="absolute inset-0 hero-grid-pattern opacity-50 pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
       <div className="orb orb-primary w-[600px] h-[600px] -top-40 -left-40 animate-float pointer-events-none" />

@@ -171,7 +171,7 @@ function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#03140e] text-[#f4f4f5] overflow-x-hidden selection:bg-emerald-500/30 font-sans">
+    <div className="landing-root min-h-screen bg-[#03140e] text-[#f4f4f5] overflow-x-hidden selection:bg-emerald-500/30 font-sans">
       {/* ── Navbar ── */}
       <nav
         className={`fixed top-0 w-full z-50 transition-all duration-500 ${
