@@ -400,7 +400,7 @@ function LandingPage() {
           </div>
 
           {/* Scrollable Study Space Preview */}
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <div className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/25 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl">
               <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-500/20 bg-[#04170e]/80">
                 <div className="flex gap-2">
@@ -417,11 +417,14 @@ function LandingPage() {
                   <span className="text-[10px] font-semibold">Scroll to explore</span>
                 </div>
               </div>
-              <div style={{ maxHeight: "600px", overflowY: "scroll" }} className="screenshot-scroll-container">
+              <div
+                style={{ maxHeight: "600px", overflowY: "scroll" }}
+                className="screenshot-scroll-container bg-[#081711] flex justify-center p-3 sm:p-6"
+              >
                 <img
-                  src={topicLessonScrollImg || studyspaceImg}
+                  src={topicLessonScrollImg}
                   alt="Remispace Study Space and AI Lesson Synthesizer"
-                  className="w-full h-auto block object-cover"
+                  className="w-full max-w-xl h-auto block object-contain rounded-xl shadow-2xl border border-emerald-500/10"
                   loading="lazy"
                 />
               </div>
