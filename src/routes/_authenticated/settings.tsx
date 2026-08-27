@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Moon, Sun, Trash2, Type } from "lucide-react";
+import { Check, Copy, Mail, MessageSquareHeart, Moon, Send, Sun, Trash2, Type } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   clearMemories,
   fetchMemories,
@@ -338,6 +339,8 @@ function SettingsPage() {
 
       <BillingSection />
 
+      <FeedbackSection />
+
       <section className="card-soft p-6">
         <h2 className="font-display text-lg font-semibold">Nudges</h2>
         <div className="mt-4 space-y-4">
@@ -364,5 +367,117 @@ function SettingsPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function FeedbackSection() {
+  const [category, setCategory] = useState<"General Feedback" | "Feature Request" | "Bug Report" | "Question">("General Feedback");
+  const [feedbackText, setFeedbackText] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const targetEmail = "ajprabhash@gmail.com";
+
+  const handleCopyEmail = () => {
+    void navigator.clipboard.writeText(targetEmail);
+    setCopied(true);
+    toast.success("Email copied: " + targetEmail);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleSendEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    const subject = encodeURIComponent(`Remispace Feedback: [${category}]`);
+    const body = encodeURIComponent(
+      feedbackText.trim()
+        ? `${feedbackText.trim()}\n\n---\nCategory: ${category}\nSent from Remispace Settings`
+        : `Hi Remispace team,\n\nI wanted to share some feedback regarding ${category}:\n\n`
+    );
+    window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
+  };
+
+  return (
+    <section className="card-soft p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <MessageSquareHeart className="size-5 text-emerald-500 dark:text-emerald-400" />
+          <h2 className="font-display text-lg font-semibold">Feedback & Support</h2>
+        </div>
+        <button
+          type="button"
+          onClick={handleCopyEmail}
+          className="press inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 transition-all cursor-pointer"
+          title="Click to copy email address"
+        >
+          <Mail className="size-3.5" />
+          <span>{targetEmail}</span>
+        </button>
+      </div>
+
+      <p className="mt-1 text-sm text-muted-foreground">
+        Have an idea, found a bug, or want a new study tool? We would love to hear from you.
+      </p>
+
+      {/* Category Selection */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {(["General Feedback", "Feature Request", "Bug Report", "Question"] as const).map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => setCategory(cat)}
+            className={`press text-xs font-medium px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+              category === cat
+                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                : "border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:border-border"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Feedback Message Form */}
+      <form onSubmit={handleSendEmail} className="mt-4 space-y-3">
+        <Textarea
+          value={feedbackText}
+          onChange={(e) => setFeedbackText(e.target.value)}
+          placeholder="Share your thoughts, describe a feature you would love, or report any issues..."
+          className="min-h-[100px] rounded-2xl border-border/60 bg-background/50 focus-visible:ring-primary text-sm resize-none"
+        />
+
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Direct contact:</span>
+            <button
+              type="button"
+              onClick={handleCopyEmail}
+              className="inline-flex items-center gap-1 font-mono text-xs text-foreground hover:text-primary transition-colors cursor-pointer rounded-md bg-muted/60 px-2 py-0.5"
+            >
+              {copied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+              <span>{targetEmail}</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopyEmail}
+              className="press rounded-xl text-xs"
+            >
+              {copied ? "Copied Email" : "Copy Email"}
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              className="press rounded-xl text-xs font-semibold gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-sm"
+            >
+              <Send className="size-3.5" />
+              <span>Send via Email</span>
+            </Button>
+          </div>
+        </div>
+      </form>
+    </section>
   );
 }
