@@ -243,16 +243,6 @@ function LandingPage() {
         />
 
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-          {/* Top Pill Badge */}
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs sm:text-sm font-medium mb-8 backdrop-blur-xl shadow-lg shadow-emerald-950/40 hover:bg-emerald-500/15 hover:border-emerald-500/40 transition-all duration-300">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Next-Generation AI Study Companion</span>
-            <span className="text-emerald-500/50">•</span>
-            <span className="text-emerald-300 font-semibold flex items-center gap-1">
-              Deep Synthesis <ArrowRight className="size-3 text-emerald-400" />
-            </span>
-          </div>
-
           {/* Main heading */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-bold tracking-tight mb-7 leading-[1.06] font-display text-white">
             Master complex subjects <br className="hidden sm:block" />
@@ -266,7 +256,7 @@ function LandingPage() {
           </p>
 
           {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link
               to="/auth"
               search={{ mode: "signup" }}
@@ -282,22 +272,6 @@ function LandingPage() {
             >
               Sign in to your workspace
             </Link>
-          </div>
-
-          {/* Trust Highlights */}
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs sm:text-sm text-emerald-200/70 mb-12">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-              <span>Free to start</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-              <span>No credit card required</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-              <span>LaTeX formulas & clean exports</span>
-            </div>
           </div>
         </div>
 
