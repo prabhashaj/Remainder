@@ -145,8 +145,8 @@ function LandingPage() {
     },
     {
       icon: Code2,
-      label: "Math Notebooks",
-      desc: "Interactive mathematical notebooks with live LaTeX rendering, formulas, and deep computation",
+      label: "Clean Notebooks",
+      desc: "Structured notebooks with clean formatting, live LaTeX equations, code blocks, and derivations",
       color: "#fbbf24",
       colorBg: "#f59e0b",
     },
@@ -314,7 +314,7 @@ function LandingPage() {
               </div>
               <div className="px-4 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/20 text-xs text-emerald-300/90 flex items-center gap-2 font-mono">
                 <Shield className="size-3 text-emerald-400" />
-                remispace.app/preview
+                remispace.app
               </div>
               <div className="w-12" />
             </div>
@@ -527,22 +527,22 @@ function LandingPage() {
             </div>
           </div>
 
-          {/* Mode 2: Mathematical Notebooks */}
+          {/* Mode 2: Clean Notebook Generation */}
           <div id="notebooks" className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h3 className="text-2xl sm:text-4xl font-bold tracking-tight mb-5 font-display text-white">
-                Live computation & <span className="text-gradient">LaTeX equations</span>
+                Clean <span className="text-gradient">Notebook generation</span>
               </h3>
               <p className="text-zinc-300 leading-relaxed mb-8 text-sm sm:text-base">
-                Write formulas, compute step-by-step calculus, solve equations, and document your theorems with
-                first-class KaTeX rendering and mathematical AI assistants.
+                Generate beautifully structured study notebooks with clear mathematical formulas, conceptual
+                explanations, step-by-step code blocks, and distraction-free formatting tailored for deep comprehension.
               </p>
               <div className="space-y-4">
                 {[
-                  { icon: Brain, text: "Real-time LaTeX formula compilation and rendering" },
-                  { icon: Star, text: "Calculus, matrix, and statistics step-by-step solvers" },
-                  { icon: Target, text: "Interactive sandbox blocks for derivations" },
-                  { icon: Lightbulb, text: "Export notes to Markdown, PDF, and shareable web snapshots" },
+                  { icon: FileText, text: "Automated generation of structured, distraction-free study notebooks" },
+                  { icon: Brain, text: "Crystal-clear LaTeX mathematical notation and formula rendering" },
+                  { icon: Code2, text: "Interactive code snippets, algorithmic logic, and derivations" },
+                  { icon: Lightbulb, text: "Export notes cleanly to Markdown, PDF, and shareable web snapshots" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <div className="size-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5 border border-amber-500/30">
@@ -564,7 +564,7 @@ function LandingPage() {
                   </div>
                   <div className="px-3 py-1 rounded-lg bg-amber-500/10 text-xs text-amber-300 font-semibold flex items-center gap-1.5">
                     <Code2 className="size-3.5" />
-                    Math Notebook
+                    Clean Notebook
                   </div>
                   <div className="flex items-center gap-1.5 text-amber-300/60">
                     <MousePointerClick className="size-3.5" />
@@ -574,7 +574,7 @@ function LandingPage() {
                 <div style={{ maxHeight: "500px", overflowY: "scroll" }} className="screenshot-scroll-container">
                   <img
                     src={notebookScrollImg}
-                    alt="Remispace Mathematical Notebook with LaTeX and live equations"
+                    alt="Remispace Clean Study Notebook with LaTeX and live equations"
                     className="w-full h-auto block"
                     loading="lazy"
                   />
