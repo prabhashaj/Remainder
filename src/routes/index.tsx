@@ -289,19 +289,19 @@ function LandingPage() {
         {/* ── Demo Video (Plays on Hover, Resets on Unhover) ── */}
         <div id="demo-video" className="relative z-10 max-w-5xl mx-auto px-6 mb-8">
           <div
-            className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/30 hover:border-emerald-400/60 transition-all duration-500 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl shadow-emerald-950/80 hover:shadow-emerald-900/60 cursor-pointer group"
+            className="relative rounded-2xl sm:rounded-3xl border border-amber-500/30 hover:border-amber-400/50 transition-all duration-500 overflow-hidden bg-[#061914] shadow-2xl hover:shadow-amber-950/50 cursor-pointer group"
             onMouseEnter={handleVideoMouseEnter}
             onMouseLeave={handleVideoMouseLeave}
           >
             {/* Window Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-500/20 bg-[#04170e]/90 backdrop-blur-md">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-amber-500/20 bg-[#051410]">
               <div className="flex gap-2">
                 <div className="size-3 rounded-full bg-red-500/70" />
                 <div className="size-3 rounded-full bg-yellow-500/70" />
-                <div className="size-3 rounded-full bg-emerald-500/70" />
+                <div className="size-3 rounded-full bg-green-500/70" />
               </div>
-              <div className="px-3 py-1 rounded-lg bg-emerald-500/10 text-xs text-emerald-300 font-semibold flex items-center gap-1.5">
-                <Sparkles className="size-3.5 text-emerald-400" />
+              <div className="px-3 py-1 rounded-lg bg-amber-500/10 text-xs text-amber-300 font-semibold flex items-center gap-1.5">
+                <Sparkles className="size-3.5" />
                 Interactive Workspace
               </div>
               <div className="w-12" />
@@ -349,20 +349,20 @@ function LandingPage() {
 
           {/* Scrollable Study Space Preview */}
           <div className="max-w-4xl mx-auto">
-            <div className="relative rounded-2xl sm:rounded-3xl border border-emerald-500/25 hover:border-emerald-400/50 transition-all duration-500 overflow-hidden bg-[#061e14]/90 backdrop-blur-xl shadow-2xl hover:shadow-emerald-950/80">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-500/20 bg-[#04170e]/80">
+            <div className="relative rounded-2xl sm:rounded-3xl border border-amber-500/30 hover:border-amber-400/50 transition-all duration-500 overflow-hidden bg-[#061914] shadow-2xl hover:shadow-amber-950/50">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-amber-500/20 bg-[#051410]">
                 <div className="flex gap-2">
                   <div className="size-3 rounded-full bg-red-500/70" />
                   <div className="size-3 rounded-full bg-yellow-500/70" />
-                  <div className="size-3 rounded-full bg-emerald-500/70" />
+                  <div className="size-3 rounded-full bg-green-500/70" />
                 </div>
-                <div className="px-3 py-1 rounded-lg bg-emerald-500/10 text-xs text-emerald-300 font-semibold flex items-center gap-1.5">
-                  <Brain className="size-3.5 text-emerald-400" />
+                <div className="px-3 py-1 rounded-lg bg-amber-500/10 text-xs text-amber-300 font-semibold flex items-center gap-1.5">
+                  <Brain className="size-3.5" />
                   AI Lesson Synthesizer
                 </div>
-                <div className="flex items-center gap-1.5 text-emerald-400/60">
+                <div className="flex items-center gap-1.5 text-amber-300/60">
                   <MousePointerClick className="size-3.5" />
-                  <span className="text-[10px] font-semibold">Scroll</span>
+                  <span className="text-[10px]">Scroll</span>
                 </div>
               </div>
               <div
@@ -377,7 +377,7 @@ function LandingPage() {
                 />
               </div>
             </div>
-            <p className="text-center text-xs text-emerald-300/60 mt-4 flex items-center justify-center gap-1.5">
+            <p className="text-center text-xs text-amber-300/60 mt-4 flex items-center justify-center gap-1.5">
               <MousePointerClick className="size-3" />
               Scroll inside the preview to explore a full Remi-synthesized lesson
             </p>
@@ -462,18 +462,18 @@ function LandingPage() {
           {/* Mode 1: Roadmaps */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-28">
             <div className="order-2 lg:order-1">
-              <div className="relative rounded-2xl sm:rounded-3xl border border-purple-500/30 hover:border-purple-400/50 transition-all duration-500 overflow-hidden bg-[#061914] shadow-2xl hover:shadow-purple-950/50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/20 bg-[#051410]">
+              <div className="relative rounded-2xl sm:rounded-3xl border border-amber-500/30 hover:border-amber-400/50 transition-all duration-500 overflow-hidden bg-[#061914] shadow-2xl hover:shadow-amber-950/50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-amber-500/20 bg-[#051410]">
                   <div className="flex gap-2">
                     <div className="size-3 rounded-full bg-red-500/70" />
                     <div className="size-3 rounded-full bg-yellow-500/70" />
                     <div className="size-3 rounded-full bg-green-500/70" />
                   </div>
-                  <div className="px-3 py-1 rounded-lg bg-purple-500/10 text-xs text-purple-300 font-semibold flex items-center gap-1.5">
+                  <div className="px-3 py-1 rounded-lg bg-amber-500/10 text-xs text-amber-300 font-semibold flex items-center gap-1.5">
                     <GraduationCap className="size-3.5" />
                     Mastery Roadmap
                   </div>
-                  <div className="flex items-center gap-1.5 text-purple-300/60">
+                  <div className="flex items-center gap-1.5 text-amber-300/60">
                     <MousePointerClick className="size-3.5" />
                     <span className="text-[10px]">Scroll</span>
                   </div>
@@ -631,18 +631,18 @@ function LandingPage() {
             </div>
 
             <div>
-              <div className="relative rounded-2xl sm:rounded-3xl border border-sky-500/30 hover:border-sky-400/50 transition-all duration-500 overflow-hidden bg-[#061914] shadow-2xl hover:shadow-sky-950/50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-sky-500/20 bg-[#051410]">
+              <div className="relative rounded-2xl sm:rounded-3xl border border-amber-500/30 hover:border-amber-400/50 transition-all duration-500 overflow-hidden bg-[#061914] shadow-2xl hover:shadow-amber-950/50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-amber-500/20 bg-[#051410]">
                   <div className="flex gap-2">
                     <div className="size-3 rounded-full bg-red-500/70" />
                     <div className="size-3 rounded-full bg-yellow-500/70" />
                     <div className="size-3 rounded-full bg-green-500/70" />
                   </div>
-                  <div className="px-3 py-1 rounded-lg bg-sky-500/10 text-xs text-sky-300 font-semibold flex items-center gap-1.5">
+                  <div className="px-3 py-1 rounded-lg bg-amber-500/10 text-xs text-amber-300 font-semibold flex items-center gap-1.5">
                     <FileText className="size-3.5" />
                     Document Intelligence
                   </div>
-                  <div className="flex items-center gap-1.5 text-sky-300/60">
+                  <div className="flex items-center gap-1.5 text-amber-300/60">
                     <MousePointerClick className="size-3.5" />
                     <span className="text-[10px]">Scroll</span>
                   </div>
@@ -662,18 +662,18 @@ function LandingPage() {
           {/* Mode 2: YouTube Video Intelligence */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="order-2 lg:order-1">
-              <div className="relative rounded-2xl sm:rounded-3xl border border-rose-500/30 hover:border-rose-400/50 transition-all duration-500 overflow-hidden bg-[#061914] shadow-2xl hover:shadow-rose-950/50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-rose-500/20 bg-[#051410]">
+              <div className="relative rounded-2xl sm:rounded-3xl border border-amber-500/30 hover:border-amber-400/50 transition-all duration-500 overflow-hidden bg-[#061914] shadow-2xl hover:shadow-amber-950/50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-amber-500/20 bg-[#051410]">
                   <div className="flex gap-2">
                     <div className="size-3 rounded-full bg-red-500/70" />
                     <div className="size-3 rounded-full bg-yellow-500/70" />
                     <div className="size-3 rounded-full bg-green-500/70" />
                   </div>
-                  <div className="px-3 py-1 rounded-lg bg-rose-500/10 text-xs text-rose-300 font-semibold flex items-center gap-1.5">
+                  <div className="px-3 py-1 rounded-lg bg-amber-500/10 text-xs text-amber-300 font-semibold flex items-center gap-1.5">
                     <Play className="size-3.5" />
                     YouTube Video Intelligence
                   </div>
-                  <div className="flex items-center gap-1.5 text-rose-300/60">
+                  <div className="flex items-center gap-1.5 text-amber-300/60">
                     <MousePointerClick className="size-3.5" />
                     <span className="text-[10px]">Scroll</span>
                   </div>
