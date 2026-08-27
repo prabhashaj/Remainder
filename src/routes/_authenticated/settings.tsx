@@ -382,7 +382,6 @@ function FeedbackSection() {
     ? `${feedbackText.trim()}\n\n---\nCategory: ${category}\nSent from Remispace Settings`
     : `Hi Remispace team,\n\nI wanted to share some feedback regarding ${category}:\n\n`;
 
-  const mailtoHref = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(targetEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
   const handleCopyEmail = () => {
@@ -471,14 +470,6 @@ function FeedbackSection() {
               <span>Copy Message</span>
             </Button>
             <a
-              href={mailtoHref}
-              className="press rounded-xl text-xs font-medium gap-1.5 border border-border/80 bg-background/80 hover:bg-muted/70 text-foreground inline-flex items-center justify-center px-3 py-2 transition-all"
-              title="Open your system's default email client (Outlook, Apple Mail, etc.)"
-            >
-              <Mail className="size-3.5 text-muted-foreground" />
-              <span>Default Mail App</span>
-            </a>
-            <a
               href={gmailHref}
               target="_blank"
               rel="noopener noreferrer"
@@ -491,9 +482,6 @@ function FeedbackSection() {
             </a>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground/80 mt-1">
-          💡 If you don't have a desktop email client installed on your computer, click <strong>Send via Gmail</strong> to compose directly in your browser.
-        </p>
       </div>
     </section>
   );
