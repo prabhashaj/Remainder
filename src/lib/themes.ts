@@ -10,16 +10,16 @@ export type ThemeId =
   | "sapphire";
 
 export type FontId =
-  | "roboto"
-  | "cormorant"
-  | "merienda";
+  | "merienda"
+  | "inter"
+  | "outfit";
 
 export const FONT_STORAGE_KEY = "remispace-font";
 
 export const FONTS: { id: FontId; name: string; blurb: string; fontClass: string }[] = [
-  { id: "roboto", name: "Roboto (Default)", blurb: "Crisp, geometric neo-grotesque sans.", fontClass: "font-roboto" },
-  { id: "cormorant", name: "Luxury (Cormorant)", blurb: "High-fashion classical serif.", fontClass: "font-cormorant" },
-  { id: "merienda", name: "Flow (Merienda)", blurb: "Playful, organic cursive.", fontClass: "font-merienda" },
+  { id: "merienda", name: "Flow (Default)", blurb: "Playful, organic cursive handwriting.", fontClass: "font-merienda" },
+  { id: "inter", name: "Minimalist (Inter)", blurb: "Clean, neutral, and hyper-legible sans.", fontClass: "font-inter" },
+  { id: "outfit", name: "Geometric (Outfit)", blurb: "Sleek, modern, and futuristic geometric sans.", fontClass: "font-outfit" },
 ];
 
 export const FONT_IDS = FONTS.map((f) => f.id);

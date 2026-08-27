@@ -7,11 +7,13 @@ export const LIMITS = {
   FREE: {
     ROADMAPS_PER_WEEK: 2,
     NOTEBOOKS_PER_WEEK: 5,
+    DEEP_RESEARCH_PER_WEEK: 2,
     MAX_FILE_SIZE_MB: 15,
   },
   PREMIUM: {
     ROADMAPS_PER_WEEK: 10,
     NOTEBOOKS_PER_WEEK: 15,
+    DEEP_RESEARCH_PER_WEEK: 5,
     MAX_FILE_SIZE_MB: 50,
   },
 };
@@ -51,6 +53,7 @@ export async function getRemainingLimits() {
 
   const roadmapsUsed = usage?.roadmaps_generated || 0;
   const notebooksUsed = usage?.notebooks_created || 0;
+  const deepResearchUsed = usage?.deep_research_used || 0;
 
   return {
     isPremium,
@@ -66,6 +69,12 @@ export async function getRemainingLimits() {
       limit: limits.NOTEBOOKS_PER_WEEK,
       remaining: Math.max(0, limits.NOTEBOOKS_PER_WEEK - notebooksUsed),
       canCreate: notebooksUsed < limits.NOTEBOOKS_PER_WEEK,
+    },
+    deepResearch: {
+      used: deepResearchUsed,
+      limit: limits.DEEP_RESEARCH_PER_WEEK,
+      remaining: Math.max(0, limits.DEEP_RESEARCH_PER_WEEK - deepResearchUsed),
+      canCreate: deepResearchUsed < limits.DEEP_RESEARCH_PER_WEEK,
     },
     maxFileSizeMb: limits.MAX_FILE_SIZE_MB,
   };
@@ -91,6 +100,7 @@ export async function getRemainingLimitsServer(supabase: SupabaseClient<Database
 
   const roadmapsUsed = usage?.roadmaps_generated || 0;
   const notebooksUsed = usage?.notebooks_created || 0;
+  const deepResearchUsed = usage?.deep_research_used || 0;
 
   return {
     isPremium,
@@ -106,6 +116,12 @@ export async function getRemainingLimitsServer(supabase: SupabaseClient<Database
       limit: limits.NOTEBOOKS_PER_WEEK,
       remaining: Math.max(0, limits.NOTEBOOKS_PER_WEEK - notebooksUsed),
       canCreate: notebooksUsed < limits.NOTEBOOKS_PER_WEEK,
+    },
+    deepResearch: {
+      used: deepResearchUsed,
+      limit: limits.DEEP_RESEARCH_PER_WEEK,
+      remaining: Math.max(0, limits.DEEP_RESEARCH_PER_WEEK - deepResearchUsed),
+      canCreate: deepResearchUsed < limits.DEEP_RESEARCH_PER_WEEK,
     },
     maxFileSizeMb: limits.MAX_FILE_SIZE_MB,
   };

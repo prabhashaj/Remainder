@@ -1691,7 +1691,7 @@ export function RemiChat({
             <AlertDialogDescription className="text-center">
               {limitType === "chat"
                 ? "You've used your 20 daily messages limit. Upgrade to Pro to get unlimited messages."
-                : "You've reached your free limit this week. Upgrade to Pro to create up to 10 roadmaps and 15 notebooks per week, unlock premium features, and more."}
+                : "You've reached your free limit this week. Upgrade to Pro to create up to 10 roadmaps, 15 notebooks, and 5 deep research investigations per week, unlock premium features, and more."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 flex flex-col gap-2 sm:flex-col">

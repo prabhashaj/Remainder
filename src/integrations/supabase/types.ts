@@ -1116,6 +1116,7 @@ export type Database = {
           week_start_date: string;
           roadmaps_generated: number;
           notebooks_created: number;
+          deep_research_used: number;
           created_at: string;
           updated_at: string;
         };
@@ -1125,6 +1126,7 @@ export type Database = {
           week_start_date: string;
           roadmaps_generated?: number;
           notebooks_created?: number;
+          deep_research_used?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -1134,6 +1136,7 @@ export type Database = {
           week_start_date?: string;
           roadmaps_generated?: number;
           notebooks_created?: number;
+          deep_research_used?: number;
           created_at?: string;
           updated_at?: string;
         };

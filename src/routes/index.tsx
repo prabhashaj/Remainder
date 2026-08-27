@@ -913,7 +913,11 @@ function LandingPage() {
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>5 Clean Notebooks</span>
+                    <span>5 Clean Notebooks per week</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>2 Deep Research per week</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
@@ -958,6 +962,10 @@ function LandingPage() {
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
                     <span>15 Clean Notebooks per week</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span className="font-semibold text-emerald-300">5 Deep Research per week</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />

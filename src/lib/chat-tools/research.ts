@@ -314,6 +314,28 @@ export function getResearchTools(
         wrapTool(
           "deepResearch",
           async () => {
+            const { getRemainingLimitsServer, getCurrentWeekStart } = await import("@/lib/limits");
+            const limits = await getRemainingLimitsServer(supabase, userId);
+            if (!limits.deepResearch.canCreate) {
+              return {
+                limitReached: true,
+                resource: "deepResearch",
+                limit: limits.deepResearch.limit,
+                used: limits.deepResearch.used,
+                remaining: 0,
+                summary: `Upgrade Required! You have reached your limit of ${limits.deepResearch.limit} deep research investigations this week. Please tell the user to upgrade their subscription.`,
+                topic,
+                report: `### Weekly Limit Reached\n\nYou have used all **${limits.deepResearch.limit}** deep research requests allowed on your ${limits.isPremium ? "Pro" : "Free"} plan this week (${limits.isPremium ? "Pro: 5/week" : "Free: 2/week"}).\n\n${limits.isPremium ? "Your weekly quota will reset at the start of next week." : "Upgrade to Remispace Pro for 5 deep research investigations per week, plus higher roadmap and notebook limits."}`,
+                plan: { topic, scope: "Weekly Limit Reached", temporalConstraints: "", keyDimensions: [] },
+                subtasks: [],
+                actionTrail: [{ step: "Limit verification", status: "completed", details: `Weekly limit of ${limits.deepResearch.limit} reached.` }],
+                subagentResults: [],
+                sourcesMarkdown: "",
+                citation_instruction:
+                  "Inform the user that their deep research limit for the week has been reached and prompt them to upgrade or wait for the weekly reset.",
+              };
+            }
+
             const res = await runDeepResearch({
               topic,
               apiKey: key,
@@ -321,6 +343,21 @@ export function getResearchTools(
               userId,
               traceId,
             });
+
+            // Record usage
+            const weekStart = getCurrentWeekStart();
+            const { error: usageErr } = await supabase.from("usage_logs").upsert(
+              {
+                user_id: userId,
+                week_start_date: weekStart,
+                deep_research_used: limits.deepResearch.used + 1,
+              },
+              { onConflict: "user_id,week_start_date" },
+            );
+            if (usageErr) {
+              const { log } = await import("@/lib/logger.server");
+              log("error", "usage_record_deep_research_failed", { error: usageErr.message }, { userId });
+            }
 
             return {
               topic: res.topic,

@@ -155,6 +155,9 @@ function PricingPage() {
                 <span className="mr-2 text-primary">✓</span> 5 Notebooks per week
               </li>
               <li className="flex items-center">
+                <span className="mr-2 text-primary">✓</span> 2 Deep Research per week
+              </li>
+              <li className="flex items-center">
                 <span className="mr-2 text-primary">✓</span> 15MB file upload limit
               </li>
             </ul>
@@ -184,6 +187,9 @@ function PricingPage() {
               </li>
               <li className="flex items-center">
                 <span className="mr-2 text-primary">✓</span> 15 Notebooks per week
+              </li>
+              <li className="flex items-center">
+                <span className="mr-2 text-primary font-semibold">✓</span> <strong className="font-semibold text-foreground">5 Deep Research per week</strong>
               </li>
               <li className="flex items-center">
                 <span className="mr-2 text-primary">✓</span> 50MB file upload limit
