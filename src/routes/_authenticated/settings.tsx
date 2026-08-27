@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Copy, Mail, MessageSquareHeart, Moon, Send, Sun, Trash2, Type } from "lucide-react";
+import { Check, Copy, ExternalLink, Mail, MessageSquareHeart, Moon, Send, Sun, Trash2, Type } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -377,6 +377,14 @@ function FeedbackSection() {
 
   const targetEmail = "ajprabhash@gmail.com";
 
+  const subject = `Remispace Feedback [${category}]`;
+  const body = feedbackText.trim()
+    ? `${feedbackText.trim()}\n\n---\nCategory: ${category}\nSent from Remispace Settings`
+    : `Hi Remispace team,\n\nI wanted to share some feedback regarding ${category}:\n\n`;
+
+  const mailtoHref = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(targetEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
   const handleCopyEmail = () => {
     void navigator.clipboard.writeText(targetEmail);
     setCopied(true);
@@ -384,28 +392,17 @@ function FeedbackSection() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleSendEmail = (e: React.FormEvent) => {
-    e.preventDefault();
-    const subject = encodeURIComponent(`Remispace Feedback: [${category}]`);
-    const body = encodeURIComponent(
-      feedbackText.trim()
-        ? `${feedbackText.trim()}\n\n---\nCategory: ${category}\nSent from Remispace Settings`
-        : `Hi Remispace team,\n\nI wanted to share some feedback regarding ${category}:\n\n`
-    );
-    window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
-  };
-
   return (
     <section className="card-soft p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <MessageSquareHeart className="size-5 text-emerald-500 dark:text-emerald-400" />
+          <MessageSquareHeart className="size-5 text-primary" />
           <h2 className="font-display text-lg font-semibold">Feedback & Support</h2>
         </div>
         <button
           type="button"
           onClick={handleCopyEmail}
-          className="press inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 transition-all cursor-pointer"
+          className="press inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/15 transition-all cursor-pointer"
           title="Click to copy email address"
         >
           <Mail className="size-3.5" />
@@ -435,8 +432,8 @@ function FeedbackSection() {
         ))}
       </div>
 
-      {/* Feedback Message Form */}
-      <form onSubmit={handleSendEmail} className="mt-4 space-y-3">
+      {/* Feedback Message Input */}
+      <div className="mt-4 space-y-3">
         <Textarea
           value={feedbackText}
           onChange={(e) => setFeedbackText(e.target.value)}
@@ -446,18 +443,18 @@ function FeedbackSection() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Direct contact:</span>
+            <span>Direct email:</span>
             <button
               type="button"
               onClick={handleCopyEmail}
               className="inline-flex items-center gap-1 font-mono text-xs text-foreground hover:text-primary transition-colors cursor-pointer rounded-md bg-muted/60 px-2 py-0.5"
             >
-              {copied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+              {copied ? <Check className="size-3 text-primary" /> : <Copy className="size-3" />}
               <span>{targetEmail}</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -467,17 +464,25 @@ function FeedbackSection() {
             >
               {copied ? "Copied Email" : "Copy Email"}
             </Button>
-            <Button
-              type="submit"
-              size="sm"
-              className="press rounded-xl text-xs font-semibold gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-sm"
+            <a
+              href={gmailHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="press rounded-xl text-xs font-medium gap-1.5 border border-border/80 bg-background/80 hover:bg-muted/70 text-foreground inline-flex items-center justify-center px-3 py-2 transition-all"
+            >
+              <ExternalLink className="size-3.5 text-muted-foreground" />
+              <span>Open in Gmail</span>
+            </a>
+            <a
+              href={mailtoHref}
+              className="press rounded-xl text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm inline-flex items-center justify-center px-3.5 py-2 transition-all"
             >
               <Send className="size-3.5" />
               <span>Send via Email</span>
-            </Button>
+            </a>
           </div>
         </div>
-      </form>
+      </div>
     </section>
   );
 }
