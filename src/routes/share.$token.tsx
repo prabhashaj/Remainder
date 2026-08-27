@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import remiLogo from "@/assets/remi.png";
 import { RemispaceBrand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
