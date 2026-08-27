@@ -210,14 +210,14 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signin" }}
-              className="text-xs sm:text-sm font-semibold text-emerald-200/80 hover:text-white transition-colors px-3 py-2"
+              className="text-xs sm:text-sm font-semibold text-emerald-100 hover:text-white transition-all px-3.5 py-2 hover:bg-white/[0.06] rounded-xl"
             >
               Sign in
             </Link>
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="text-xs sm:text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 sm:px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98]"
+              className="text-xs sm:text-sm font-bold bg-emerald-400 hover:bg-emerald-300 text-zinc-950 px-4 sm:px-5 py-2.5 rounded-xl shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)] transition-all duration-200 hover:scale-105 active:scale-95"
             >
               Get Started Free
             </Link>
@@ -260,7 +260,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="group flex items-center gap-2.5 px-8 sm:px-9 py-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-2xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] text-base"
+              className="group flex items-center gap-2.5 px-8 sm:px-9 py-4 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:via-teal-200 hover:to-emerald-300 text-zinc-950 font-extrabold rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.35)] hover:shadow-[0_0_45px_rgba(52,211,153,0.55)] transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] text-base ring-2 ring-emerald-300/30"
             >
               Start learning free
               <ArrowRight className="size-4.5 group-hover:translate-x-1.5 transition-transform" />
@@ -268,7 +268,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signin" }}
-              className="flex items-center gap-2 px-8 sm:px-9 py-4 border border-emerald-500/30 rounded-2xl bg-[#072418]/60 hover:bg-[#0b3323] hover:border-emerald-400/50 transition-all duration-300 text-base font-semibold text-emerald-200 hover:text-white backdrop-blur-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 px-8 sm:px-9 py-4 border-2 border-white/20 hover:border-emerald-400/60 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] transition-all duration-300 text-base font-semibold text-white backdrop-blur-xl shadow-lg shadow-black/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:scale-[1.02] active:scale-[0.98]"
             >
               Sign in to your workspace
             </Link>
@@ -928,7 +928,7 @@ function LandingPage() {
               <Link
                 to="/auth"
                 search={{ mode: "signup" }}
-                className="w-full py-3 px-4 rounded-xl border border-emerald-500/30 bg-[#092b1d] hover:bg-[#0e3b28] text-emerald-300 hover:text-white text-sm font-bold text-center transition-all duration-150 active:scale-[0.99]"
+                className="w-full py-3.5 px-4 rounded-xl border-2 border-emerald-400/40 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-200 hover:text-white font-bold text-sm text-center shadow-lg shadow-black/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
                 Get Started Free
               </Link>
@@ -972,7 +972,7 @@ function LandingPage() {
               <Link
                 to="/auth"
                 search={{ mode: "signup" }}
-                className="w-full py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-sm font-bold text-center shadow-lg shadow-emerald-500/25 transition-all duration-150 active:scale-[0.99]"
+                className="w-full py-4 px-4 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:via-teal-200 hover:to-emerald-300 text-zinc-950 text-sm font-extrabold text-center shadow-[0_0_25px_rgba(16,185,129,0.4)] hover:shadow-[0_0_40px_rgba(52,211,153,0.6)] transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ring-2 ring-emerald-300/40"
               >
                 Upgrade to Weekly Pro
               </Link>
@@ -1016,7 +1016,7 @@ function LandingPage() {
               <Link
                 to="/auth"
                 search={{ mode: "signup" }}
-                className="w-full py-3 px-4 rounded-xl border border-emerald-500/30 bg-[#092b1d] hover:bg-[#0e3b28] text-emerald-300 hover:text-white text-sm font-bold text-center transition-all duration-150 active:scale-[0.99]"
+                className="w-full py-3.5 px-4 rounded-xl border-2 border-emerald-400/40 bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-100 hover:text-white font-bold text-sm text-center shadow-lg shadow-black/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
                 Upgrade to Monthly Pro
               </Link>
@@ -1045,7 +1045,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="group flex items-center gap-2 px-8 sm:px-10 py-4 sm:py-5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-2xl shadow-2xl shadow-emerald-500/30 transition-all duration-300 hover:scale-[1.03] text-base sm:text-lg"
+              className="group flex items-center gap-2.5 px-8 sm:px-10 py-4 sm:py-5 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:via-teal-200 hover:to-emerald-300 text-zinc-950 font-extrabold rounded-2xl shadow-[0_0_35px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_rgba(52,211,153,0.6)] transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] text-base sm:text-lg ring-2 ring-emerald-300/30"
             >
               Get started free
               <ArrowRight className="size-5 group-hover:translate-x-1.5 transition-transform" />
@@ -1053,7 +1053,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signin" }}
-              className="flex items-center gap-2 px-8 py-4 sm:py-5 border border-emerald-500/30 rounded-2xl bg-[#072418]/60 hover:bg-[#0b3323] transition-all duration-300 text-sm font-semibold text-emerald-200 hover:text-white"
+              className="flex items-center gap-2 px-8 py-4 sm:py-5 border-2 border-white/20 hover:border-emerald-400/60 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] transition-all duration-300 text-sm sm:text-base font-semibold text-white backdrop-blur-xl shadow-lg shadow-black/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:scale-[1.02] active:scale-[0.98]"
             >
               Sign in to your account
             </Link>
