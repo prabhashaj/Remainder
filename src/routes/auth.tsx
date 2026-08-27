@@ -131,25 +131,26 @@ function AuthPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-[#06140e] text-zinc-100 px-4 py-12 selection:bg-emerald-500/30 font-sans overflow-hidden">
-      {/* Dynamic Background Mesh Gradients */}
-      <div className="pointer-events-none absolute -top-40 -left-40 size-[500px] rounded-full bg-emerald-600/15 blur-[140px]" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 size-[500px] rounded-full bg-teal-500/15 blur-[140px]" />
-      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[650px] rounded-full bg-emerald-400/5 blur-[160px]" />
-
-      {/* Subtle Dot Grid Overlay */}
+    <main className="relative flex min-h-screen items-center justify-center bg-[#020b08] text-zinc-100 px-4 py-12 selection:bg-emerald-500/30 font-sans overflow-hidden">
+      {/* Background Mesh Grid & Ambient Glows */}
+      <div className="absolute inset-0 hero-grid-pattern opacity-50 pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
+      <div className="orb orb-primary w-[600px] h-[600px] -top-40 -left-40 animate-float pointer-events-none" />
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        className="orb orb-secondary w-[550px] h-[550px] -bottom-32 -right-32 animate-float pointer-events-none"
+        style={{ animationDelay: "2s" }}
+      />
+      <div
+        className="orb w-[450px] h-[450px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-float pointer-events-none"
         style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, #34d399 1px, transparent 0)`,
-          backgroundSize: "32px 32px",
+          background: "radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(20, 184, 166, 0.04) 50%, transparent 75%)",
+          animationDelay: "1s",
         }}
       />
 
       {/* Back to Home Button */}
       <Link
         to="/"
-        className="group absolute left-4 top-4 sm:left-8 sm:top-8 flex items-center gap-2 rounded-full border border-emerald-500/20 bg-[#0c2419]/80 px-4 py-2 text-xs sm:text-sm font-medium text-zinc-300 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-emerald-400/50 hover:bg-[#123626] hover:text-white z-20"
+        className="btn-shimmer-dark group absolute left-4 top-4 sm:left-8 sm:top-8 flex items-center gap-2 rounded-full border border-emerald-500/30 bg-[#061914]/90 px-4 py-2 text-xs sm:text-sm font-medium text-zinc-300 shadow-md backdrop-blur-xl transition-all duration-200 hover:border-emerald-400/60 hover:text-white hover:-translate-y-0.5 active:translate-y-0.5 z-20"
       >
         <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5 text-emerald-400" />
         <span>Back to home</span>
@@ -157,20 +158,23 @@ function AuthPage() {
 
       <div className="relative w-full max-w-[440px] z-10 my-auto">
         {/* Brand Header */}
-        <div className="mb-6 flex items-center justify-center">
+        <div className="mb-6 flex flex-col items-center justify-center text-center">
           <Link
             to="/"
-            className="inline-flex items-center justify-center transition-transform hover:opacity-90 group"
+            className="inline-flex items-center justify-center transition-transform hover:opacity-95 group mb-2"
           >
-            <RemispaceBrand size="lg" className="text-white" iconClassName="group-hover:scale-110" />
+            <RemispaceBrand size="lg" className="text-white" iconClassName="group-hover:scale-105 transition-transform" />
           </Link>
+          <p className="text-xs text-emerald-200/60 font-medium">
+            Your calm AI sanctuary for deep synthesis & structured learning
+          </p>
         </div>
 
         {/* Auth Card */}
-        <div className="relative rounded-3xl border border-emerald-500/20 bg-[#082216]/90 p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl transition-all">
+        <div className="relative rounded-3xl border border-emerald-500/25 bg-[#061914]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl transition-all duration-300">
           {sentConfirmation ? (
             <div className="space-y-4 text-center py-4 animate-in fade-in zoom-in-95 duration-200">
-              <div className="mx-auto size-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-lg shadow-emerald-500/10">
+              <div className="mx-auto size-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-md">
                 <CheckCircle2 className="size-7 text-emerald-400" />
               </div>
               <h2 className="font-display text-xl font-bold text-white">Check your email</h2>
@@ -185,7 +189,7 @@ function AuthPage() {
                     setSentConfirmation(false);
                     setTab("signin");
                   }}
-                  className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-colors shadow-sm cursor-pointer"
+                  className="btn-shimmer inline-flex items-center justify-center rounded-xl bg-emerald-400 hover:bg-emerald-300 px-6 py-2.5 text-xs font-bold text-zinc-950 shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
                 >
                   Return to sign in
                 </button>
@@ -193,7 +197,7 @@ function AuthPage() {
             </div>
           ) : resetEmailSent ? (
             <div className="space-y-4 text-center py-4 animate-in fade-in zoom-in-95 duration-200">
-              <div className="mx-auto size-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-lg shadow-emerald-500/10">
+              <div className="mx-auto size-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-md">
                 <Mail className="size-7 text-emerald-400" />
               </div>
               <h2 className="font-display text-xl font-bold text-white">Password reset link sent</h2>
@@ -208,7 +212,7 @@ function AuthPage() {
                     setResetEmailSent(false);
                     setTab("signin");
                   }}
-                  className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-colors shadow-sm cursor-pointer"
+                  className="btn-shimmer inline-flex items-center justify-center rounded-xl bg-emerald-400 hover:bg-emerald-300 px-6 py-2.5 text-xs font-bold text-zinc-950 shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
                 >
                   Back to Sign In
                 </button>
@@ -218,13 +222,13 @@ function AuthPage() {
             <>
               {/* Segmented Switcher (Sign in / Create Account) */}
               {tab !== "forgot" ? (
-                <div className="grid grid-cols-2 rounded-2xl bg-[#04170e] p-1.5 border border-emerald-500/20 mb-6 shadow-inner">
+                <div className="grid grid-cols-2 rounded-2xl bg-[#03130c] p-1 border border-emerald-500/20 mb-6">
                   <button
                     type="button"
                     onClick={() => setTab("signin")}
                     className={`rounded-xl py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
                       tab === "signin"
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/50 font-bold border border-emerald-400/30"
+                        ? "bg-emerald-400 text-zinc-950 font-bold shadow-md"
                         : "text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
@@ -235,7 +239,7 @@ function AuthPage() {
                     onClick={() => setTab("signup")}
                     className={`rounded-xl py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
                       tab === "signup"
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/50 font-bold border border-emerald-400/30"
+                        ? "bg-emerald-400 text-zinc-950 font-bold shadow-md"
                         : "text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
@@ -266,7 +270,7 @@ function AuthPage() {
                       Email Address
                     </label>
                     <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-400/70">
                         <Mail className="size-4" />
                       </div>
                       <input
@@ -278,7 +282,7 @@ function AuthPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@example.com"
-                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03150d] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/30"
+                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25"
                       />
                     </div>
                   </div>
@@ -297,7 +301,7 @@ function AuthPage() {
                       </button>
                     </div>
                     <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-400/70">
                         <Lock className="size-4" />
                       </div>
                       <input
@@ -309,7 +313,7 @@ function AuthPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter your password"
-                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03150d] pl-10 pr-10 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/30"
+                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] pl-10 pr-10 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25"
                       />
                       <button
                         type="button"
@@ -325,7 +329,7 @@ function AuthPage() {
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full h-11.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all duration-150 active:scale-[0.99] disabled:opacity-60 cursor-pointer mt-3 flex items-center justify-center gap-2"
+                    className="btn-shimmer w-full h-11.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold text-sm shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 cursor-pointer mt-3 flex items-center justify-center gap-2"
                   >
                     {busy ? (
                       <>
@@ -347,7 +351,7 @@ function AuthPage() {
                       Full Name
                     </label>
                     <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-400/70">
                         <User className="size-4" />
                       </div>
                       <input
@@ -358,7 +362,7 @@ function AuthPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g. Marie Curie"
-                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03150d] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/30"
+                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25"
                       />
                     </div>
                   </div>
@@ -368,7 +372,7 @@ function AuthPage() {
                       Email Address
                     </label>
                     <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-400/70">
                         <Mail className="size-4" />
                       </div>
                       <input
@@ -380,7 +384,7 @@ function AuthPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@example.com"
-                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03150d] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/30"
+                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25"
                       />
                     </div>
                   </div>
@@ -393,7 +397,7 @@ function AuthPage() {
                       <span className="text-[11px] text-zinc-400">min 6 chars</span>
                     </div>
                     <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-400/70">
                         <Lock className="size-4" />
                       </div>
                       <input
@@ -406,7 +410,7 @@ function AuthPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Create a strong password"
-                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03150d] pl-10 pr-10 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/30"
+                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] pl-10 pr-10 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25"
                       />
                       <button
                         type="button"
@@ -422,7 +426,7 @@ function AuthPage() {
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full h-11.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all duration-150 active:scale-[0.99] disabled:opacity-60 cursor-pointer mt-3 flex items-center justify-center gap-2"
+                    className="btn-shimmer w-full h-11.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold text-sm shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 cursor-pointer mt-3 flex items-center justify-center gap-2"
                   >
                     {busy ? (
                       <>
@@ -447,7 +451,7 @@ function AuthPage() {
                       Email Address
                     </label>
                     <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-400/70">
                         <Mail className="size-4" />
                       </div>
                       <input
@@ -459,7 +463,7 @@ function AuthPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@example.com"
-                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03150d] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/30"
+                        className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25"
                       />
                     </div>
                   </div>
@@ -467,7 +471,7 @@ function AuthPage() {
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full h-11.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all duration-150 active:scale-[0.99] disabled:opacity-60 cursor-pointer mt-3 flex items-center justify-center gap-2"
+                    className="btn-shimmer w-full h-11.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold text-sm shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 cursor-pointer mt-3 flex items-center justify-center gap-2"
                   >
                     {busy ? (
                       <>
@@ -495,7 +499,7 @@ function AuthPage() {
                     type="button"
                     onClick={google}
                     disabled={busy}
-                    className="w-full h-11.5 rounded-xl border border-emerald-500/30 bg-[#092b1d] hover:bg-[#0e3b28] hover:border-emerald-400/60 text-zinc-100 text-xs sm:text-sm font-semibold transition-all duration-150 flex items-center justify-center gap-3 active:scale-[0.99] cursor-pointer shadow-md shadow-black/20"
+                    className="btn-shimmer-dark w-full h-11.5 rounded-xl border border-emerald-500/30 bg-[#092218] hover:bg-[#0f3325] hover:border-emerald-400/70 text-zinc-100 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-3 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer shadow-md"
                   >
                     <svg className="size-4.5" viewBox="0 0 24 24">
                       <path

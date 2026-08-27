@@ -217,7 +217,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="btn-shimmer text-xs sm:text-sm font-bold bg-white hover:bg-zinc-100 text-zinc-950 px-4 sm:px-5 py-2.5 rounded-xl shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+              className="btn-shimmer text-xs sm:text-sm font-bold bg-emerald-400 hover:bg-emerald-300 text-zinc-950 px-4 sm:px-5 py-2.5 rounded-xl shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
             >
               Get Started Free
             </Link>
@@ -260,7 +260,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="btn-shimmer group flex items-center gap-2.5 px-8 sm:px-9 py-4 bg-white hover:bg-zinc-100 text-zinc-950 font-bold rounded-2xl shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 text-base"
+              className="btn-shimmer group flex items-center gap-2.5 px-8 sm:px-9 py-4 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold rounded-2xl shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 text-base"
             >
               Start learning free
               <ArrowRight className="size-4.5 group-hover:translate-x-1 transition-transform duration-200" />
@@ -972,7 +972,7 @@ function LandingPage() {
               <Link
                 to="/auth"
                 search={{ mode: "signup" }}
-                className="btn-shimmer w-full py-3.5 px-4 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 text-sm font-extrabold text-center shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+                className="btn-shimmer w-full py-3.5 px-4 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-zinc-950 text-sm font-extrabold text-center shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
               >
                 Upgrade to Weekly Pro
               </Link>
@@ -1045,7 +1045,7 @@ function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="btn-shimmer group flex items-center gap-2.5 px-8 sm:px-10 py-4 sm:py-5 bg-white hover:bg-zinc-100 text-zinc-950 font-bold rounded-2xl shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 text-base sm:text-lg"
+              className="btn-shimmer group flex items-center gap-2.5 px-8 sm:px-10 py-4 sm:py-5 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-bold rounded-2xl shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 text-base sm:text-lg"
             >
               Get started free
               <ArrowRight className="size-5 group-hover:translate-x-1 transition-transform duration-200" />
