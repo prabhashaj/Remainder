@@ -459,29 +459,41 @@ function FeedbackSection() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleCopyEmail}
+              onClick={() => {
+                const fullText = `To: ${targetEmail}\nSubject: ${subject}\n\n${body}`;
+                void navigator.clipboard.writeText(fullText);
+                toast.success("Copied message & recipient to clipboard!");
+              }}
               className="press rounded-xl text-xs"
+              title="Copy message and recipient to clipboard"
             >
-              {copied ? "Copied Email" : "Copy Email"}
+              <Copy className="size-3.5 mr-1" />
+              <span>Copy Message</span>
             </Button>
+            <a
+              href={mailtoHref}
+              className="press rounded-xl text-xs font-medium gap-1.5 border border-border/80 bg-background/80 hover:bg-muted/70 text-foreground inline-flex items-center justify-center px-3 py-2 transition-all"
+              title="Open your system's default email client (Outlook, Apple Mail, etc.)"
+            >
+              <Mail className="size-3.5 text-muted-foreground" />
+              <span>Default Mail App</span>
+            </a>
             <a
               href={gmailHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="press rounded-xl text-xs font-medium gap-1.5 border border-border/80 bg-background/80 hover:bg-muted/70 text-foreground inline-flex items-center justify-center px-3 py-2 transition-all"
-            >
-              <ExternalLink className="size-3.5 text-muted-foreground" />
-              <span>Open in Gmail</span>
-            </a>
-            <a
-              href={mailtoHref}
-              className="press rounded-xl text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm inline-flex items-center justify-center px-3.5 py-2 transition-all"
+              className="press rounded-xl text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm inline-flex items-center justify-center px-4 py-2 transition-all"
+              title="Open directly in Gmail web composer"
             >
               <Send className="size-3.5" />
-              <span>Send via Email</span>
+              <span>Send via Gmail</span>
+              <ExternalLink className="size-3 opacity-70" />
             </a>
           </div>
         </div>
+        <p className="text-[11px] text-muted-foreground/80 mt-1">
+          💡 If you don't have a desktop email client installed on your computer, click <strong>Send via Gmail</strong> to compose directly in your browser.
+        </p>
       </div>
     </section>
   );
