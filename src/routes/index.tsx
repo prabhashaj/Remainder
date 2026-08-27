@@ -176,6 +176,9 @@ function LandingPage() {
             <a href="#remi-chat" className="hover:text-emerald-300 transition-colors">
               Remi AI
             </a>
+            <a href="#pricing" className="hover:text-emerald-300 transition-colors">
+              Pricing
+            </a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -761,6 +764,191 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* ── Pricing & Payments Section ── */}
+      <section
+        id="pricing"
+        ref={addRef("pricing")}
+        className={`py-28 relative transition-all duration-1000 ${
+          isVisible("pricing") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/[0.03] to-transparent pointer-events-none" />
+        <div
+          className="orb orb-primary w-[500px] h-[500px] top-1/4 -right-40 animate-float"
+          style={{ animationDelay: "1.5s" }}
+        />
+
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 mb-5">
+              <Sparkles className="size-3.5 text-emerald-400" />
+              <span className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">
+                Transparent Pricing
+              </span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 font-display text-white">
+              Invest in your <span className="text-gradient">deep mastery</span>
+            </h2>
+            <p className="text-emerald-100/70 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+              Start completely free, then upgrade to Pro when you need unlimited AI reasoning, expanded
+              roadmaps, and larger file processing.
+            </p>
+          </div>
+
+          {/* Pricing Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-16">
+            {/* Free Tier */}
+            <div className="rounded-3xl border border-emerald-500/20 bg-[#061e14]/70 p-7 sm:p-8 flex flex-col justify-between backdrop-blur-xl shadow-xl transition-all duration-300 hover:border-emerald-500/40">
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1 font-display">Free Explorer</h3>
+                <p className="text-xs text-zinc-400 mb-6">For casual study and learning exploration.</p>
+                <div className="flex items-baseline gap-1 mb-8">
+                  <span className="text-4xl font-extrabold text-white">₹0</span>
+                  <span className="text-sm font-medium text-zinc-400">/ forever</span>
+                </div>
+                <ul className="space-y-3.5 text-sm text-zinc-300 mb-8">
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>20 daily messages with Remi AI</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>2 Structured Roadmaps per week</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>5 Mathematical Notebooks</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>15MB Document upload limit</span>
+                  </li>
+                  <li className="flex items-center gap-2.5 text-zinc-500">
+                    <CheckCircle2 className="size-4 text-zinc-600 shrink-0" />
+                    <span>Standard response speed</span>
+                  </li>
+                </ul>
+              </div>
+              <Link
+                to="/auth"
+                search={{ mode: "signup" }}
+                className="w-full py-3 px-4 rounded-xl border border-emerald-500/30 bg-[#092b1d] hover:bg-[#0e3b28] text-emerald-300 hover:text-white text-sm font-bold text-center transition-all duration-150 active:scale-[0.99]"
+              >
+                Get Started Free
+              </Link>
+            </div>
+
+            {/* Weekly Pro Tier (Highlighted) */}
+            <div className="relative rounded-3xl border-2 border-emerald-400/60 bg-[#082a1c]/90 p-7 sm:p-8 flex flex-col justify-between backdrop-blur-2xl shadow-2xl shadow-emerald-950/80 transition-all duration-300 hover:border-emerald-400">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-zinc-950 shadow-md">
+                Most Popular
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1 font-display">Weekly Pro</h3>
+                <p className="text-xs text-emerald-200/70 mb-6">Ideal for focused study sprints & exam prep.</p>
+                <div className="flex items-baseline gap-1 mb-8">
+                  <span className="text-4xl font-extrabold text-white">₹99</span>
+                  <span className="text-sm font-medium text-emerald-200/70">/ week</span>
+                </div>
+                <ul className="space-y-3.5 text-sm text-zinc-200 mb-8">
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span className="font-semibold text-white">Unlimited messages with Remi AI</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>10 Structured Roadmaps per week</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>15 Mathematical Notebooks per week</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>50MB Document & paper uploads</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>Instant Flashcards & SRS Reviews</span>
+                  </li>
+                </ul>
+              </div>
+              <Link
+                to="/auth"
+                search={{ mode: "signup" }}
+                className="w-full py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-sm font-bold text-center shadow-lg shadow-emerald-500/25 transition-all duration-150 active:scale-[0.99]"
+              >
+                Upgrade to Weekly Pro
+              </Link>
+            </div>
+
+            {/* Monthly Pro Tier */}
+            <div className="rounded-3xl border border-emerald-500/20 bg-[#061e14]/70 p-7 sm:p-8 flex flex-col justify-between backdrop-blur-xl shadow-xl transition-all duration-300 hover:border-emerald-500/40">
+              <div>
+                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 uppercase tracking-wider mb-2">
+                  Best Value — Save 10%
+                </div>
+                <h3 className="text-xl font-bold text-white mb-1 font-display">Monthly Pro</h3>
+                <p className="text-xs text-zinc-400 mb-6">For continuous semester mastery & deep thinkers.</p>
+                <div className="flex items-baseline gap-1 mb-8">
+                  <span className="text-4xl font-extrabold text-white">₹399</span>
+                  <span className="text-sm font-medium text-zinc-400">/ month</span>
+                </div>
+                <ul className="space-y-3.5 text-sm text-zinc-300 mb-8">
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>All Weekly Pro capabilities</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>~10% Savings over weekly renewal</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>Priority multi-model AI synthesis</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>Export to PDF, LaTeX, & Markdown</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>Priority dedicated support</span>
+                  </li>
+                </ul>
+              </div>
+              <Link
+                to="/auth"
+                search={{ mode: "signup" }}
+                className="w-full py-3 px-4 rounded-xl border border-emerald-500/30 bg-[#092b1d] hover:bg-[#0e3b28] text-emerald-300 hover:text-white text-sm font-bold text-center transition-all duration-150 active:scale-[0.99]"
+              >
+                Upgrade to Monthly Pro
+              </Link>
+            </div>
+          </div>
+
+          {/* Secure Payment Reassurance Bar */}
+          <div className="rounded-2xl border border-emerald-500/20 bg-[#051c13]/80 p-6 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <Shield className="size-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Bank-Grade Secure Checkout</p>
+                <p className="text-xs text-zinc-400">
+                  Powered by Razorpay. Supports UPI, Google Pay, NetBanking, Credit & Debit cards.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300/80">
+              <span>✓ Instant Activation</span>
+              <span>•</span>
+              <span>✓ Cancel Anytime</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA Section ── */}
       <section id="cta" ref={addRef("cta")} className="py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/[0.06] via-transparent to-transparent pointer-events-none" />
@@ -822,6 +1010,9 @@ function LandingPage() {
               </a>
               <a href="#roadmaps" className="hover:text-white transition-colors">
                 Roadmaps
+              </a>
+              <a href="#pricing" className="hover:text-white transition-colors">
+                Pricing
               </a>
               <Link to="/auth" search={{ mode: "signin" }} className="hover:text-white transition-colors">
                 Sign in
