@@ -35,6 +35,7 @@ import {
 import { RemispaceBrand } from "@/components/brand";
 import remispaceDashboardImg from "@/assets/Remispace_dashboard.png";
 import studyspaceImg from "@/assets/Studyspace.png";
+import topicLessonScrollImg from "@/assets/topic-lesson-scroll.png";
 import roadmapsImg from "@/assets/roadmaps.png";
 import tasksImg from "@/assets/tasks.png";
 import remichatImg from "@/assets/remichat.png";
@@ -418,7 +419,7 @@ function LandingPage() {
               </div>
               <div style={{ maxHeight: "600px", overflowY: "scroll" }} className="screenshot-scroll-container">
                 <img
-                  src={studyspaceImg || heroStudyImg}
+                  src={topicLessonScrollImg || studyspaceImg}
                   alt="Remispace Study Space and AI Lesson Synthesizer"
                   className="w-full h-auto block object-cover"
                   loading="lazy"
