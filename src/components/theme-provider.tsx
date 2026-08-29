@@ -34,9 +34,12 @@ function readStoredTheme(): ThemeId {
 }
 
 function readStoredFont(): FontId {
-  if (typeof window === "undefined") return "merienda";
+  if (typeof window === "undefined") return "roboto";
   const stored = window.localStorage.getItem(FONT_STORAGE_KEY);
-  return isFontId(stored) ? stored : "merienda";
+  if (isFontId(stored)) return stored;
+  // Default to clean, modern Roboto on mobile screens
+  if (window.innerWidth < 768) return "roboto";
+  return "merienda";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

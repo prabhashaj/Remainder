@@ -100,7 +100,12 @@ function LandingPage() {
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        navigate({ to: "/dashboard", replace: true });
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+          navigate({ to: "/conversation", search: { new: "true" }, replace: true });
+        } else {
+          navigate({ to: "/dashboard", replace: true });
+        }
       }
     });
   }, [navigate]);

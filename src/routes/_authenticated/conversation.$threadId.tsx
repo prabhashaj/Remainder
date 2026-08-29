@@ -104,16 +104,21 @@ function ConversationThread() {
   const initial = messages;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <div className="flex items-center justify-between border-b border-border/60 bg-background/50 px-4 py-2 backdrop-blur-sm">
-        <span className="text-xs font-semibold text-muted-foreground truncate max-w-[200px] sm:max-w-md">
+    <div className="flex h-[calc(100dvh-3.5rem)] sm:h-[calc(100vh-4rem)] flex-col">
+      {/* Thread sub-header: hidden on empty mobile chat to keep mobile ultra-minimal */}
+      <div
+        className={`items-center justify-between border-b border-border/60 bg-background/50 px-3 sm:px-4 py-1.5 sm:py-2 backdrop-blur-sm ${
+          initial.length === 0 ? "hidden sm:flex" : "flex"
+        }`}
+      >
+        <span className="text-xs font-semibold text-muted-foreground truncate max-w-[150px] sm:max-w-md">
           {threadTitle}
         </span>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl text-xs font-medium"
+            className="h-7 sm:h-8 gap-1.5 rounded-xl px-2 sm:px-3 text-xs font-medium"
             onClick={() => setShareOpen(true)}
             disabled={initial.length === 0}
             title={initial.length === 0 ? "Send a message first to share" : "Share conversation"}
@@ -124,7 +129,7 @@ function ConversationThread() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl text-xs"
+            className="h-7 sm:h-8 gap-1.5 rounded-xl px-2 sm:px-3 text-xs font-medium"
             onClick={() => void startNew()}
           >
             <Plus className="size-3.5" />
@@ -133,7 +138,7 @@ function ConversationThread() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className="h-7 sm:h-8 gap-1.5 rounded-xl px-2 sm:px-3 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             onClick={() => deleteMutation.mutate()}
             disabled={deleteMutation.isPending}
           >

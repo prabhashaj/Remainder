@@ -74,6 +74,14 @@ html.font-merienda {
   --font-display: var(--font-merienda);
 }
 
+/* On mobile devices, default font resolves to clean, crisp Roboto for optimal legibility */
+@media (max-width: 767px) {
+  html.font-merienda {
+    --font-sans: var(--font-roboto);
+    --font-display: var(--font-roboto);
+  }
+}
+
 html.font-inter {
   --font-sans: var(--font-inter);
   --font-display: var(--font-inter);

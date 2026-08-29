@@ -132,75 +132,53 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex min-h-screen w-full bg-background">
             <WorkspaceSidebar />
             <SidebarResizer width={sidebarWidth} onWidth={persistWidth} />
-            <SidebarInset className="bg-background">
-              <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-border/70 bg-background/80 px-3 backdrop-blur">
-                <SidebarTrigger className="size-10 rounded-xl [&>svg]:size-5" />
+            <SidebarInset className="bg-background flex flex-col min-h-screen">
+              <header className="sticky top-0 z-20 flex h-14 sm:h-16 items-center gap-2 border-b border-border/70 bg-background/80 px-3 backdrop-blur">
+                {/* Top Left: Sidebar Toggle */}
+                <SidebarTrigger className="size-9 sm:size-10 rounded-xl [&>svg]:size-5" />
+
+                {/* Desktop-only Search button */}
                 <Button
                   variant="secondary"
                   onClick={() => setPaletteOpen(true)}
-                  className="ml-1 h-10 gap-2 rounded-2xl px-3.5 text-muted-foreground"
+                  className="ml-1 hidden h-10 gap-2 rounded-2xl px-3.5 text-muted-foreground sm:inline-flex"
                 >
                   <Search className="size-5" />
-                  <span className="hidden text-base sm:inline">Search</span>
+                  <span className="text-base">Search</span>
                 </Button>
+
                 <div className="flex-1" />
+
+                {/* Study Place Button - beside Profile Button */}
                 <Button
                   variant="secondary"
                   asChild
-                  className="h-10 gap-2 rounded-2xl px-3.5 text-muted-foreground"
+                  className="h-9 sm:h-10 gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl px-2.5 sm:px-3.5 text-muted-foreground hover:text-foreground"
                 >
                   <Link to="/study">
-                    <BookOpen className="size-5" />
-                    <span className="hidden text-base sm:inline">Study Place</span>
+                    <BookOpen className="size-4.5 sm:size-5" />
+                    <span className="text-xs sm:text-base font-medium">Study Place</span>
                   </Link>
                 </Button>
-                <FocusTimerButton />
+
+                {/* Desktop-only Focus Timer */}
+                <div className="hidden sm:block">
+                  <FocusTimerButton />
+                </div>
+
+                {/* Top Right: Profile Button */}
                 <AccountMenu />
               </header>
-              <main className="flex-1 pb-24 md:pb-6">{children}</main>
+
+              <main className="flex-1 min-h-0 flex flex-col">{children}</main>
             </SidebarInset>
           </div>
           <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
           <FocusTimerChip />
           <RemiDock />
-          <MobileBottomNav />
         </SidebarProvider>
       </TopicProvider>
     </FocusTimerProvider>
-  );
-}
-
-function MobileBottomNav() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  const items = [
-    { to: "/dashboard", icon: LayoutDashboard, label: "Today" },
-    { to: "/tasks", icon: ListChecks, label: "Tasks" },
-    { to: "/roadmaps", icon: Compass, label: "Roadmaps" },
-    { to: "/goals", icon: Target, label: "Goals" },
-    { to: "/study", icon: BookOpen, label: "Study" },
-  ] as const;
-
-  return (
-    <nav className="fixed bottom-0 inset-x-0 z-30 flex h-16 items-center justify-around border-t border-border/70 bg-background/95 px-2 backdrop-blur-md md:hidden">
-      {items.map(({ to, icon: Icon, label }) => {
-        const isActive = pathname === to || (to !== "/dashboard" && pathname.startsWith(to));
-        return (
-          <Link
-            key={to}
-            to={to}
-            className={`press flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-1.5 transition-colors ${
-              isActive
-                ? "text-primary font-bold bg-primary/10"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Icon className="size-5" />
-            <span className="text-[11px] leading-none">{label}</span>
-          </Link>
-        );
-      })}
-    </nav>
   );
 }
 
@@ -208,14 +186,24 @@ function WorkspaceSidebar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isMobile, setOpenMobile } = useSidebar();
   const { data: pages = [] } = useQuery({ queryKey: ["pages"], queryFn: fetchPages });
 
   const roots = useMemo(() => pages.filter((p) => !p.parent_id), [pages]);
   const favorites = useMemo(() => pages.filter((p) => p.is_favorite), [pages]);
 
+  const handleMobileNav = (e: React.MouseEvent) => {
+    if (!isMobile) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("a, button:not([aria-label='Expand']):not([aria-label='Collapse'])")) {
+      setOpenMobile(false);
+    }
+  };
+
   async function addPage(parentId: string | null) {
     const page = await createPage({ parent_id: parentId });
     await queryClient.invalidateQueries({ queryKey: ["pages"] });
+    if (isMobile) setOpenMobile(false);
     navigate({ to: "/page/$pageId", params: { pageId: page.id } });
   }
 
@@ -237,7 +225,7 @@ function WorkspaceSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-border/70">
-      <SidebarHeader>
+      <SidebarHeader onClick={handleMobileNav}>
         <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1.5 hover:opacity-90 transition-opacity">
           <div className="hidden group-data-[collapsible=icon]:block">
             <img src={remiLogo} alt="Remi" width={32} height={32} className="size-8 shrink-0 object-contain" />
@@ -260,7 +248,7 @@ function WorkspaceSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent onClick={handleMobileNav}>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -329,7 +317,7 @@ function WorkspaceSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter onClick={handleMobileNav}>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -741,12 +729,15 @@ function ConversationsGroup() {
     },
   });
 
+  const { isMobile, setOpenMobile } = useSidebar();
+
   async function startNew() {
     const thread = await createThread();
     const { data } = await supabase.auth.getSession();
     const userId = data.session?.user?.id;
     setStoredActiveThreadId(userId, thread.id);
     await queryClient.invalidateQueries({ queryKey: ["threads"] });
+    if (isMobile) setOpenMobile(false);
     navigate({
       to: "/conversation/$threadId",
       params: { threadId: thread.id },

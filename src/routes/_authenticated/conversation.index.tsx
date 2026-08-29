@@ -7,15 +7,17 @@ import { getStoredActiveThreadId, setStoredActiveThreadId } from "@/lib/thread-s
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/conversation/")({
-  validateSearch: (search: Record<string, unknown>): { seed?: string } =>
-    typeof search["seed"] === "string" && search["seed"] ? { seed: search["seed"] } : {},
+  validateSearch: (search: Record<string, unknown>): { seed?: string; new?: string } => ({
+    ...(typeof search["seed"] === "string" && search["seed"] ? { seed: search["seed"] } : {}),
+    ...(typeof search["new"] === "string" && search["new"] ? { new: search["new"] } : {}),
+  }),
   component: ConversationIndex,
 });
 
 function ConversationIndex() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { seed } = Route.useSearch();
+  const { seed, new: isNew } = Route.useSearch();
   const started = useRef(false);
 
   useEffect(() => {
@@ -26,15 +28,15 @@ function ConversationIndex() {
         const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData.session?.user?.id;
 
-        // If a seed prompt was provided (e.g. from a button / action), always create a fresh conversation
-        if (seed) {
+        // If a seed prompt or explicit new conversation requested (e.g. on mobile launch), create fresh thread
+        if (seed || isNew === "true" || isNew === "1") {
           const thread = await createThread();
           setStoredActiveThreadId(userId, thread.id);
           await qc.invalidateQueries({ queryKey: ["threads"] });
           navigate({
             to: "/conversation/$threadId",
             params: { threadId: thread.id },
-            search: { seed },
+            search: seed ? { seed } : {},
             replace: true,
           });
           return;

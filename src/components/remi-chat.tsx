@@ -1397,28 +1397,28 @@ export function RemiChat({
             }
           >
             {messages.length === 0 && (
-              <div className={compact ? "py-6 text-center" : "py-16 text-center"}>
+              <div className={compact ? "py-4 text-center" : "py-8 sm:py-16 text-center px-2"}>
                 <img
                   src={remiLogo}
                   alt="Remi"
-                  width={compact ? 56 : 80}
-                  height={compact ? 56 : 80}
-                  className={compact ? "mx-auto size-14" : "mx-auto size-20"}
+                  width={compact ? 52 : 72}
+                  height={compact ? 52 : 72}
+                  className={compact ? "mx-auto size-12" : "mx-auto size-14 sm:size-20 drop-shadow-sm"}
                 />
-                <h1 className={`mt-4 font-display font-bold ${compact ? "text-xl" : "text-3xl"}`}>
+                <h1 className={`mt-3 sm:mt-4 font-display font-bold tracking-tight ${compact ? "text-lg" : "text-2xl sm:text-3xl"}`}>
                   Hi, I'm Remi.
                 </h1>
-                <p className="mx-auto mt-2 max-w-xl text-sm sm:text-base leading-relaxed text-muted-foreground">
+                <p className="mx-auto mt-2 max-w-sm sm:max-w-xl text-xs sm:text-base leading-relaxed text-muted-foreground">
                   Your dedicated AI learning companion. Ask complex questions, build multi-phase roadmaps, generate rich notebooks with formulas, or plan your daily study rhythm.
                 </p>
                 {suggestions.length > 0 && (
-                  <div className="mt-5 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
+                  <div className="mt-4 sm:mt-6 flex flex-wrap justify-center gap-1.5 sm:gap-2 max-w-2xl mx-auto">
                     {suggestions.map((s) => (
                       <button
                         key={s}
                         type="button"
                         onClick={() => void submit(s)}
-                        className="press rounded-full border border-border bg-card/60 px-4 py-2 text-xs sm:text-sm font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground hover:border-primary/40 shadow-xs"
+                        className="press rounded-full border border-border/80 bg-card/70 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground hover:border-primary/40 shadow-xs"
                       >
                         {s}
                       </button>
@@ -1579,11 +1579,11 @@ export function RemiChat({
         className={
           compact
             ? "w-full px-3 pb-3"
-            : "mx-auto w-full max-w-4xl xl:max-w-5xl px-4 sm:px-6 pb-5"
+            : "mx-auto w-full max-w-4xl xl:max-w-5xl px-3 sm:px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5"
         }
       >
         {topic && (
-          <p className="mb-2 flex items-center gap-2 px-1 text-sm text-muted-foreground">
+          <p className="mb-2 flex items-center gap-2 px-1 text-xs sm:text-sm text-muted-foreground">
             <BookOpen className="size-4 text-primary" />
             <span className="min-w-0 truncate">
               Answering with context from{" "}
@@ -1624,7 +1624,7 @@ export function RemiChat({
             ref={textareaRef}
             placeholder={
               deepResearchActive
-                ? "Enter research topic for multi-agent deep research (arXiv, verifier & writer)..."
+                ? "Enter research topic for multi-agent deep research..."
                 : topic
                   ? `Ask a doubt about ${topic.label}…`
                   : "What do you want to create or ask?"
@@ -1633,7 +1633,7 @@ export function RemiChat({
           />
 
           <PromptInputFooter className="justify-between items-center">
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
               <AttachButton />
               <VoiceInputButton textareaRef={textareaRef} />
               <DeepResearchToggleButton
@@ -1647,11 +1647,11 @@ export function RemiChat({
         </PromptInput>
 
         {!isPremium && (
-          <div className="mt-2.5 flex items-center justify-between px-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
+          <div className="mt-2 flex items-center justify-between px-1.5 text-[11px] sm:text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
               <span
                 className={cn(
-                  "inline-block size-2 rounded-full",
+                  "inline-block size-1.5 sm:size-2 rounded-full",
                   (usageData?.daily?.used ?? 0) >= (usageData?.daily?.limit ?? 20)
                     ? "bg-amber-500 animate-pulse"
                     : "bg-primary/80",
@@ -1661,7 +1661,7 @@ export function RemiChat({
                 <strong className="font-semibold text-foreground">
                   {usageData?.daily?.used ?? 0}/{usageData?.daily?.limit ?? 20}
                 </strong>{" "}
-                daily free messages used
+                <span className="hidden xs:inline">daily free </span>messages
               </span>
             </div>
             <button
@@ -1673,7 +1673,7 @@ export function RemiChat({
               className="font-medium text-primary hover:underline transition-colors flex items-center gap-1"
             >
               <Zap className="size-3" />
-              Upgrade to Pro for Unlimited →
+              <span>Upgrade to Pro</span>
             </button>
           </div>
         )}

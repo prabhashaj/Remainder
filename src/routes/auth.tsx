@@ -50,10 +50,24 @@ function AuthPage() {
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session) {
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+          navigate({ to: "/conversation", search: { new: "true" }, replace: true });
+        } else {
+          navigate({ to: "/dashboard", replace: true });
+        }
+      }
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) navigate({ to: "/dashboard", replace: true });
+      if (event === "SIGNED_IN" && session) {
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+          navigate({ to: "/conversation", search: { new: "true" }, replace: true });
+        } else {
+          navigate({ to: "/dashboard", replace: true });
+        }
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
