@@ -147,7 +147,7 @@ function getToolLabel(
     updateGoal: { active: "Updating goal", done: "Updated goal" },
     addMilestone: { active: "Adding milestone", done: "Added milestone" },
     createMilestone: { active: "Adding milestone", done: "Added milestone" },
-    createRoadmap: { active: "Designing roadmap", done: "Created roadmap" },
+    createRoadmap: { active: "Creating roadmap", done: "Created roadmap" },
     updateRoadmap: { active: "Updating roadmap", done: "Updated roadmap" },
     readRoadmap: { active: "Reading roadmap", done: "Read roadmap" },
     researchResources: { active: "Finding resources", done: "Found resources" },
@@ -1533,13 +1533,11 @@ export function RemiChat({
                           const roadmapParts = group.parts.filter((p) => isRoadmapTool(p));
                           const researchParts = group.parts.filter((p) => isDeepResearchTool(p));
                           const notebookParts = group.parts.filter((p) => isNotebookTool(p));
-                          const otherToolParts = group.parts.filter(
-                            (p) => !isRoadmapTool(p) && !isDeepResearchTool(p) && !isNotebookTool(p),
-                          );
+                          const toolParts = group.parts.filter((p) => !isDeepResearchTool(p));
                           return (
                             <div key={gIdx} className="space-y-2">
-                              {otherToolParts.length > 0 && (
-                                <ToolGroup parts={otherToolParts} isActivelyStreaming={isActivelyStreaming} />
+                              {toolParts.length > 0 && (
+                                <ToolGroup parts={toolParts} isActivelyStreaming={isActivelyStreaming} />
                               )}
                               {roadmapParts.map((rp, rpIdx) => (
                                 <RoadmapChatCard key={rpIdx} part={rp} isActivelyStreaming={isActivelyStreaming} />
