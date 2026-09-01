@@ -41,6 +41,7 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [sentConfirmation, setSentConfirmation] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (search.mode) {
@@ -78,11 +79,32 @@ function AuthPage() {
       toast.error("Please provide both email and password.");
       return;
     }
+    setUnconfirmedEmail(null);
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
     if (error) {
-      toast.error(error.message || "Failed to sign in. Please verify your credentials.");
+      if (error.code === "email_not_confirmed") {
+        setUnconfirmedEmail(email.trim());
+        toast.error("Your email isn't confirmed yet. Check your inbox or resend the confirmation below.");
+      } else if (error.code === "invalid_credentials") {
+        toast.error("Incorrect email or password. Please try again.");
+      } else {
+        toast.error(error.message || "Failed to sign in. Please verify your credentials.");
+      }
+    }
+  }
+
+  async function resendConfirmation() {
+    if (!unconfirmedEmail) return;
+    setBusy(true);
+    const { error } = await supabase.auth.resend({ type: "signup", email: unconfirmedEmail });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message || "Failed to resend confirmation.");
+    } else {
+      setSentConfirmation(true);
+      toast.success("Confirmation email resent — check your inbox.");
     }
   }
 
@@ -104,13 +126,19 @@ function AuthPage() {
     });
     setBusy(false);
     if (error) {
-      toast.error(error.message || "Unable to register account. Please try again.");
+      if (error.code === "user_already_exists" || error.message?.toLowerCase().includes("already registered")) {
+        toast.error("An account with this email already exists. Try signing in instead.");
+      } else {
+        toast.error(error.message || "Unable to register account. Please try again.");
+      }
       return;
     }
     if (!data.session) {
+      // Email confirmation is enabled — user needs to verify their inbox
       setSentConfirmation(true);
       toast.success("Check your email to confirm your account.");
     }
+    // If session is returned, onAuthStateChange will handle the redirect automatically
   }
 
   async function forgotPassword(e: React.FormEvent) {
@@ -352,6 +380,21 @@ function AuthPage() {
                       "Sign In to Workspace"
                     )}
                   </button>
+
+                  {/* Resend confirmation banner */}
+                  {unconfirmedEmail && (
+                    <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200 flex flex-col gap-2 animate-in fade-in duration-150">
+                      <p>📧 Your email <span className="font-semibold text-amber-100">{unconfirmedEmail}</span> isn't confirmed yet.</p>
+                      <button
+                        type="button"
+                        onClick={resendConfirmation}
+                        disabled={busy}
+                        className="self-start text-xs font-semibold text-amber-300 hover:text-amber-100 underline underline-offset-4 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {busy ? "Sending…" : "Resend confirmation email →"}
+                      </button>
+                    </div>
+                  )}
                 </form>
               )}
 
