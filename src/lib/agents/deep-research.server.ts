@@ -82,11 +82,18 @@ async function createPlanAndSubtasks(
   gateway: ReturnType<typeof createAiGatewayProvider>,
   modelName: string,
 ): Promise<{ plan: ResearchPlan; subtasks: ResearchSubtask[] }> {
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentDateStr = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   const planningPrompt = `You are an expert Research Planner Agent.
 Analyze the user's research topic or question: "${topic}".
-Current Year: ${currentYear}.
+Today's exact date: ${currentDateStr} (use this as the authoritative current date — do NOT use any other date from training knowledge).
 
 Your goal:
 1. Formulate a structured Research Plan outlining the core scope, temporal window (e.g., historical context vs. recent advancements), and key analytical pillars (keyDimensions).
@@ -539,10 +546,19 @@ async function writePublicationReport(
 
   const sourcesMarkdown = `### Sources & Literature References\n\n${formattedSources}`;
 
+  const reportNow = new Date();
+  const reportDateStr = reportNow.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   const writerPrompt = `You are an expert Technical Synthesis Author and Research Writer.
 Write an extensive, definitive, long-form deep research report based strictly on the verified research dossier.
 
 User Topic: "${topic}"
+Today's exact date: ${reportDateStr}. Use this as the authoritative current date in any report title, date range, or temporal reference. Do NOT use any other date or date range from your training knowledge.
 Research Scope: ${plan.scope}
 
 Verified Research Dossier (from Verifier Agent):
