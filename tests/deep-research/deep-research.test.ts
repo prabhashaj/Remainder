@@ -14,6 +14,9 @@ import {
   rankCandidates,
   runResearchAudit,
   synthesizeResearchReport,
+  deriveIndependenceGroup,
+  calculateImportanceScore,
+  generateMultiIntentSearchPlan,
   type SourceMetadata,
   type AtomicClaim,
   type EvidenceLedger,
@@ -403,4 +406,392 @@ describe("Evidence-Grounded Deep Research Agent Test Suite", () => {
     expect(auditReport.citationAudit.passed).toBe(true);
     expect(auditReport.bibliographyAudit.passed).toBe(true);
   });
+
+  // TEST A: PRINCIPLE 1 — UNKNOWN DATES ARE STRICTLY NULL
+  it("TEST A: preserves unknown publication dates as strictly null without inventing fake defaults", () => {
+    const undatedSource = evaluateSource({
+      url: "https://water-research.org/novel-polymeric-filtration",
+      title: "Novel Polymeric Filtration for Industrial Effluent",
+      rawSnippet: "A new polyamide composite membrane reduces heavy metal contaminants efficiently.",
+    });
+
+    expect(undatedSource.publicationDate).toBeNull();
+    expect(undatedSource.dateStatus).toBe("unknown");
+    expect(undatedSource.publicationDate).not.toBe("2021-01-01");
+    expect(undatedSource.publicationDate).not.toBe("2024-01-01");
+  });
+
+  // TEST B: PRINCIPLE 2 — GROUNDING & SUPPORT DIRECTNESS
+  it("TEST B: distinguishes DIRECT_SUPPORT from CONTEXTUAL_SUPPORT when numerical assertion is missing", () => {
+    const source = evaluateSource({
+      url: "https://energy.gov/reports/battery-technologies-2025",
+      title: "DOE Report on Solid-State Battery Chemistry",
+      rawSnippet: "The laboratory evaluated solid-state lithium metal pouch cells for electric vehicle propulsion systems.",
+    });
+
+    // Claim with specific quantitative density NOT in the snippet
+    const unsupportedMetricClaim: AtomicClaim = {
+      id: "claim_b1",
+      claim: "The solid-state battery achieved 450 Wh/kg in production vehicles.",
+      claimType: "fact",
+      quantitative: { value: "450 Wh/kg", unit: "Wh/kg", category: "dimension" },
+      dates: {},
+    };
+
+    const check = isClaimSupportedBySource(unsupportedMetricClaim, source);
+    expect(check.supported).toBe(false);
+    expect(check.directness).toBe("CONTEXTUAL_SUPPORT");
+    expect(check.matchedExcerpt).toBeDefined();
+
+    // Claim whose exact tokens and concepts are in the snippet
+    const supportedClaim: AtomicClaim = {
+      id: "claim_b2",
+      claim: "The laboratory evaluated solid-state lithium metal pouch cells.",
+      claimType: "fact",
+      dates: {},
+    };
+
+    const checkDirect = isClaimSupportedBySource(supportedClaim, source);
+    expect(checkDirect.supported).toBe(true);
+    expect(checkDirect.directness).toBe("DIRECT_SUPPORT");
+  });
+
+  // TEST C: PRINCIPLE 3 — SOURCE INDEPENDENCE GROUPING
+  it("TEST C: clusters syndicated PR wire reposts into the same independence group to prevent false corroboration", () => {
+    const wire1 = deriveIndependenceGroup("prnewswire.com", "Startup Announces Battery Breakthrough");
+    const wire2 = deriveIndependenceGroup("businesswire.com", "Startup Announces Battery Breakthrough");
+    const wire3 = deriveIndependenceGroup("globenewswire.com", "Startup Announces Battery Breakthrough");
+
+    expect(wire1).toBe("syndicated_wire");
+    expect(wire2).toBe("syndicated_wire");
+    expect(wire3).toBe("syndicated_wire");
+
+    // Corporate subdomain clustering
+    const awsDocs = deriveIndependenceGroup("docs.aws.amazon.com", "AWS Lambda Pricing");
+    const awsBlog = deriveIndependenceGroup("aws.amazon.com", "Serverless Innovations");
+    expect(awsDocs).toBe("amazon.com");
+    expect(awsBlog).toBe("amazon.com");
+  });
+
+  // TEST D: PRINCIPLE 4 — IMPORTANCE SCORE SEPARATED FROM CONFIDENCE SCORE
+  it("TEST D: calculates claim importance score independently from confidence score", () => {
+    const highImportanceClaim: AtomicClaim = {
+      id: "imp_1",
+      claim: "Subprime mortgage securitization collapsed interbank liquidity by $700 billion.",
+      claimType: "fact",
+      quantitative: {
+        value: "$700 billion",
+        numericValue: 7e11,
+        unit: "currency",
+        category: "currency",
+        baseline: "pre-crisis interbank lending",
+      },
+      causal: {
+        isCausalClaim: true,
+        classification: "CAUSATION",
+        causalVerbsFound: ["collapsed"],
+        supportedByDirectEvidence: true,
+      },
+      dates: {},
+    };
+
+    const trivialClaim: AtomicClaim = {
+      id: "imp_2",
+      claim: "The commission hearing was held in Room 210.",
+      claimType: "fact",
+      dates: {},
+    };
+
+    const highImp = calculateImportanceScore(highImportanceClaim);
+    const lowImp = calculateImportanceScore(trivialClaim);
+
+    expect(highImp).toBeGreaterThanOrEqual(8.0);
+    expect(lowImp).toBeLessThanOrEqual(5.5);
+    expect(highImp).toBeGreaterThan(lowImp);
+  });
+
+  // TEST E: PRINCIPLE 5 — GENERIC CAUSAL VALIDATION ACROSS ARBITRARY DOMAINS
+  it("TEST E: validates causal claims across economics, environmental science, and chemistry", () => {
+    // 1. Economics
+    const econCheck = validateCausalStatement(
+      "High global oil prices caused the inflation spike in India.",
+      false,
+    );
+    expect(econCheck.isCausalClaim).toBe(true);
+    expect(econCheck.classification).toBe("CORRELATION");
+    expect(econCheck.suggestedWording).toContain("likely contributed to");
+
+    // 2. Chemistry / Mechanistic
+    const chemCheck = validateCausalStatement(
+      "Advanced titanium dioxide photocatalytically oxidizes organic pollutants.",
+      false,
+    );
+    expect(chemCheck.isCausalClaim).toBe(true);
+    expect(chemCheck.classification).toBe("MECHANISTIC");
+    expect(chemCheck.supportedByDirectEvidence).toBe(true);
+
+    // 3. Environmental science
+    const envCheck = validateCausalStatement(
+      "Phosphorus runoff induced severe algal blooms in the reservoir.",
+      false,
+    );
+    expect(envCheck.isCausalClaim).toBe(true);
+    expect(envCheck.suggestedWording).toContain("was associated with");
+  });
+
+  // TEST F: PRINCIPLE 6 — EVENT DATE VS PUBLICATION DATE SEPARATION
+  it("TEST F: allows retrospective historical analysis reports while enforcing event-window boundaries", () => {
+    const historicalCrisisTask = resolveResearchScope("What caused the 2008 financial crisis?");
+    expect(historicalCrisisTask.intent).toBe("historical_cause");
+    expect(historicalCrisisTask.temporalScope.cutoffPolicy).toBe("retrospective_allowed");
+
+    // Government commission inquiry report published in 2011 analyzing 2008 event
+    const fcicReport = evaluateSource({
+      url: "https://fcic.gov/report",
+      title: "The Financial Crisis Inquiry Report",
+      publishedDateHint: "January 27, 2011",
+      rawSnippet: "Investigating the causes of the 2008 financial and economic collapse.",
+    });
+
+    const validation = validateSourceTemporalWindow(fcicReport, historicalCrisisTask);
+    expect(validation.status).toBe("valid");
+
+    // Strict cutoff query for comparison
+    const strictTask = resolveResearchScope("Developments up to 2023");
+    const strictValidation = validateSourceTemporalWindow(
+      evaluateSource({
+        url: "https://example.com/2024-article",
+        title: "2024 Tech Update",
+        publishedDateHint: "2024-05-10",
+      }),
+      strictTask,
+    );
+    expect(strictValidation.status).toBe("rejected_out_of_window");
+  });
+
+  // TEST G: PRINCIPLE 7 — GENERIC QUANTITATIVE ENGINE ACROSS ARBITRARY DOMAINS
+  it("TEST G: extracts units, categories, and baselines across battery, wastewater, and cloud domains", () => {
+    // 1. Battery density
+    const battery = extractNumericalData(
+      "Silicon-anode pouch cell reached 450 Wh/kg compared to 260 Wh/kg for standard lithium cells.",
+    );
+    expect(battery).toBeDefined();
+    expect(battery?.unit).toBe("Wh/kg");
+    expect(battery?.numericValue).toBe(450);
+    expect(battery?.baseline).toContain("standard lithium cells");
+
+    // 2. Wastewater BOD concentration
+    const water = extractNumericalData(
+      "Membrane bioreactor reduced effluent BOD to 15 mg/L under standard municipal flow.",
+    );
+    expect(water).toBeDefined();
+    expect(water?.unit).toBe("mg/L");
+    expect(water?.numericValue).toBe(15);
+    expect(water?.conditions).toContain("municipal flow");
+
+    // 3. Cloud storage pricing
+    const cloud = extractNumericalData(
+      "Startup cloud storage priced at $0.02 per GB relative to legacy block storage.",
+    );
+    expect(cloud).toBeDefined();
+    expect(cloud?.category).toBe("currency");
+    expect(cloud?.baseline).toContain("legacy block storage");
+
+    // 4. Financial crisis stimulus
+    const finance = extractNumericalData(
+      "Emergency fiscal stabilization program authorized $700 billion.",
+    );
+    expect(finance).toBeDefined();
+    expect(finance?.category).toBe("currency");
+    expect(finance?.numericValue).toBe(700000000000);
+  });
+
+  // TEST H: PRINCIPLE 8 — ACTIVE COUNTER-EVIDENCE RECORDING & PENALIZATION
+  it("TEST H: records counter-evidence and penalizes claim confidence score accordingly", () => {
+    const primarySource = evaluateSource({
+      url: "https://cleanenergy.org/solid-state-breakthrough",
+      title: "Breakthrough Solid-State Battery Achieves 1000 Cycles",
+    });
+
+    const uncontestedClaim = createLedgerEntry({
+      claim: {
+        id: "c_uncontested",
+        claim: "Solid-state electrolyte achieved 1000 cycles at room temperature.",
+        claimType: "fact",
+        dates: {},
+      },
+      supportingSources: [primarySource],
+      contradictions: [],
+      temporalStatus: "valid",
+    });
+
+    const contestedClaim = createLedgerEntry({
+      claim: {
+        id: "c_contested",
+        claim: "Solid-state electrolyte achieved 1000 cycles at room temperature.",
+        claimType: "fact",
+        dates: {},
+      },
+      supportingSources: [primarySource],
+      contradictions: [],
+      temporalStatus: "valid",
+      counterEvidence: ["Independent battery consortium failed to replicate cycle life above 300 cycles."],
+    });
+
+    expect(contestedClaim.counterEvidence.length).toBe(1);
+    expect(contestedClaim.confidenceScore).toBeLessThan(uncontestedClaim.confidenceScore);
+  });
+
+  // TEST I: PRINCIPLE 9 — 16-POINT AUDIT & QUALITY METRICS CALCULATION
+  it("TEST I: executes complete 16-point audit and calculates research quality metrics", () => {
+    const scope = resolveResearchScope("What were the biggest breakthroughs in battery technology from 2020 to 2026?");
+    const source = evaluateSource({
+      url: "https://nature.com/articles/battery-review-2024",
+      title: "Progress in Solid-State Battery Interfaces",
+      publishedDateHint: "2024-03-12",
+      rawSnippet: "Review of solid electrolyte interphase stability in lithium metal cells.",
+    });
+
+    const entry = createLedgerEntry({
+      claim: {
+        id: "claim_i1",
+        claim: "Solid electrolyte interphase engineering extended lithium metal pouch cell cyclability.",
+        claimType: "fact",
+        dates: {},
+      },
+      supportingSources: [source],
+      contradictions: [],
+      temporalStatus: "valid",
+    });
+
+    const ledger: EvidenceLedger = {
+      entries: [entry],
+      unverifiedClaims: [],
+      rejectedSources: [],
+      contradictions: [],
+    };
+
+    const { reportText, bibliography } = synthesizeResearchReport({
+      scope,
+      ledger,
+      rankedCandidates: [],
+    });
+
+    const audit = runResearchAudit({
+      scope,
+      ledger,
+      rankedCandidates: [],
+      reportText,
+      bibliographySources: bibliography,
+    });
+
+    // 16 distinct programmatic audit checks
+    expect(audit.checks).toBeDefined();
+    expect(Object.keys(audit.checks).length).toBe(16);
+    expect(audit.checks.unsupportedClaims.passed).toBe(true);
+    expect(audit.checks.temporalViolations.passed).toBe(true);
+    expect(audit.checks.numericalContext.passed).toBe(true);
+    expect(audit.checks.unsupportedCausalClaims.passed).toBe(true);
+
+    // Research quality metrics
+    expect(audit.metrics).toBeDefined();
+    expect(audit.metrics.evidenceCoverageRate).toBe(1.0);
+    expect(audit.metrics.citationGroundingRate).toBe(1.0);
+    expect(audit.metrics.temporalComplianceRate).toBe(1.0);
+    expect(audit.metrics.researchCompletenessScore).toBeGreaterThanOrEqual(8.0);
+    expect(audit.recommendedAction).toBe("PROCEED_TO_PUBLISH");
+  });
+
+  // TEST J: PRINCIPLE 10 — ADAPTIVE REPORT FORMATS
+  it("TEST J: dynamically adapts report layout for comparison, causal, and ranking intents", () => {
+    // 1. Comparison Layout
+    const compTask = resolveResearchScope("Compare AWS, Azure and GCP for startups");
+    expect(compTask.outputFormat).toBe("comparison");
+    const compReport = synthesizeResearchReport({
+      scope: compTask,
+      ledger: { entries: [], unverifiedClaims: [], rejectedSources: [], contradictions: [] },
+      rankedCandidates: [],
+    });
+    expect(compReport.reportText).toContain("Comparative Evaluation Matrix");
+    expect(compReport.reportText).toContain("| Evaluation Dimension |");
+
+    // 2. Causal Investigation Layout
+    const causalTask = resolveResearchScope("What caused the 2008 financial crisis?");
+    expect(causalTask.outputFormat).toBe("causal_investigation");
+    const causalReport = synthesizeResearchReport({
+      scope: causalTask,
+      ledger: { entries: [], unverifiedClaims: [], rejectedSources: [], contradictions: [] },
+      rankedCandidates: [],
+    });
+    expect(causalReport.reportText).toContain("Causal Mechanism & Root Cause Investigation");
+    expect(causalReport.reportText).toContain("Root Cause Architecture");
+
+    // 3. Ranking Layout
+    const rankTask = resolveResearchScope("What were the biggest breakthroughs in battery technology from 2020 to 2026?");
+    expect(rankTask.outputFormat).toBe("ranking");
+    const rankReport = synthesizeResearchReport({
+      scope: rankTask,
+      ledger: { entries: [], unverifiedClaims: [], rejectedSources: [], contradictions: [] },
+      rankedCandidates: [],
+    });
+    expect(rankReport.reportText).toContain("Ranked Developments & Strategic Breakthroughs");
+  });
+
+  // TEST K: MULTI-INTENT CANDIDATE DISCOVERY
+  it("TEST K: generates multi-intent query plans across discovery, primary, corroboration, and counter-evidence pillars", () => {
+    const plan = generateMultiIntentSearchPlan(
+      "What were the biggest breakthroughs in battery technology from 2020 to 2026?",
+    );
+
+    expect(plan.pillars.discovery.length).toBeGreaterThan(0);
+    expect(plan.pillars.primaryVerification.length).toBeGreaterThan(0);
+    expect(plan.pillars.independentCorroboration.length).toBeGreaterThan(0);
+    expect(plan.pillars.counterEvidenceSearch.length).toBeGreaterThan(0);
+
+    // Counter-evidence pillar specifically targets disconfirmation
+    const counterQueries = plan.pillars.counterEvidenceSearch.join(" ");
+    expect(counterQueries.toLowerCase()).toMatch(/limitations|challenges|failure|degradation|safety/);
+  });
+
+  // TEST L: BATTERY BREAKTHROUGHS DOMAIN VERIFICATION
+  it("TEST L: resolves battery research scope, derives technical dimensions, and enforces 2020-2026 window", () => {
+    const task = resolveResearchScope(
+      "What were the biggest breakthroughs in battery technology from 2020–2026?",
+    );
+
+    expect(task.temporalScope.startDate).toBe("2020-01-01");
+    expect(task.temporalScope.endDate).toBe("2026-01-01");
+    expect(task.comparisonDimensions).toContain("Technical Efficiency & Performance");
+    expect(task.comparisonDimensions).toContain("Safety & Environmental Impact");
+    expect(task.rankingRequired).toBe(true);
+  });
+
+  // TEST M: CLOUD PROVIDERS STARTUP COMPARISON VERIFICATION
+  it("TEST M: extracts cloud provider entities and derives cost/developer-experience dimensions", () => {
+    const task = resolveResearchScope("Compare the leading cloud providers for startups");
+
+    expect(task.intent).toBe("comparison");
+    expect(task.comparisonDimensions).toContain("Cost & Pricing Structure");
+    expect(task.comparisonDimensions).toContain("Developer Experience & Ecosystem");
+    expect(task.rankingRequired).toBe(false);
+  });
+
+  // TEST N: WASTEWATER TREATMENT APPROACHES VERIFICATION
+  it("TEST N: derives engineering and environmental dimensions for wastewater treatment query", () => {
+    const task = resolveResearchScope("Research the best approaches for treating wastewater.");
+
+    expect(task.comparisonDimensions).toContain("Manufacturing Scalability & Cost");
+    expect(task.comparisonDimensions).toContain("Safety & Environmental Impact");
+  });
+
+  // TEST O: INFLATION IN INDIA GEOGRAPHIC AND CAUSAL SCOPE VERIFICATION
+  it("TEST O: extracts geographic scope (India) and economic causal dimensions", () => {
+    const task = resolveResearchScope("What are the major causes of inflation in India?");
+
+    expect(task.geographicScope).toBe("India");
+    expect(task.intent).toBe("historical_cause");
+    expect(task.comparisonDimensions).toContain("Root Structural Vulnerabilities");
+    expect(task.comparisonDimensions).toContain("Immediate Catalyst Triggers");
+  });
 });
+

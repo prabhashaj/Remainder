@@ -1,11 +1,13 @@
 import type {
   ConfidenceLevel,
+  DynamicEvaluationDimension,
+  GenericDateClassification,
   ImpactDimensions,
   ImpactScore,
   RankedCandidate,
 } from "./types";
 
-export const IMPACT_WEIGHTS = {
+export const IMPACT_WEIGHTS: Record<keyof ImpactDimensions, number> = {
   technicalNovelty: 0.2,
   capabilityImprovement: 0.2,
   realWorldAdoption: 0.2,
@@ -16,9 +18,28 @@ export const IMPACT_WEIGHTS = {
 };
 
 /**
- * Calculates weighted impact score strictly according to explicit dimensions.
+ * Calculates weighted impact score either from legacy ImpactDimensions or dynamic dimensions array.
  */
-export function calculateImpactScore(dimensions: ImpactDimensions): ImpactScore {
+export function calculateImpactScore(
+  dimensions: ImpactDimensions | DynamicEvaluationDimension[],
+): ImpactScore {
+  if (Array.isArray(dimensions)) {
+    let total = 0;
+    let weightSum = 0;
+
+    for (const dim of dimensions) {
+      total += dim.score * dim.weight;
+      weightSum += dim.weight;
+    }
+
+    const normalizedTotal = weightSum > 0 ? total / weightSum : total;
+    return {
+      dimensions,
+      totalScore: Math.round(normalizedTotal * 100) / 100,
+    };
+  }
+
+  // Legacy ImpactDimensions
   const total =
     dimensions.technicalNovelty * IMPACT_WEIGHTS.technicalNovelty +
     dimensions.capabilityImprovement * IMPACT_WEIGHTS.capabilityImprovement +
@@ -41,15 +62,48 @@ export interface CandidateEvaluationInput {
   whyItMatters: string;
   technicalSignificance: string;
   realWorldImpact: string;
-  dates: {
+  dates: GenericDateClassification | {
     releaseDate?: string;
     adoptionDate?: string;
   };
-  dimensions: ImpactDimensions;
+  dimensions: ImpactDimensions | DynamicEvaluationDimension[];
   confidenceLevel: ConfidenceLevel;
   primaryEvidenceQuote: string;
   supportingLedgerEntryIds: string[];
   limitations: string;
+  counterEvidenceFound?: string | undefined;
+}
+
+/**
+ * Generates an explicit, domain-agnostic rationale for why a candidate was excluded from top ranking.
+ */
+function deriveExclusionReason(
+  dimensions: ImpactDimensions | DynamicEvaluationDimension[],
+  topCount: number,
+  totalScore: number,
+): string {
+  if (Array.isArray(dimensions)) {
+    // Find the dimension with the lowest score
+    const sorted = [...dimensions].sort((a, b) => a.score - b.score);
+    const lowest = sorted[0];
+    if (lowest && lowest.score < 6.5) {
+      return `Lower score in ${lowest.name} (${lowest.score}/10) compared to top ${topCount} threshold.`;
+    }
+    return `High overall merit, but edged out by broader systemic solutions (Score: ${totalScore} vs #${topCount} cutoff).`;
+  }
+
+  // Legacy dimensions
+  if (dimensions.realWorldAdoption < 6.0) {
+    return `Lower real-world production adoption (${dimensions.realWorldAdoption}/10) compared to top ${topCount} ranked items.`;
+  }
+  if (dimensions.economicIndustryImpact < 6.0) {
+    return `More concentrated industry scope with lower direct economic market impact (${dimensions.economicIndustryImpact}/10).`;
+  }
+  if (dimensions.technicalNovelty < 6.0) {
+    return `Incremental advancement rather than structural paradigm shift (${dimensions.technicalNovelty}/10).`;
+  }
+
+  return `High technical merit, but edged out by broader systemic breakthroughs (Score: ${totalScore} vs #${topCount} threshold).`;
 }
 
 /**
@@ -76,13 +130,11 @@ export function rankCandidates(
 
     let exclusionReason: string | undefined = undefined;
     if (!includedInTopRanking) {
-      if (item.dimensions.realWorldAdoption < 6.0) {
-        exclusionReason = `Lower real-world production adoption (${item.dimensions.realWorldAdoption}/10) compared to top ${topCount} ranked items.`;
-      } else if (item.dimensions.economicIndustryImpact < 6.0) {
-        exclusionReason = `More concentrated industry scope with lower direct economic market impact (${item.dimensions.economicIndustryImpact}/10).`;
-      } else {
-        exclusionReason = `High technical merit, but edged out by broader systemic breakthroughs (Score: ${item.impactScore.totalScore} vs #${topCount} threshold).`;
-      }
+      exclusionReason = deriveExclusionReason(
+        item.dimensions,
+        topCount,
+        item.impactScore.totalScore,
+      );
     }
 
     return {
@@ -99,6 +151,7 @@ export function rankCandidates(
       primaryEvidenceQuote: item.primaryEvidenceQuote,
       supportingLedgerEntryIds: item.supportingLedgerEntryIds,
       limitations: item.limitations,
+      counterEvidenceFound: item.counterEvidenceFound,
       includedInTopRanking,
       exclusionReason,
     };

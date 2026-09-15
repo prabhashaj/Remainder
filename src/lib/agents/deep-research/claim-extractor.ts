@@ -1,13 +1,14 @@
 import type {
   AtomicClaim,
+  CausalClassification,
   CausalValidation,
   ClaimType,
   DateClassification,
-  NumericalData,
+  QuantitativeData,
 } from "./types";
 import { extractDateClassification } from "./temporal-validator";
 
-const CAUSAL_VERBS = [
+const STRONG_CAUSAL_VERBS = [
   "caused",
   "causes",
   "enabled",
@@ -21,7 +22,29 @@ const CAUSAL_VERBS = [
   "led to",
   "leads to",
   "induced",
+  "induces",
   "produced",
+  "produces",
+  "triggered",
+  "triggers",
+  "forced",
+  "forces",
+  "created",
+];
+
+const MECHANISTIC_VERBS = [
+  "catalyzes",
+  "chemically reacts",
+  "degrades",
+  "oxidizes",
+  "binds to",
+  "synthesizes",
+  "converts",
+  "transfers",
+  "encodes",
+  "computes",
+  "modulates",
+  "inhibits",
 ];
 
 const WEAKENED_CAUSAL_MAP: Record<string, string> = {
@@ -34,113 +57,193 @@ const WEAKENED_CAUSAL_MAP: Record<string, string> = {
   drove: "helped stimulate",
   drives: "helps stimulate",
   accelerated: "coincided with an acceleration in",
+  accelerates: "coincides with an acceleration in",
   "led to": "correlated with",
   "leads to": "correlates with",
+  induced: "was associated with",
+  induces: "is associated with",
+  triggered: "preceded",
+  triggers: "precedes",
 };
 
 /**
- * Detects numerical claims in text (e.g. %, x faster, parameters, latency, bandwidth, FLOPs)
+ * Domain-agnostic quantitative data extractor:
+ * Handles percentages, multipliers, currencies, scientific units, rates, counts, and baselines.
  */
-export function extractNumericalData(claimText: string): NumericalData | undefined {
-  // 1. Percentage improvement: e.g. "30% faster", "40% reduction", "15% improvement"
+export function extractNumericalData(claimText: string): QuantitativeData | undefined {
+  const text = claimText.trim();
+
+  // 1. Percentage: e.g. "30% faster", "40% reduction", "rose 6.5%", "15.2% margin"
   const percentMatch =
-    /(\d+(?:\.\d+)?)\s*%\s*(faster|slower|cheaper|reduction|gain|increase|decrease|improvement|higher|lower)?/i.exec(
-      claimText,
+    /(\d+(?:\.\d+)?)\s*%\s*(faster|slower|cheaper|reduction|gain|increase|decrease|improvement|higher|lower|growth|inflation|rate)?/i.exec(
+      text,
     );
   if (percentMatch && percentMatch[1]) {
-    const value = percentMatch[1];
+    const rawNum = parseFloat(percentMatch[1]);
     const comparison = percentMatch[2] || "% change";
-    const baseline = extractBaseline(claimText);
-    const measurementConditions = extractMeasurementConditions(claimText);
+    const direction =
+      /faster|gain|increase|improvement|higher|growth/i.test(comparison) || /rose|increased|grew|surged/i.test(text)
+        ? "increase"
+        : /slower|cheaper|reduction|decrease|lower|fell|dropped/i.test(comparison) || /fell|decreased|dropped/i.test(text)
+          ? "decrease"
+          : "neutral";
+
+    const rawStr = `${percentMatch[1]}%`;
+    const conditions = extractMeasurementConditions(text);
     return {
-      value: `${value}%`,
+      value: rawStr,
+      rawValue: rawStr,
+      numericValue: rawNum,
       unit: "%",
+      category: "percentage",
+      direction,
       comparison,
-      baseline,
-      measurementConditions,
-      isBestCaseOnly: isBestCase(claimText),
+      baseline: extractBaseline(text),
+      conditions,
+      measurementConditions: conditions,
+      isBestCaseOnly: isBestCase(text),
     };
   }
 
-  // 2. Multiplier: e.g. "2x faster", "3x throughput", "10x lower latency"
+  // 2. Multiplier: e.g. "2x faster", "3x throughput", "10-fold increase"
   const multMatch =
-    /(\d+(?:\.\d+)?)\s*[xX]\s*(faster|slower|throughput|speedup|latency|improvement|reduction|cheaper)?/i.exec(
-      claimText,
+    /(\d+(?:\.\d+)?)\s*(?:[xX]|-fold)\s*(faster|slower|throughput|speedup|latency|improvement|reduction|cheaper|increase)?/i.exec(
+      text,
     );
   if (multMatch && multMatch[1]) {
-    const value = multMatch[1];
+    const rawNum = parseFloat(multMatch[1]);
     const comparison = multMatch[2] || "multiplier speedup";
-    const baseline = extractBaseline(claimText);
-    const measurementConditions = extractMeasurementConditions(claimText);
+    const rawStr = `${multMatch[1]}x`;
     return {
-      value: `${value}x`,
+      value: rawStr,
+      rawValue: rawStr,
+      numericValue: rawNum,
       unit: "multiplier",
+      category: "multiplier",
+      direction: /slower|cheaper|reduction/i.test(comparison) ? "decrease" : "increase",
       comparison,
-      baseline,
-      measurementConditions,
-      isBestCaseOnly: isBestCase(claimText),
+      baseline: extractBaseline(text),
+      conditions: extractMeasurementConditions(text),
+      isBestCaseOnly: isBestCase(text),
     };
   }
 
-  // 3. Parameter count: e.g. "500B parameters", "70B model", "1.5T tokens"
-  const paramMatch =
-    /(\d+(?:\.\d+)?)\s*([BMKTPbmktp])\s*(?:params|parameters|tokens|weights)/i.exec(claimText);
-  if (paramMatch && paramMatch[1] && paramMatch[2]) {
-    return {
-      value: `${paramMatch[1]}${paramMatch[2].toUpperCase()}`,
-      unit: "parameters/tokens",
-      comparison: "model capacity",
-    };
-  }
-
-  // 4. Latency / Bandwidth / Hardware metrics: e.g. "20ms latency", "1.8 TB/s memory bandwidth", "200 tok/s"
-  const metricMatch =
-    /(\d+(?:\.\d+)?)\s*(ms|milliseconds|seconds|s|tokens\/s|tok\/s|TB\/s|GB\/s|GB|TB|PFLOPS|TFLOPS|watts|W)\b/i.exec(
-      claimText,
+  // 3. Currency: e.g. "$700 billion", "$50B", "€120 million", "₹15,000 crore", "10 billion USD"
+  const currencyMatch =
+    /(?:\$|€|£|¥|₹)\s*(\d+(?:[.,]\d+)?)\s*(trillion|billion|million|crore|lakh|k|b|m)?\b/i.exec(
+      text,
+    ) ||
+    /(\d+(?:[.,]\d+)?)\s*(trillion|billion|million|crore|lakh)?\s*(?:USD|EUR|GBP|INR|JPY|dollars)/i.exec(
+      text,
     );
-  if (metricMatch && metricMatch[1] && metricMatch[2]) {
+
+  if (currencyMatch && currencyMatch[1]) {
+    const cleanNum = parseFloat(currencyMatch[1].replace(/,/g, ""));
+    const magnitude = currencyMatch[2]?.toLowerCase() || "";
+    let mult = 1;
+    if (magnitude === "billion" || magnitude === "b") mult = 1e9;
+    else if (magnitude === "million" || magnitude === "m") mult = 1e6;
+    else if (magnitude === "trillion") mult = 1e12;
+    else if (magnitude === "crore") mult = 1e7;
+    else if (magnitude === "lakh") mult = 1e5;
+
+    const rawStr = currencyMatch[0].trim();
     return {
-      value: metricMatch[1],
-      unit: metricMatch[2],
-      baseline: extractBaseline(claimText),
-      measurementConditions: extractMeasurementConditions(claimText),
+      value: rawStr,
+      rawValue: rawStr,
+      numericValue: cleanNum * mult,
+      unit: "currency",
+      category: "currency",
+      baseline: extractBaseline(text),
+      conditions: extractMeasurementConditions(text),
+    };
+  }
+
+  // 4. Physical / Scientific Units (Domain-Agnostic: battery, chemical, hardware, energy)
+  // e.g. "450 Wh/kg", "300 mg/L", "50 GW", "100 MW", "20 ms", "1.8 TB/s", "500B params"
+  const unitMatch =
+    /(\d+(?:\.\d+)?)\s*(Wh\/kg|mAh\/g|mg\/L|ppm|GW|MW|kW|kWh|MWh|TB\/s|GB\/s|ms|tokens\/s|tok\/s|flops|tflops|pflops|parameters|params|weights|bps|students|users|subscribers)\b/i.exec(
+      text,
+    );
+  if (unitMatch && unitMatch[1] && unitMatch[2]) {
+    const rawNum = parseFloat(unitMatch[1]);
+    const unit = unitMatch[2];
+    const isCount = /parameters|params|weights|students|users|subscribers/i.test(unit);
+    const isRate = /tokens\/s|tok\/s|TB\/s|GB\/s|bps/i.test(unit);
+    const rawStr = `${unitMatch[1]} ${unit}`;
+
+    return {
+      value: rawStr,
+      rawValue: rawStr,
+      numericValue: rawNum,
+      unit,
+      category: isCount ? "count" : isRate ? "rate" : "dimension",
+      baseline: extractBaseline(text),
+      conditions: extractMeasurementConditions(text),
+      isBestCaseOnly: isBestCase(text),
     };
   }
 
   return undefined;
 }
 
+/**
+ * Extracts comparison baseline generically (e.g. "than X", "versus Y", "compared to 260 Wh/kg for standard lithium cells")
+ */
 function extractBaseline(text: string): string | undefined {
-  // Look for "than X", "compared to X", "over X", "relative to X", "vs X"
+  // Check if comparison has metric + entity: e.g. "compared to 260 Wh/kg for standard lithium cells"
+  const metricForMatch =
+    /(?:than|compared to|relative to|versus|vs\.?)\s+\d+(?:\.\d+)?\s*\S+\s+(?:for|in|of|on)\s+([^,.]+)/i.exec(
+      text,
+    );
+  if (metricForMatch && metricForMatch[1]) {
+    return metricForMatch[1].trim();
+  }
+
+  // Look for "than X", "compared to X", "relative to X", "over X", "versus X", "vs X"
   const baselineMatch =
-    /(?:than|compared to|relative to|over|versus|vs\.?)\s+([A-Za-z0-9_.\-]+(?:\s+[A-Za-z0-9_.\-]+){0,3})/i.exec(
+    /(?:than|compared to|relative to|over|versus|vs\.?|from)\s+([^,.]+)/i.exec(
       text,
     );
   if (baselineMatch && baselineMatch[1]) {
-    return baselineMatch[1].trim();
+    const candidate = baselineMatch[1]
+      .trim()
+      .split(/\s+(?:under|at|on|measured|with|in)\s+/i)[0]
+      ?.trim();
+    if (
+      candidate &&
+      !["the", "an", "a", "its", "previous", "other"].includes(candidate.toLowerCase())
+    ) {
+      return candidate;
+    }
   }
   return undefined;
 }
 
+/**
+ * Extracts measurement / benchmark conditions generically
+ */
 function extractMeasurementConditions(text: string): string | undefined {
-  // Look for "on [Benchmark/Hardware]", "under [Workload]", "measured with [Settings]"
   const condMatch =
-    /(?:on|under|measured on|evaluated on|using|tested on)\s+((?:MMLU|GSM8K|HumanEval|SWE-bench|MATH|A100|H100|B200|TPU|FP8|INT4|FP16|batch size\s+\d+|temperature\s+\d+(?:\.\d+)?)[A-Za-z0-9_.\s-]*)/i.exec(
+    /(?:on|under|measured on|evaluated on|using|tested at|tested on|in)\s+((?:[A-Za-z0-9_.\-]+(?:\s+[A-Za-z0-9_.\-]+){0,4}))/i.exec(
       text,
     );
   if (condMatch && condMatch[1]) {
-    return condMatch[1].trim();
+    const val = condMatch[1].trim();
+    if (val.length > 2 && !["the", "an", "a", "this", "that"].includes(val.toLowerCase())) {
+      return val;
+    }
   }
   return undefined;
 }
 
 function isBestCase(text: string): boolean {
-  return /up to|best-case|peak|isolated|under optimal conditions/i.test(text);
+  return /up to|best-case|peak|isolated|under optimal conditions|ideal conditions/i.test(text);
 }
 
 /**
- * Validates causal statements. If the statement uses causal verbs without direct causal proof,
- * generates a weakened, correlational phrasing.
+ * Validates causal statements generically:
+ * Distinguishes CORRELATION, CAUSATION, MECHANISTIC, TEMPORAL_SEQUENCE, and SPECULATION.
  */
 export function validateCausalStatement(
   statement: string,
@@ -149,15 +252,51 @@ export function validateCausalStatement(
   const lower = statement.toLowerCase();
   const foundVerbs: string[] = [];
 
-  for (const verb of CAUSAL_VERBS) {
+  // Check for speculative hedging
+  if (/\b(might have|could potentially|may have been|possibly|speculated to)\b/i.test(lower)) {
+    return {
+      isCausalClaim: true,
+      classification: "SPECULATION",
+      causalVerbsFound: [],
+      supportedByDirectEvidence: false,
+      suggestedWording: statement,
+    };
+  }
+
+  // Check for mechanistic descriptions
+  for (const mv of MECHANISTIC_VERBS) {
+    if (new RegExp(`\\b${mv}\\b`, "i").test(lower)) {
+      return {
+        isCausalClaim: true,
+        classification: "MECHANISTIC",
+        causalVerbsFound: [mv],
+        supportedByDirectEvidence: true,
+        suggestedWording: statement,
+      };
+    }
+  }
+
+  // Check for strong causal verbs
+  for (const verb of STRONG_CAUSAL_VERBS) {
     if (new RegExp(`\\b${verb}\\b`, "i").test(lower)) {
       foundVerbs.push(verb);
     }
   }
 
   if (foundVerbs.length === 0) {
+    // Check if temporal sequence is asserted without causal verbs
+    if (/\b(followed by|subsequently|prior to which|after which)\b/i.test(lower)) {
+      return {
+        isCausalClaim: false,
+        classification: "TEMPORAL_SEQUENCE",
+        causalVerbsFound: [],
+        supportedByDirectEvidence: true,
+      };
+    }
+
     return {
       isCausalClaim: false,
+      classification: "CORRELATION",
       causalVerbsFound: [],
       supportedByDirectEvidence: true,
     };
@@ -166,6 +305,7 @@ export function validateCausalStatement(
   if (hasDirectCausalEvidence) {
     return {
       isCausalClaim: true,
+      classification: "CAUSATION",
       causalVerbsFound: foundVerbs,
       supportedByDirectEvidence: true,
       suggestedWording: statement,
@@ -182,6 +322,7 @@ export function validateCausalStatement(
 
   return {
     isCausalClaim: true,
+    classification: "CORRELATION",
     causalVerbsFound: foundVerbs,
     supportedByDirectEvidence: false,
     suggestedWording: weakened,
@@ -189,23 +330,41 @@ export function validateCausalStatement(
 }
 
 /**
- * Classifies claim type: Fact vs Interpretation vs Forecast
+ * Classifies claim type: Fact vs Interpretation vs Inference vs Forecast vs Opinion
  */
 export function classifyClaimType(statement: string): ClaimType {
   const lower = statement.toLowerCase();
 
-  // Forecast indicators
+  // 1. Forecast indicators
   if (
-    /\b(will|projected to|forecast|expected to|anticipated|by 2027|by 2028|by 2030|future|may eventually)\b/i.test(
+    /\b(will|projected to|forecast|expected to|anticipated|by \d{4}|future|may eventually|outlook)\b/i.test(
       lower,
     )
   ) {
     return "forecast";
   }
 
-  // Interpretation / Analysis indicators
+  // 2. Opinion indicators
   if (
-    /\b(suggests|indicates|implies|demonstrates potential|likely reflects|appears to|can be interpreted)\b/i.test(
+    /\b(in our view|we believe|arguably|best|worst|superior|disappointing|impressive|preferred)\b/i.test(
+      lower,
+    )
+  ) {
+    return "opinion";
+  }
+
+  // 3. Inference / Deductive indicators
+  if (
+    /\b(therefore|consequently|implies that|it follows that|must be|deduced from)\b/i.test(
+      lower,
+    )
+  ) {
+    return "inference";
+  }
+
+  // 4. Interpretation / Analysis indicators
+  if (
+    /\b(suggests|indicates|demonstrates potential|likely reflects|appears to|can be interpreted)\b/i.test(
       lower,
     )
   ) {
@@ -216,12 +375,7 @@ export function classifyClaimType(statement: string): ClaimType {
 }
 
 /**
- * Splits a compound finding sentence into atomic claims.
- * For example: "Model X was released, is 40% cheaper, and is 2x faster."
- * Becomes 3 atomic claims:
- * 1. Model X was released.
- * 2. Model X is 40% cheaper.
- * 3. Model X is 2x faster.
+ * Splits compound sentences into atomic claims.
  */
 export function splitIntoAtomicClaims(
   text: string,
@@ -236,7 +390,6 @@ export function splitIntoAtomicClaims(
   let counter = 1;
 
   for (const sentence of sentences) {
-    // Check if sentence contains multiple coordinate clauses with metrics: e.g. "released, and is 40% cheaper and 2x faster"
     const clauses = splitCompoundSentence(sentence);
 
     for (const clause of clauses) {
@@ -250,6 +403,7 @@ export function splitIntoAtomicClaims(
         claim: clause,
         claimType,
         dates,
+        quantitative: numerical,
         numerical,
         causal,
       });
@@ -263,14 +417,13 @@ export function splitIntoAtomicClaims(
  * Splits compound sentences joined by coordinates with distinct assertions
  */
 function splitCompoundSentence(sentence: string): string[] {
-  // If sentence has "released", and also has numerical improvements like "and is 40% cheaper"
-  const commaAndRegex = /(.*?(?:released|announced|launched)[^,]*?),\s*(?:and\s+)?(is\s+.*|\d+.*)/i;
+  // Check coordinate clauses like "released X, and is 40% cheaper and 2x faster"
+  const commaAndRegex = /(.*?(?:released|announced|launched|introduced|developed|established)[^,]*?),\s*(?:and\s+)?(is\s+.*|\d+.*)/i;
   const match = commaAndRegex.exec(sentence);
   if (match && match[1] && match[2]) {
     const part1 = match[1].trim();
     const part2 = match[2].trim();
 
-    // Further check if part2 contains multiple metrics like "40% cheaper and 2x faster"
     const subParts = part2.split(/\s+and\s+(?=\d|is\s+|\w+\s+is)/i);
     return [part1, ...subParts.map((sp) => sp.trim())];
   }
