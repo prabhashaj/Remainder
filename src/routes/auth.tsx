@@ -184,22 +184,6 @@ function AuthPage() {
       }
       return;
     }
-    if (data.user?.id) {
-      // Sync phone directly to auth.users.phone via Admin API
-      void fetch("/api/sync-phone", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: data.user.id,
-          phone: fullPhone,
-          countryCode,
-          phoneNumber: cleanPhone,
-        }),
-      }).catch((syncErr) => {
-        console.error("Failed to sync phone to auth.users:", syncErr);
-      });
-    }
-
     if (!data.session) {
       // Email confirmation is enabled — user needs to verify their inbox
       setSentConfirmation(true);

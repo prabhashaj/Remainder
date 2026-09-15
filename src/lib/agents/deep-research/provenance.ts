@@ -11,7 +11,8 @@ export class ProvenanceTracker {
   constructor(question: string, scope: ResearchScope) {
     this.trace = {
       question,
-      scope,
+      task: scope as any,
+      scope: scope as any,
       provenanceTrail: [],
     };
   }

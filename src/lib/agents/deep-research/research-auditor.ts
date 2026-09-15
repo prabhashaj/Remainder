@@ -29,8 +29,8 @@ export function runResearchAudit(params: {
         ? scope.endDate
         : undefined;
 
-  const question = "question" in scope ? scope.question : "topic" in scope ? scope.topic : "";
-  const rankingRequired = "rankingRequired" in scope ? scope.rankingRequired : true;
+  const question = typeof (scope as any).question === "string" ? (scope as any).question : typeof (scope as any).topic === "string" ? (scope as any).topic : "";
+  const rankingRequired = "rankingRequired" in scope ? (scope as any).rankingRequired : true;
 
   // 1. TEMPORAL AUDIT (Hard Cutoff)
   const temporalViolations: string[] = [];
@@ -237,10 +237,10 @@ export function runResearchAudit(params: {
     .toLowerCase()
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length > 3 && !["what", "were", "with", "from", "that", "this", "which", "compare"].includes(w));
+    .filter((w: string) => w.length > 3 && !["what", "were", "with", "from", "that", "this", "which", "compare"].includes(w));
 
   const lowerReport = reportText.toLowerCase();
-  const matchedKeyTerms = questionWords.filter((w) => lowerReport.includes(w));
+  const matchedKeyTerms = questionWords.filter((w: string) => lowerReport.includes(w));
   if (questionWords.length > 0 && matchedKeyTerms.length / questionWords.length < 0.4) {
     questionAddressedViolations.push("Report does not adequately address core keywords of the original user question.");
   }

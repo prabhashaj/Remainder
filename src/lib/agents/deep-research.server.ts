@@ -359,7 +359,7 @@ async function executeSubagentWorker(
     evidenceLines.push(`  URL: ${p.arxivUrl || p.pdfUrl}`);
   }
 
-  const inWindowWeb = evaluatedSources.filter((s) => s.sourceType !== "paper");
+  const inWindowWeb = evaluatedSources.filter((s) => s.sourceType !== "academic_paper");
   evidenceLines.push(`\n## Verified Web Research Results (${inWindowWeb.length} in-window):`);
   for (const s of inWindowWeb) {
     evidenceLines.push(
@@ -660,7 +660,7 @@ export async function runDeepResearch(params: {
   // 5. Claim Verification, Cross-Source Corroboration & Contradiction Detection
   recordStep("Claim Verifier", "Verifying atomic claims against primary sources, checking baselines, and detecting contradictions.");
   const ledgerEntries: EvidenceLedgerEntry[] = [];
-  const unverifiedClaims: string[] = [];
+  const unverifiedClaims: Array<{ claim: string; reason: any; details?: string }> = [];
   const detectedContradictions: ContradictionRecord[] = [];
 
   for (const claim of allExtractedClaims) {
@@ -699,7 +699,11 @@ export async function runDeepResearch(params: {
       ledgerEntries.push(entry);
       provenanceTracker.recordEvidenceTrace(entry);
     } else {
-      unverifiedClaims.push(claim.claim);
+      unverifiedClaims.push({
+        claim: claim.claim,
+        reason: "NO_PRIMARY_SOURCE" as const,
+        details: "Zero reliable sources found",
+      });
     }
   }
 
@@ -708,6 +712,7 @@ export async function runDeepResearch(params: {
     unverifiedClaims,
     rejectedSources: allRejectedSources,
     contradictions: detectedContradictions,
+    counterEvidenceFound: [],
   };
 
   recordStep(
