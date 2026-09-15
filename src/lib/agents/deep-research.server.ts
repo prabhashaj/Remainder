@@ -379,17 +379,20 @@ ${evidenceLines.join("\n")}
 Your task:
 1. Synthesize the relevant evidence into concise, structured findings organized by atomic claims.
 2. For each claim, explicitly cite the supporting source.
-3. VERIFY EVERY FACTUAL CLAIM, NOT JUST NUMBERS: Before including any claim — numeric, directional, or descriptive (e.g., "expanded," "reduced," "unchanged," "improved") — confirm the specific source states that exact thing. A number can be accurate while the direction or comparison around it is wrong. Check both.
-4. DO NOT COLLAPSE CONDITIONAL FACTS INTO ONE STATEMENT: If a source says a value depends on context (e.g., different defaults per platform, different rates per tier, different limits per plan), state the condition explicitly. Never present "it depends" information as a single universal figure.
-5. SOURCE PRIORITY IS MANDATORY: If a primary source (official docs, press release, system card) appears anywhere in results, cite it over aggregators or blogs. If only secondary sources exist, say so. Never submit an answer with zero cited sources when search was used — every claim should trace to something retrievable.
-6. COMPLETENESS OVER SELECTIVE FRAMING: Include all comparisons a source makes (e.g., "beats X, Y, and Z"), not just the most convenient one.
-7. FLAG UNVERIFIED ADDITIONS: If you want to include a comparison, claim, or related fact that didn't come from this search (e.g., about a different product), either search for it specifically or clearly mark it as unverified/general knowledge rather than presenting it with the same confidence as sourced facts.
-8. STRUCTURAL CONTEXT BEFORE PERFORMANCE CLAIMS: State where something sits in a lineup, hierarchy, or timeline (e.g., "point release of X," "same underlying model as Y") before or alongside comparative claims like "outperforms."
-9. FORMATTING: Never combine Markdown bold/italic syntax with currency or special characters in a way that could break rendering. Write numeric values in plain, unambiguous text.
-10. FINAL SELF-CHECK: For each sentence in the draft, ask: (a) does this trace to a specific retrieved source? (b) if it's conditional, did I preserve the condition? (c) if it's a comparison or direction (not just a number), did I verify that specific direction? Remove or soften anything that fails.
-11. If sources conflict on a fact, note both positions rather than silently picking one.
-12. Do not make unsupported causal claims (use "contributed to" or "correlated with" unless explicit causation is established).
-13. Do NOT add any claim or statistic not explicitly in the raw evidence above.`;
+3. VERIFY EVERY FACTUAL CLAIM: numeric, directional, or descriptive. A number can be locally accurate while its label, unit, or scale is wrong — check the unit as carefully as the digits.
+4. CROSS-CHECK INTERNAL CONSISTENCY: If your own answer states the same quantity in two places (e.g., a per-unit price and a bulk price, or two related figures that should roughly agree), verify they don't contradict each other before sending. An internal contradiction means at least one number is wrong — find out which before responding.
+5. DISTINGUISH CUMULATIVE VS. NEW FIGURES: When reporting on an ongoing or recurring event (layoffs, price changes, casualty counts), explicitly state whether a number is a running total, a previous period's figure, or today's new/undisclosed figure. Never let a past total imply today's specific scale.
+6. FINANCIAL AND SAFETY-RELEVANT DATA GETS EXTRA SCRUTINY: For prices, rates, dosages, or other figures someone might act on directly, prefer sources that agree with each other; if sources disagree by more than a small margin, flag the discrepancy explicitly rather than picking one silently.
+7. DO NOT COLLAPSE CONDITIONAL FACTS INTO ONE STATEMENT: If a source says a value depends on context, state the condition explicitly. Never present "it depends" information as a single universal figure.
+8. SOURCE PRIORITY IS MANDATORY: If a primary source (official docs, press release, system card) appears anywhere in results, cite it over aggregators or blogs. If only secondary sources exist, say so. Never submit an answer with zero cited sources when search was used.
+9. COMPLETENESS OVER SELECTIVE FRAMING: Include all comparisons a source makes (e.g., "beats X, Y, and Z"), not just the most convenient one.
+10. FLAG UNVERIFIED ADDITIONS: If you want to include a comparison, claim, or related fact that didn't come from this search, clearly mark it as unverified/general knowledge rather than presenting it with the same confidence as sourced facts.
+11. STRUCTURAL CONTEXT BEFORE PERFORMANCE CLAIMS: State where something sits in a lineup, hierarchy, or timeline before or alongside comparative claims like "outperforms."
+12. FORMATTING: Never combine Markdown bold/italic syntax with currency or special characters in a way that could break rendering. Write numeric values in plain, unambiguous text.
+13. FINAL SELF-CHECK: For each number in the draft, ask — (a) does this trace to a source? (b) does the unit/label match what the source actually said? (c) does it agree with every other related number elsewhere in this same answer?
+14. If sources conflict on a fact, note both positions rather than silently picking one.
+15. Do not make unsupported causal claims (use "contributed to" or "correlated with" unless explicit causation is established).
+16. Do NOT add any claim or statistic not explicitly in the raw evidence above.`;
 
   let findingsSummary = "";
   try {
