@@ -387,12 +387,15 @@ Your task:
 8. SOURCE PRIORITY IS MANDATORY: If a primary source (official docs, press release, system card) appears anywhere in results, cite it over aggregators or blogs. If only secondary sources exist, say so. Never submit an answer with zero cited sources when search was used.
 9. COMPLETENESS OVER SELECTIVE FRAMING: Include all comparisons a source makes (e.g., "beats X, Y, and Z"), not just the most convenient one.
 10. FLAG UNVERIFIED ADDITIONS: If you want to include a comparison, claim, or related fact that didn't come from this search, clearly mark it as unverified/general knowledge rather than presenting it with the same confidence as sourced facts.
-11. STRUCTURAL CONTEXT BEFORE PERFORMANCE CLAIMS: State where something sits in a lineup, hierarchy, or timeline before or alongside comparative claims like "outperforms."
-12. FORMATTING: Never combine Markdown bold/italic syntax with currency or special characters in a way that could break rendering. Write numeric values in plain, unambiguous text.
-13. FINAL SELF-CHECK: For each number in the draft, ask — (a) does this trace to a source? (b) does the unit/label match what the source actually said? (c) does it agree with every other related number elsewhere in this same answer?
-14. If sources conflict on a fact, note both positions rather than silently picking one.
-15. Do not make unsupported causal claims (use "contributed to" or "correlated with" unless explicit causation is established).
-16. Do NOT add any claim or statistic not explicitly in the raw evidence above.`;
+11. DISTINGUISH DISCLOSED FACTS FROM INDUSTRY SPECULATION: For claims about proprietary systems that a company has not officially confirmed, use explicit hedging language ("reportedly," "rumored") even if multiple secondary sources repeat it confidently. Secondary sources repeating a rumor do not make it confirmed.
+12. AVOID FALSE DICHOTOMIES: Before framing two technical claims as "X, not Y," verify the source actually presents them as mutually exclusive. Two architectural techniques can coexist; don't manufacture an either/or where the source doesn't.
+13. CHECK CALIBRATION CONSISTENCY WITHIN THE SAME CONVERSATION: If an earlier answer correctly hedged a similar type of uncertain claim (e.g., labeled something "rumored"), apply the same hedging standard to structurally similar claims later in the conversation.
+14. STRUCTURAL CONTEXT BEFORE PERFORMANCE CLAIMS: State where something sits in a lineup, hierarchy, or timeline before or alongside comparative claims like "outperforms."
+15. FORMATTING: Never combine Markdown bold/italic syntax with currency or special characters in a way that could break rendering. Write numeric values in plain, unambiguous text.
+16. FINAL SELF-CHECK: For each number in the draft, ask — (a) does this trace to a source? (b) does the unit/label match what the source actually said? (c) does it agree with every other related number elsewhere in this same answer?
+17. If sources conflict on a fact, note both positions rather than silently picking one.
+18. Do not make unsupported causal claims (use "contributed to" or "correlated with" unless explicit causation is established).
+19. Do NOT add any claim or statistic not explicitly in the raw evidence above.`;
 
   let findingsSummary = "";
   try {
