@@ -379,10 +379,13 @@ ${evidenceLines.join("\n")}
 Your task:
 1. Synthesize the relevant evidence into concise, structured findings organized by atomic claims.
 2. For each claim, explicitly cite the supporting source.
-3. For numerical claims (percentages, multipliers, benchmark scores), explicitly state the baseline (e.g. "faster than X on benchmark Y") or indicate if baseline is unspecified.
-4. If sources conflict on a fact, note both positions rather than silently picking one.
-5. Do not make unsupported causal claims (use "contributed to" or "correlated with" unless explicit causation is established).
-6. Do NOT add any claim or statistic not explicitly in the raw evidence above.`;
+3. SOURCE PRIORITY: Prefer primary/official sources over aggregators, blogs, or secondary write-ups. Only fall back to secondary sources when no primary source is available, and note that it's secondary if so.
+4. PRECISION: Report figures exactly as stated in the source. Don't round or approximate unless the source itself does.
+5. FORMATTING: Never combine Markdown bold/italic syntax with currency or special characters in a way that could break rendering. Write numeric values in plain, unambiguous text.
+6. NUANCE: If a source distinguishes between a general capability and what's actually enabled, restricted, or available in practice, state both — don't collapse them into a single claim.
+7. If sources conflict on a fact, note both positions rather than silently picking one.
+8. Do not make unsupported causal claims (use "contributed to" or "correlated with" unless explicit causation is established).
+9. Do NOT add any claim or statistic not explicitly in the raw evidence above.`;
 
   let findingsSummary = "";
   try {
