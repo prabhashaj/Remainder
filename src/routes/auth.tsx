@@ -1,10 +1,41 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, User } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Phone, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { RemispaceBrand } from "@/components/brand";
 import { supabase } from "@/integrations/supabase/client";
+
+const COUNTRY_CODES = [
+  { code: "+1", country: "US/CA", flag: "🇺🇸" },
+  { code: "+91", country: "IN", flag: "🇮🇳" },
+  { code: "+44", country: "UK", flag: "🇬🇧" },
+  { code: "+61", country: "AU", flag: "🇦🇺" },
+  { code: "+49", country: "DE", flag: "🇩🇪" },
+  { code: "+33", country: "FR", flag: "🇫🇷" },
+  { code: "+81", country: "JP", flag: "🇯🇵" },
+  { code: "+86", country: "CN", flag: "🇨🇳" },
+  { code: "+971", country: "AE", flag: "🇦🇪" },
+  { code: "+65", country: "SG", flag: "🇸🇬" },
+  { code: "+353", country: "IE", flag: "🇮🇪" },
+  { code: "+55", country: "BR", flag: "🇧🇷" },
+  { code: "+41", country: "CH", flag: "🇨🇭" },
+  { code: "+31", country: "NL", flag: "🇳🇱" },
+  { code: "+46", country: "SE", flag: "🇸🇪" },
+  { code: "+34", country: "ES", flag: "🇪🇸" },
+  { code: "+39", country: "IT", flag: "🇮🇹" },
+  { code: "+64", country: "NZ", flag: "🇳🇿" },
+  { code: "+27", country: "ZA", flag: "🇿🇦" },
+  { code: "+82", country: "KR", flag: "🇰🇷" },
+  { code: "+234", country: "NG", flag: "🇳🇬" },
+  { code: "+92", country: "PK", flag: "🇵🇰" },
+  { code: "+880", country: "BD", flag: "🇧🇩" },
+  { code: "+62", country: "ID", flag: "🇮🇩" },
+  { code: "+60", country: "MY", flag: "🇲🇾" },
+  { code: "+63", country: "PH", flag: "🇵🇭" },
+  { code: "+52", country: "MX", flag: "🇲🇽" },
+  { code: "+966", country: "SA", flag: "🇸🇦" },
+];
 
 type AuthMode = "signin" | "signup" | "forgot";
 type AuthSearch = { mode?: "signin" | "signup" };
@@ -37,6 +68,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [countryCode, setCountryCode] = useState("+1");
+  const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sentConfirmation, setSentConfirmation] = useState(false);
@@ -114,6 +147,16 @@ function AuthPage() {
       toast.error("Please fill in all required fields.");
       return;
     }
+    if (!phone.trim()) {
+      toast.error("Please enter your phone number with country code.");
+      return;
+    }
+    const cleanPhone = phone.replace(/[^\d]/g, "");
+    if (cleanPhone.length < 6 || cleanPhone.length > 15) {
+      toast.error("Please enter a valid phone number (between 6 and 15 digits).");
+      return;
+    }
+    const fullPhone = `${countryCode}${cleanPhone}`;
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters long.");
       return;
@@ -122,7 +165,15 @@ function AuthPage() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: window.location.origin, data: { full_name: name.trim() } },
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          full_name: name.trim(),
+          phone: fullPhone,
+          country_code: countryCode,
+          phone_number: cleanPhone,
+        },
+      },
     });
     setBusy(false);
     if (error) {
@@ -441,6 +492,45 @@ function AuthPage() {
                         placeholder="you@example.com"
                         className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25"
                       />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="signup-phone" className="block text-xs font-semibold text-zinc-200">
+                      Phone Number
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative w-32 shrink-0">
+                        <select
+                          id="signup-country-code"
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                          className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] px-2.5 text-xs sm:text-sm text-white transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25 cursor-pointer"
+                          aria-label="Country Code"
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={`${c.code}-${c.country}`} value={c.code} className="bg-zinc-900 text-white">
+                              {c.flag} {c.code} ({c.country})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="relative flex-1">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-400/70">
+                          <Phone className="size-4" />
+                        </div>
+                        <input
+                          id="signup-phone"
+                          name="phone"
+                          type="tel"
+                          autoComplete="tel-national"
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="e.g. 98765 43210"
+                          className="w-full h-11 rounded-xl border border-emerald-500/25 bg-[#03130c] pl-10 pr-3.5 text-sm text-white placeholder:text-zinc-500 transition-all hover:border-emerald-500/40 focus:border-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-400/25"
+                        />
+                      </div>
                     </div>
                   </div>
 
