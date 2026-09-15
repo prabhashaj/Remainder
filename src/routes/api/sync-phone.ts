@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "node:process";
 
-export const Route = createFileRoute("/api/sync-phone" as any)({
+export const Route = createFileRoute("/api/sync-phone")({
   server: {
     handlers: {
       POST: async ({ request }) => {

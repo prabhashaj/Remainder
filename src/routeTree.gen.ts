@@ -28,6 +28,7 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLogErrorRouteImport } from './routes/api/log-error'
 import { Route as ApiMaterialChatRouteImport } from './routes/api/material-chat'
+import { Route as ApiSyncPhoneRouteImport } from './routes/api/sync-phone'
 import { Route as ApiUploadDocumentRouteImport } from './routes/api/upload-document'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as AuthenticatedConversationIndexRouteImport } from './routes/_authenticated/conversation.index'
@@ -133,6 +134,11 @@ const ApiMaterialChatRoute = ApiMaterialChatRouteImport.update({
   path: '/api/material-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSyncPhoneRoute = ApiSyncPhoneRouteImport.update({
+  id: '/api/sync-phone',
+  path: '/api/sync-phone',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUploadDocumentRoute = ApiUploadDocumentRouteImport.update({
   id: '/api/upload-document',
   path: '/api/upload-document',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
+  '/api/sync-phone': typeof ApiSyncPhoneRoute
   '/api/upload-document': typeof ApiUploadDocumentRoute
   '/share/$token': typeof ShareTokenRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
+  '/api/sync-phone': typeof ApiSyncPhoneRoute
   '/api/upload-document': typeof ApiUploadDocumentRoute
   '/share/$token': typeof ShareTokenRoute
   '/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/log-error': typeof ApiLogErrorRoute
   '/api/material-chat': typeof ApiMaterialChatRoute
+  '/api/sync-phone': typeof ApiSyncPhoneRoute
   '/api/upload-document': typeof ApiUploadDocumentRoute
   '/share/$token': typeof ShareTokenRoute
   '/_authenticated/conversation/$threadId': typeof AuthenticatedConversationThreadIdRoute
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
+    | '/api/sync-phone'
     | '/api/upload-document'
     | '/share/$token'
     | '/conversation/$threadId'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
+    | '/api/sync-phone'
     | '/api/upload-document'
     | '/share/$token'
     | '/conversation/$threadId'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/log-error'
     | '/api/material-chat'
+    | '/api/sync-phone'
     | '/api/upload-document'
     | '/share/$token'
     | '/_authenticated/conversation/$threadId'
@@ -384,6 +396,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLogErrorRoute: typeof ApiLogErrorRoute
   ApiMaterialChatRoute: typeof ApiMaterialChatRoute
+  ApiSyncPhoneRoute: typeof ApiSyncPhoneRoute
   ApiUploadDocumentRoute: typeof ApiUploadDocumentRoute
   ShareTokenRoute: typeof ShareTokenRoute
   ApiWebhooksRazorpayRoute: typeof ApiWebhooksRazorpayRoute
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMaterialChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sync-phone': {
+      id: '/api/sync-phone'
+      path: '/api/sync-phone'
+      fullPath: '/api/sync-phone'
+      preLoaderRoute: typeof ApiSyncPhoneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/upload-document': {
       id: '/api/upload-document'
       path: '/api/upload-document'
@@ -653,6 +673,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiLogErrorRoute: ApiLogErrorRoute,
   ApiMaterialChatRoute: ApiMaterialChatRoute,
+  ApiSyncPhoneRoute: ApiSyncPhoneRoute,
   ApiUploadDocumentRoute: ApiUploadDocumentRoute,
   ShareTokenRoute: ShareTokenRoute,
   ApiWebhooksRazorpayRoute: ApiWebhooksRazorpayRoute,
