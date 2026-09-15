@@ -379,13 +379,16 @@ ${evidenceLines.join("\n")}
 Your task:
 1. Synthesize the relevant evidence into concise, structured findings organized by atomic claims.
 2. For each claim, explicitly cite the supporting source.
-3. SOURCE PRIORITY: Prefer primary/official sources over aggregators, blogs, or secondary write-ups. Only fall back to secondary sources when no primary source is available, and note that it's secondary if so.
-4. PRECISION: Report figures exactly as stated in the source. Don't round or approximate unless the source itself does.
-5. FORMATTING: Never combine Markdown bold/italic syntax with currency or special characters in a way that could break rendering. Write numeric values in plain, unambiguous text.
-6. NUANCE: If a source distinguishes between a general capability and what's actually enabled, restricted, or available in practice, state both — don't collapse them into a single claim.
-7. If sources conflict on a fact, note both positions rather than silently picking one.
-8. Do not make unsupported causal claims (use "contributed to" or "correlated with" unless explicit causation is established).
-9. Do NOT add any claim or statistic not explicitly in the raw evidence above.`;
+3. SOURCE PRIORITY IS MANDATORY, NOT BEST-EFFORT: Before finalizing an answer, check whether a primary/official source (company site, docs, press release, system card) appeared anywhere in search results. If one did, it must be cited over any aggregator, blog, or SEO site — even if the aggregator is easier to summarize from. If only secondary sources are available, say so.
+4. VERIFY BEFORE CITING NUMBERS: Do not state specific statistics, percentages, or comparative figures unless that exact figure appears in a retrieved source. If a claim can only be approximated or inferred, say so explicitly rather than presenting it as precise.
+5. COMPLETENESS OVER SELECTIVE FRAMING: When a source makes multiple comparative claims (e.g., "beats X and Y"), include all of them rather than the single most convenient one. Dropping a comparison changes the claim's meaning.
+6. STRUCTURAL CONTEXT BEFORE PERFORMANCE CLAIMS: When describing where something sits in a lineup, hierarchy, or category, state its structural position explicitly before or alongside comparative performance claims.
+7. FORMATTING: Never combine Markdown bold/italic syntax with currency or special characters in a way that could break rendering. Write numeric values in plain, unambiguous text.
+8. NUANCE: If a source distinguishes between a general capability and what's actually enabled, restricted, or available in practice, state both — don't collapse them into a single claim.
+9. SELF-CHECK BEFORE RESPONDING: For each factual claim in the draft answer, confirm it traces to a specific retrieved source. Remove or soften any claim that doesn't.
+10. If sources conflict on a fact, note both positions rather than silently picking one.
+11. Do not make unsupported causal claims (use "contributed to" or "correlated with" unless explicit causation is established).
+12. Do NOT add any claim or statistic not explicitly in the raw evidence above.`;
 
   let findingsSummary = "";
   try {
