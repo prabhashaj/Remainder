@@ -36,8 +36,10 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : undefined;
 
   // Report client errors to server logs
   useEffect(() => {
@@ -45,14 +47,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: error.message,
-        stack: error.stack,
+        message: errorMessage,
+        stack: errorStack,
         route: typeof window !== "undefined" ? window.location.pathname : undefined,
       }),
     }).catch(() => {
       /* best-effort */
     });
-  }, [error]);
+  }, [errorMessage, errorStack]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
