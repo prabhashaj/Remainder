@@ -6,7 +6,7 @@ create table if not exists public.document_chunks (
     id uuid primary key default gen_random_uuid(),
     document_id uuid not null references public.study_resources(id) on delete cascade,
     content text not null,
-    embedding vector(1024), -- Using 1024 dimensions for Mistral AI embeddings
+    embedding vector(1024), -- Gemini embeddings are configured to 1024 dimensions
     created_at timestamptz default now() not null
 );
 

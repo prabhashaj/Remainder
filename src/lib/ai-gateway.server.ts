@@ -1,32 +1,23 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { createMistral } from "@ai-sdk/mistral";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 export function getAiApiKey(): string | undefined {
   return (
-    process.env["MISTRAL_API_KEY"] ||
-    process.env["OPENAI_API_KEY"] ||
-    process.env["OPENROUTER_API_KEY"] ||
     process.env["GEMINI_API_KEY"] ||
     process.env["GOOGLE_API_KEY"] ||
+    process.env["OPENAI_API_KEY"] ||
+    process.env["OPENROUTER_API_KEY"] ||
     process.env["AI_GATEWAY_API_KEY"] ||
     process.env["LOVABLE_API_KEY"]
   );
 }
 
 export function getAiModelName(defaultModel = "google/gemini-2.0-flash"): string {
-  if (process.env["MISTRAL_API_KEY"]) {
-    return process.env["MISTRAL_MODEL"] || "mistral-small-latest";
+  if (process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"]) {
+    return process.env["GEMINI_MODEL"] || process.env["AI_MODEL"] || "gemini-2.0-flash";
   }
   if (process.env["OPENAI_API_KEY"] && !process.env["OPENROUTER_API_KEY"]) {
     return process.env["OPENAI_MODEL"] || "gpt-4o-mini";
-  }
-  if (
-    process.env["GEMINI_API_KEY"] ||
-    process.env["GOOGLE_API_KEY"]
-  ) {
-    const raw = process.env["GEMINI_MODEL"] || process.env["AI_MODEL"] || "gemini-2.0-flash";
-    // Strip google/ prefix when connecting directly to Google generative language endpoint
-    return raw.replace(/^google\//, "");
   }
   return process.env["AI_MODEL"] || defaultModel;
 }
@@ -38,17 +29,13 @@ export function getResearchModelName(): string {
   if (process.env["RESEARCH_MODEL"]) {
     return process.env["RESEARCH_MODEL"];
   }
-  if (process.env["MISTRAL_API_KEY"]) {
-    return process.env["MISTRAL_RESEARCH_MODEL"] || "mistral-small-latest";
+  if (process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"]) {
+    return process.env["GEMINI_RESEARCH_MODEL"] || "gemini-2.0-flash";
   }
   if (process.env["OPENAI_API_KEY"] && !process.env["OPENROUTER_API_KEY"]) {
     return process.env["OPENAI_RESEARCH_MODEL"] || "gpt-4o-mini";
   }
-  if (process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"]) {
-    const raw = process.env["GEMINI_RESEARCH_MODEL"] || "gemini-2.0-flash";
-    return raw.replace(/^google\//, "");
-  }
-  return "mistral-small-latest";
+  return "gemini-2.0-flash";
 }
 
 /**
@@ -92,15 +79,19 @@ export function createAiGatewayProvider(apiKey?: string) {
   const key = apiKey || getAiApiKey();
   if (!key) {
     throw new Error(
-      "No AI API key configured. Please set MISTRAL_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, or GEMINI_API_KEY in your .env file.",
+      "No AI API key configured. Please set GEMINI_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, or AI_GATEWAY_API_KEY in your .env file.",
     );
   }
 
-  // 1. Mistral AI
-  if (process.env["MISTRAL_API_KEY"] || key === process.env["MISTRAL_API_KEY"]) {
-    return createMistral({
+  // 1. Gemini / Google AI
+  if (
+    process.env["GEMINI_API_KEY"] ||
+    process.env["GOOGLE_API_KEY"] ||
+    key === process.env["GEMINI_API_KEY"] ||
+    key === process.env["GOOGLE_API_KEY"]
+  ) {
+    return createGoogleGenerativeAI({
       apiKey: key,
-      baseURL: process.env["MISTRAL_BASE_URL"] || "https://api.mistral.ai/v1",
     });
   }
 
@@ -115,23 +106,7 @@ export function createAiGatewayProvider(apiKey?: string) {
     });
   }
 
-  // 3. Gemini / Google AI
-  if (
-    process.env["GEMINI_API_KEY"] ||
-    process.env["GOOGLE_API_KEY"] ||
-    key === process.env["GEMINI_API_KEY"] ||
-    key === process.env["GOOGLE_API_KEY"]
-  ) {
-    return createOpenAICompatible({
-      name: "google",
-      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-      headers: {
-        Authorization: `Bearer ${key}`,
-      },
-    });
-  }
-
-  // 4. Custom AI Gateway
+  // 3. Custom AI Gateway
   if (process.env["AI_GATEWAY_BASE_URL"]) {
     return createOpenAICompatible({
       name: "custom-gateway",
@@ -142,7 +117,7 @@ export function createAiGatewayProvider(apiKey?: string) {
     });
   }
 
-  // 5. Lovable AI Gateway (Fallback if key provided)
+  // 4. Lovable AI Gateway (Fallback if key provided)
   if (process.env["LOVABLE_API_KEY"] && key === process.env["LOVABLE_API_KEY"]) {
     return createOpenAICompatible({
       name: "lovable",
@@ -154,7 +129,7 @@ export function createAiGatewayProvider(apiKey?: string) {
     });
   }
 
-  // 6. Default OpenAI
+  // 5. Default OpenAI
   return createOpenAICompatible({
     name: "openai",
     baseURL: process.env["OPENAI_BASE_URL"] || "https://api.openai.com/v1",

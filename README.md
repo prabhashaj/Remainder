@@ -169,7 +169,7 @@ Remispace is built on a full-stack architecture utilizing **React 19** and **Tan
 - **Server Engine & API Gateway**: TanStack Start powered by Nitro Server Engine with typed server functions (`createServerFn`), session authentication attachers, and sliding-window rate limiting.
 - **Remi AI Engine**: Orchestrator built on the Vercel AI SDK managing subagents, tool execution (`wrapTool`), and Server-Sent Event streaming via `streamdown`.
 - **Database & Storage Layer**: Supabase PostgreSQL with Row-Level Security (RLS) policies, `pgvector` for semantic document retrieval, and persistent audit logs.
-- **External Services**: Real-time web retrieval through the Tavily Search API and multi-provider LLM gateways (Mistral AI, OpenAI GPT-4o, Google Gemini, OpenRouter).
+- **External Services**: Real-time web retrieval through the Tavily Search API and multi-provider LLM gateways (Google Gemini, OpenAI GPT-4o, OpenRouter).
 
 ---
 
@@ -227,8 +227,8 @@ Queries pass through a 5-stage context engineering pipeline to guarantee factual
 | :--- | :--- |
 | **Frontend Framework** | React 19, TanStack Start, TanStack Router, TanStack Query v5 |
 | **Styling & UI Components** | Tailwind CSS v4, Framer Motion, Radix UI Primitives, Lucide Icons |
-| **AI Framework & Tooling** | Vercel AI SDK (`ai`), `@ai-sdk/mistral`, `@ai-sdk/openai-compatible` |
-| **LLM Inference Gateways** | Mistral AI, OpenAI (GPT-4o), Google Gemini, OpenRouter |
+| **AI Framework & Tooling** | Vercel AI SDK (`ai`), `@ai-sdk/google`, `@ai-sdk/openai-compatible` |
+| **LLM Inference Gateways** | Google Gemini, OpenAI (GPT-4o), OpenRouter |
 | **Database & Vector Engine** | Supabase PostgreSQL + `pgvector` (cosine similarity search) |
 | **Search & Document Parsing** | Tavily Search API, `pdfjs-dist` / `unpdf`, `youtube-caption-extractor` |
 | **Rendering & Math Engine** | `streamdown` (Streaming Markdown & LaTeX), `@uiw/react-codemirror`, `shiki` |
@@ -329,13 +329,12 @@ SUPABASE_URL="https://your-project-id.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 
 # AI Provider API Keys (Configure at least one)
-MISTRAL_API_KEY="your-mistral-api-key"
-MISTRAL_MODEL="mistral-small-latest"
+GEMINI_API_KEY="your-gemini-api-key"
+GEMINI_MODEL="gemini-2.0-flash"
 
 OPENAI_API_KEY="your-openai-api-key"
 OPENAI_MODEL="gpt-4o"
 
-GEMINI_API_KEY="your-gemini-api-key"
 OPENROUTER_API_KEY="your-openrouter-key"
 
 # Web Research (Required for Tavily search agent)

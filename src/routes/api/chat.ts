@@ -374,7 +374,7 @@ export const Route = createFileRoute("/api/chat")({
         const key = getAiApiKey();
         if (!key)
           return new Response(
-            "Missing AI API Key (please set MISTRAL_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY)",
+            "Missing AI API Key (please set GEMINI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY)",
             { status: 500 },
           );
 
