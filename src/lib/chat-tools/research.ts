@@ -64,7 +64,7 @@ export function getResearchTools(
             "The targeted search query, including domain context keywords if needed for disambiguation",
           ),
         time_range: z
-          .enum(["day", "week", "month", "year", "d", "w", "m", "y", ""])
+          .enum(["day", "week", "month", "year", "d", "w", "m", "y"])
           .optional()
           .describe("Optional time range for the search (e.g. 'day' for yesterday/today, 'week' for recent events)"),
         depth: z
