@@ -330,7 +330,7 @@ SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 
 # AI Provider API Keys (Configure at least one)
 GEMINI_API_KEY="your-gemini-api-key"
-GEMINI_MODEL="gemini-2.0-flash"
+GEMINI_MODEL="gemini-3.8-flash"
 
 OPENAI_API_KEY="your-openai-api-key"
 OPENAI_MODEL="gpt-4o"

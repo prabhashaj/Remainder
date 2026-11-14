@@ -12,9 +12,9 @@ export function getAiApiKey(): string | undefined {
   );
 }
 
-export function getAiModelName(defaultModel = "google/gemini-2.0-flash"): string {
+export function getAiModelName(defaultModel = "google/gemini-3.8-flash"): string {
   if (process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"]) {
-    return process.env["GEMINI_MODEL"] || process.env["AI_MODEL"] || "gemini-2.0-flash";
+    return process.env["GEMINI_MODEL"] || process.env["AI_MODEL"] || "gemini-3.8-flash";
   }
   if (process.env["OPENAI_API_KEY"] && !process.env["OPENROUTER_API_KEY"]) {
     return process.env["OPENAI_MODEL"] || "gpt-4o-mini";
@@ -30,12 +30,12 @@ export function getResearchModelName(): string {
     return process.env["RESEARCH_MODEL"];
   }
   if (process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"]) {
-    return process.env["GEMINI_RESEARCH_MODEL"] || "gemini-2.0-flash";
+    return process.env["GEMINI_RESEARCH_MODEL"] || "gemini-3.8-flash";
   }
   if (process.env["OPENAI_API_KEY"] && !process.env["OPENROUTER_API_KEY"]) {
     return process.env["OPENAI_RESEARCH_MODEL"] || "gpt-4o-mini";
   }
-  return "gemini-2.0-flash";
+  return "gemini-3.8-flash";
 }
 
 /**
